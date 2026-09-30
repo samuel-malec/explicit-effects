@@ -14,8 +14,15 @@ if [[ ${#SOURCES[@]} -eq 0 ]]; then
 fi
 
 rm -rf "$HERE/classes"
-javac ${JAVAC_CP:+-cp "$JAVAC_CP"} -d "$HERE/classes" "${SOURCES[@]}"
-javac -cp "$CP" @"$HERE/jvmci.args" -d "$HERE" "$HERE/DumpEffects.java"
+if ! javac -XDstringConcat=inline ${JAVAC_CP:+-cp "$JAVAC_CP"} -d "$HERE/classes" "${SOURCES[@]}"; then
+    echo "error: compiling the target failed -- not continuing" >&2
+    echo "       if it imports a library, put the jar on JAVAC_CP here and on TARGET_CP for run-dump.sh" >&2
+    exit 1
+fi
+if ! javac -cp "$CP" @"$HERE/jvmci.args" -d "$HERE" "$HERE/DumpEffects.java"; then
+    echo "error: compiling DumpEffects.java failed" >&2
+    exit 1
+fi
 
 echo "built driver + analysis target in classes/:"
 find "$HERE/classes" -name "*.class" | sed "s|$HERE/classes/|  |"
