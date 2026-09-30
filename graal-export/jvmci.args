@@ -1,0 +1,7 @@
+--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta=ALL-UNNAMED
+--add-exports=jdk.internal.vm.ci/jdk.vm.ci.meta.annotation=ALL-UNNAMED
+--add-exports=jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED
+--add-exports=jdk.internal.vm.ci/jdk.vm.ci.common=ALL-UNNAMED
+--add-exports=jdk.internal.vm.ci/jdk.vm.ci.runtime=ALL-UNNAMED
+--add-exports=jdk.internal.vm.ci/jdk.vm.ci.services=ALL-UNNAMED
+--add-modules=jdk.internal.vm.ci
