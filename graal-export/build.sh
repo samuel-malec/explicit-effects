@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-#   ./build.sh                     # compiles Demo.java (the two examples)
-#   ./build.sh path/to/My.java ...  # compiles your own program instead
-#
+#./build.sh path/to/My.java
+#DUMP_JSON=out/my.json ./run-dump.sh my.pkg.Main
+
 # JAVAC_CP adds a compile classpath for the target, e.g.
 #   JAVAC_CP=$G/sdk/mxbuild/dists/collections.jar ./build.sh Bench.java
 #
@@ -19,8 +19,14 @@ if ! javac -XDstringConcat=inline ${JAVAC_CP:+-cp "$JAVAC_CP"} -d "$HERE/classes
     echo "       if it imports a library, put the jar on JAVAC_CP here and on TARGET_CP for run-dump.sh" >&2
     exit 1
 fi
-if ! javac -cp "$CP" @"$HERE/jvmci.args" -d "$HERE" "$HERE/DumpEffects.java"; then
-    echo "error: compiling DumpEffects.java failed" >&2
+# The driver is compiled with the module flags run-dump.sh runs it with, so it
+# builds against the repo's jdk.graal.compiler rather than the JDK's own older
+# copy: GraphExport uses the compiler's node classes directly.
+if ! javac -cp "$CP" --upgrade-module-path="$UPGRADE_MP" --module-path="$MODULE_PATH" \
+        --add-modules="$ADD_MODULES,jdk.graal.compiler,jdk.graal.compiler.options" \
+        "${EXPORTS[@]}" @"$HERE/exports.args" \
+        -d "$HERE" "$HERE/DumpEffects.java" "$HERE/GraphExport.java"; then
+    echo "error: compiling the driver failed" >&2
     exit 1
 fi
 
