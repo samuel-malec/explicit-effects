@@ -12,13 +12,25 @@ import com.oracle.graal.pointsto.meta.AnalysisMethod;
 import com.oracle.graal.pointsto.meta.PointsToAnalysisMethod;
 import com.oracle.graal.pointsto.phases.InlineBeforeAnalysis;
 
+import jdk.graal.compiler.core.common.type.AbstractObjectStamp;
+import jdk.graal.compiler.core.common.type.FloatStamp;
+import jdk.graal.compiler.core.common.type.IntegerStamp;
+import jdk.graal.compiler.core.common.type.Stamp;
 import jdk.graal.compiler.debug.DebugContext;
+import jdk.graal.compiler.graph.Node;
 import jdk.graal.compiler.graph.NodeSourcePosition;
+import jdk.graal.compiler.graph.Position;
+import jdk.graal.compiler.nodeinfo.InputType;
 import jdk.graal.compiler.nodes.AbstractBeginNode;
 import jdk.graal.compiler.nodes.AbstractDeoptimizeNode;
 import jdk.graal.compiler.nodes.AbstractEndNode;
 import jdk.graal.compiler.nodes.AbstractFixedGuardNode;
+import jdk.graal.compiler.nodes.AbstractMergeNode;
 import jdk.graal.compiler.nodes.ConstantNode;
+import jdk.graal.compiler.nodes.LogicNode;
+import jdk.graal.compiler.nodes.NodeView;
+import jdk.graal.compiler.nodes.PhiNode;
+import jdk.graal.compiler.nodes.VirtualState;
 import jdk.graal.compiler.nodes.ControlSinkNode;
 import jdk.graal.compiler.nodes.ControlSplitNode;
 import jdk.graal.compiler.nodes.FixedNode;
@@ -40,11 +52,14 @@ import jdk.graal.compiler.nodes.extended.ValueAnchorNode;
 import jdk.graal.compiler.nodes.java.AbstractNewObjectNode;
 import jdk.graal.compiler.nodes.java.AccessFieldNode;
 import jdk.graal.compiler.nodes.java.ArrayLengthNode;
+import jdk.graal.compiler.nodes.java.ExceptionObjectNode;
 import jdk.graal.compiler.nodes.java.FinalFieldBarrierNode;
 import jdk.graal.compiler.nodes.java.LoadFieldNode;
+import jdk.graal.compiler.nodes.java.MethodCallTargetNode;
 import jdk.graal.compiler.nodes.java.NewInstanceNode;
 import jdk.graal.compiler.nodes.java.StoreFieldNode;
 import jdk.graal.compiler.nodes.util.GraphUtil;
+import jdk.graal.compiler.phases.schedule.SchedulePhase;
 import jdk.graal.compiler.nodes.virtual.CommitAllocationNode;
 import jdk.vm.ci.meta.ResolvedJavaField;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
@@ -79,7 +94,13 @@ final class GraphExport {
             throw graph.getDebug().handle(e);
         }
 
-        ControlFlowGraph cfg = ControlFlowGraph.newBuilder(graph).connectBlocks(true).computeLoops(true).computeFrequency(false).build();
+        // Scheduled, so every node, floating ones included, sits in one block
+        // in an order that respects its inputs. A translation into a language
+        // without floating values (Cthulhu) needs exactly that. Immutable: the
+        // schedule is computed, the graph is left as it is.
+        SchedulePhase.runWithoutContextOptimizations(graph, SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS, true);
+        StructuredGraph.ScheduleResult schedule = graph.getLastSchedule();
+        ControlFlowGraph cfg = schedule.getCFG();
         if (!cfg.getLoops().isEmpty()) {
             unsupported.add("loop");
         }
@@ -94,7 +115,7 @@ final class GraphExport {
         Map<String, String> values = new TreeMap<>();
         List<Object> blocks = new ArrayList<>();
         for (HIRBlock block : cfg.reversePostOrder()) {
-            blocks.add(exportBlock(block, flowsByBci, values, unsupported));
+            blocks.add(exportBlock(block, schedule, flowsByBci, values, unsupported));
         }
         out.put("entry", cfg.getStartBlock().getId());
         out.put("blocks", blocks);
@@ -102,8 +123,8 @@ final class GraphExport {
         return out;
     }
 
-    private static Map<String, Object> exportBlock(HIRBlock block, Map<Integer, InvokeTypeFlow> flowsByBci,
-                    Map<String, String> values, List<String> unsupported) {
+    private static Map<String, Object> exportBlock(HIRBlock block, StructuredGraph.ScheduleResult schedule,
+                    Map<Integer, InvokeTypeFlow> flowsByBci, Map<String, String> values, List<String> unsupported) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", block.getId());
 
@@ -112,6 +133,21 @@ final class GraphExport {
             preds.add(block.getPredecessorAt(i).getId());
         }
         out.put("preds", preds);
+
+        // A merge's phis first: they are the values the block receives, and the
+        // schedule does not list them among the block's nodes.
+        List<Object> nodes = new ArrayList<>();
+        if (block.getBeginNode() instanceof AbstractMergeNode merge) {
+            for (PhiNode phi : merge.phis()) {
+                nodes.add(exportScheduledNode(phi, schedule.getCFG(), flowsByBci));
+            }
+        }
+        for (Node node : schedule.nodesFor(block)) {
+            if (!(node instanceof PhiNode) && isScheduledValueOrEffect(node)) {
+                nodes.add(exportScheduledNode(node, schedule.getCFG(), flowsByBci));
+            }
+        }
+        out.put("nodes", nodes);
 
         List<Object> ops = new ArrayList<>();
         for (FixedNode node : block.getNodes()) {
@@ -211,7 +247,98 @@ final class GraphExport {
         return op;
     }
 
-    // TODO: check if there isn't a mathod that decides this
+    /**
+     * The nodes a translation has to see: values and operations with effects.
+     * Begins, ends and merges are control flow the blocks already describe,
+     * frame states are deoptimization metadata, and a call target is folded
+     * into its invoke.
+     */
+    private static boolean isScheduledValueOrEffect(Node node) {
+        if (node instanceof ExceptionObjectNode) {
+            return true; // a begin that also produces the exception
+        }
+        return !(node instanceof AbstractBeginNode || node instanceof AbstractEndNode || node instanceof VirtualState ||
+                        node instanceof MethodCallTargetNode);
+    }
+
+    /**
+     * One scheduled node: its operation, type and data inputs in order, plus
+     * what the operation needs beyond them (a constant's value, a parameter's
+     * index, a field, a call's arguments and callees, a phi's value per
+     * predecessor block).
+     */
+    private static Map<String, Object> exportScheduledNode(Node node, ControlFlowGraph cfg, Map<Integer, InvokeTypeFlow> flowsByBci) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", node.getId());
+        out.put("op", node.getClass().getSimpleName().replaceAll("Node$", ""));
+        out.put("type", typeOf(node));
+        if (node instanceof PhiNode phi) {
+            AbstractMergeNode merge = phi.merge();
+            List<Object> from = new ArrayList<>();
+            for (int i = 0; i < phi.valueCount(); i++) {
+                Map<String, Object> edge = new LinkedHashMap<>();
+                edge.put("block", cfg.blockFor(merge.phiPredecessorAt(i)).getId());
+                edge.put("value", phi.valueAt(i).getId());
+                from.add(edge);
+            }
+            out.put("from", from);
+            return out;
+        }
+
+        List<Object> in = new ArrayList<>();
+        for (Position position : node.inputPositions()) {
+            InputType kind = position.getInputType();
+            Node input = position.get(node);
+            if (input != null && (kind == InputType.Value || kind == InputType.Condition)) {
+                in.add(input.getId());
+            }
+        }
+        out.put("in", in);
+
+        if (node instanceof ParameterNode param) {
+            out.put("index", param.index());
+        } else if (node instanceof ConstantNode constant) {
+            out.put("value", constant.getValue().toValueString());
+        } else if (node instanceof AccessFieldNode access) {
+            out.put("field", fieldName(access.field()));
+        } else if (node instanceof NewInstanceNode allocation) {
+            out.put("class", allocation.instanceClass().toJavaName(true));
+        } else if (node instanceof Invoke invoke) {
+            List<Object> args = new ArrayList<>();
+            for (ValueNode arg : invoke.callTarget().arguments()) {
+                args.add(arg == null ? null : arg.getId());
+            }
+            out.put("args", args);
+            Map<String, Object> call = exportInvoke(invoke, flowsByBci);
+            for (String key : List.of("target", "callees", "flow", "exception_edge")) {
+                out.put(key, call.get(key));
+            }
+        }
+        out.put("bci", node instanceof ValueNode value ? bci(value) : -1);
+        return out;
+    }
+
+    /** "ref", "int", "long", "float", "double", "cond" for a condition, or "void". */
+    private static String typeOf(Node node) {
+        if (node instanceof LogicNode) {
+            return "cond";
+        }
+        if (!(node instanceof ValueNode value)) {
+            return "void";
+        }
+        Stamp stamp = value.stamp(NodeView.DEFAULT);
+        if (stamp instanceof AbstractObjectStamp) {
+            return "ref";
+        }
+        if (stamp instanceof IntegerStamp integer) {
+            return integer.getBits() > 32 ? "long" : "int";
+        }
+        if (stamp instanceof FloatStamp floating) {
+            return floating.getBits() > 32 ? "double" : "float";
+        }
+        return "void";
+    }
+
     private static boolean isControl(FixedNode node) {
         return node instanceof AbstractBeginNode || node instanceof AbstractEndNode || node instanceof ControlSinkNode ||
                         (node instanceof ControlSplitNode && !(node instanceof WithExceptionNode)) ||
