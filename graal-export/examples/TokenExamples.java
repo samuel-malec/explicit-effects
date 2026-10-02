@@ -10,9 +10,6 @@ public class TokenExamples {
     static int peek(Counter counter) { return counter.value; }
 
     // --- dead stores ------------------------------------------------------
-
-    // Dead only if nothing can observe counter.value = 1 before it
-    // is overwritten: the call must not read Counter, and must not throw.
     static void resetCounter(Counter counter, Logger logger) {
         counter.value = 1;
         unrelatedWork(logger);

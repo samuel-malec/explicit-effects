@@ -53,11 +53,6 @@ import jdk.vm.ci.meta.ResolvedJavaMethod;
  * Exports a method's Graal IR, as the points-to analysis saw it, in the shape
  * prototype/cthulhu/graal_ir.py turns into token form: basic blocks, the
  * memory operations in each block in order, successors and exits.
- *
- * Every fixed node is either understood or reported. A node kind that touches
- * memory in a way this does not model puts the method in "unsupported" with
- * the node's name, rather than being skipped: skipping it would drop an effect
- * without anyone noticing.
  */
 final class GraphExport {
 

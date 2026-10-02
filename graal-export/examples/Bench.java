@@ -1,3 +1,5 @@
+// Run with DUMP_FILTER=* to report every reachable method, or
+// DUMP_FILTER=org.graalvm.collections for just the graal library.
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

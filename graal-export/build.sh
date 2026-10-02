@@ -25,7 +25,7 @@ fi
 if ! javac -cp "$CP" --upgrade-module-path="$UPGRADE_MP" --module-path="$MODULE_PATH" \
         --add-modules="$ADD_MODULES,jdk.graal.compiler,jdk.graal.compiler.options" \
         "${EXPORTS[@]}" @"$HERE/exports.args" \
-        -d "$HERE" "$HERE/DumpEffects.java" "$HERE/GraphExport.java"; then
+        -d "$HERE" "$HERE/ReadWriteExport.java" "$HERE/GraphExport.java"; then
     echo "error: compiling the driver failed" >&2
     exit 1
 fi

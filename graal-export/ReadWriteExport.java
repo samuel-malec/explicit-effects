@@ -1,7 +1,11 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.oracle.graal.pointsto.PointsToAnalysis;
 import com.oracle.graal.pointsto.flow.AccessFieldTypeFlow;
 import com.oracle.graal.pointsto.flow.InvokeTypeFlow;
 import com.oracle.graal.pointsto.flow.LoadFieldTypeFlow;
@@ -14,7 +18,7 @@ import com.oracle.graal.pointsto.meta.AnalysisUniverse;
 import com.oracle.graal.pointsto.meta.PointsToAnalysisMethod;
 import com.oracle.graal.pointsto.standalone.PointsToAnalyzer;
 
-public class DumpEffects {
+public class ReadWriteExport {
 
     /** Packages treated as "not the program under analysis" by default. */
     private static final String[] PLATFORM = {
@@ -46,6 +50,8 @@ public class DumpEffects {
         TreeMap<String, TreeSet<String>> reads = new TreeMap<>();
         TreeMap<String, TreeSet<String>> writes = new TreeMap<>();
         TreeMap<String, TreeSet<String>> callees = new TreeMap<>();
+        PointsToAnalysis bb = analyzer.getResultAnalysis();
+        TreeSet<String> analysed = new TreeSet<>();
 
         for (AnalysisMethod method : universe.getMethods()) {
             if (!method.isReachable() || !(method instanceof PointsToAnalysisMethod ptm)) {
@@ -58,10 +64,13 @@ public class DumpEffects {
             if (!isUnderAnalysis(owner)) {
                 continue;
             }
-
             String name = owner + "." + method.getName();
+            if (ptm.ensureGraphParsed(bb).getEncodedGraph() != null) {
+                analysed.add(name);
+            }
+            // NB: flows(), not getNodeFlows() -- store flows live in
+            // miscEntryFlows, and getNodeFlows() silently yields no writes.
             MethodFlowsGraph graph = ptm.getTypeFlow().getMethodFlowsGraph();
-
             for (TypeFlow<?> flow : graph.flows()) {
                 if (flow instanceof AccessFieldTypeFlow access) {
                     AnalysisField field = access.field();
@@ -74,6 +83,9 @@ public class DumpEffects {
                 }
             }
 
+            // The call graph, points-to resolved: a virtual call yields every
+            // target the analysis considers possible, not just the declared
+            // one. This is what the prototype's transitive closure consumes.
             for (InvokeTypeFlow invoke : graph.getInvokes()) {
                 for (AnalysisMethod callee : invoke.getOriginalCallees()) {
                     String target = callee.getDeclaringClass().toJavaName(true) + "." + callee.getName();
@@ -100,10 +112,11 @@ public class DumpEffects {
         }
 
         System.out.println();
-        System.out.println("=== call graph ===");
+        System.out.println("=== call graph with points-to resolved callees ===");
         for (String m : new TreeSet<>(callees.keySet())) {
             TreeSet<String> targets = new TreeSet<>();
             for (String t : callees.get(m)) {
+                // keep platform callees out of the listing, but note them
                 targets.add(isUnderAnalysis(t.substring(0, t.lastIndexOf('.'))) ? t : "<platform>");
             }
             targets.remove("<platform>");
@@ -127,16 +140,39 @@ public class DumpEffects {
                             e.getKey(), e.getValue()[0], e.getValue()[1]);
         }
 
+        String facts = factsJson(analysed, reads, writes, callees, fields);
         String jsonPath = System.getProperty("dump.json", "");
         if (!jsonPath.isEmpty()) {
-            writeJson(jsonPath, all, reads, writes, callees, fields);
+            write(jsonPath, "{\n" + facts + "\n}\n");
             System.out.println();
             System.out.println("wrote " + jsonPath);
         }
+
+        // The IR, for the token-form conversion. A superset of the effects
+        // JSON (same "methods" and "fields"), so one file carries both the
+        // facts the signatures are derived from and the graphs they apply to.
+        String irPath = System.getProperty("dump.ir", "");
+        if (!irPath.isEmpty()) {
+            List<Map<String, Object>> graphs = new ArrayList<>();
+            for (AnalysisMethod method : universe.getMethods()) {
+                if (method.isReachable() && method instanceof PointsToAnalysisMethod ptm && ptm.getTypeFlow().flowsGraphCreated() &&
+                                isUnderAnalysis(method.getDeclaringClass().toJavaName(true))) {
+                    graphs.add(GraphExport.export(bb, ptm));
+                }
+            }
+            graphs.sort((a, b) -> (a.get("name") + " " + a.get("descriptor")).compareTo(b.get("name") + " " + b.get("descriptor")));
+            write(irPath, "{\n" + facts + ",\n  \"graphs\": " + GraphExport.toJson(graphs, 1) + "\n}\n");
+            System.out.println();
+            System.out.println("wrote " + graphs.size() + " graphs to " + irPath);
+        }
     }
 
-    private static void writeJson(String path,
-                    Set<String> methods,
+    /**
+     * Machine-readable form, for the prototype's partitioner/derivation to
+     * consume. Hand-rolled so this stays dependency-free. Returns the members
+     * without the enclosing braces, so the IR dump can add its own.
+     */
+    private static String factsJson(Set<String> methods,
                     TreeMap<String, TreeSet<String>> reads,
                     TreeMap<String, TreeSet<String>> writes,
                     TreeMap<String, TreeSet<String>> callees,
@@ -144,7 +180,7 @@ public class DumpEffects {
         Set<String> allMethods = new TreeSet<>(methods);
         allMethods.addAll(callees.keySet());
         StringBuilder sb = new StringBuilder();
-        sb.append("{\n  \"methods\": {\n");
+        sb.append("  \"methods\": {\n");
         boolean firstMethod = true;
         for (String m : allMethods) {
             if (!firstMethod) {
@@ -169,14 +205,18 @@ public class DumpEffects {
                             .append(", \"written\": ").append(e.getValue()[1])
                             .append("}");
         }
-        sb.append("\n  }\n}\n");
+        sb.append("\n  }");
+        return sb.toString();
+    }
+
+    private static void write(String path, String content) {
         try {
             java.nio.file.Path out = java.nio.file.Path.of(path).toAbsolutePath();
             java.nio.file.Path parent = out.getParent();
             if (parent != null) {
                 java.nio.file.Files.createDirectories(parent);
             }
-            java.nio.file.Files.writeString(out, sb.toString());
+            java.nio.file.Files.writeString(out, content);
         } catch (java.io.IOException e) {
             throw new RuntimeException("could not write " + path, e);
         }

@@ -23,12 +23,13 @@ exec java \
   -Dcom.oracle.graal.pointsto.standalone.vmaccess.name=host \
   -Ddump.filter="${DUMP_FILTER:-}" \
   -Ddump.json="${DUMP_JSON:-}" \
+  -Ddump.ir="${DUMP_IR:-}" \
   --upgrade-module-path="$UPGRADE_MP" \
   --module-path="$MODULE_PATH" \
   --add-modules="$ADD_MODULES" \
   "${EXPORTS[@]}" @"$HERE/exports.args" \
   -cp "$CP:$HERE" \
-  DumpEffects \
+  ReadWriteExport \
   "$ENTRY" \
   -H:StandaloneAnalysisTargetAppCP="${TARGET_CP:-$HERE/classes}" \
   -H:StandaloneAnalysisReportsPath="$HERE/out" \
