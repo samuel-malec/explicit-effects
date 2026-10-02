@@ -28,8 +28,10 @@ import jdk.graal.compiler.nodes.AbstractFixedGuardNode;
 import jdk.graal.compiler.nodes.AbstractMergeNode;
 import jdk.graal.compiler.nodes.ConstantNode;
 import jdk.graal.compiler.nodes.LogicNode;
+import jdk.graal.compiler.nodes.LoopExitNode;
 import jdk.graal.compiler.nodes.NodeView;
 import jdk.graal.compiler.nodes.PhiNode;
+import jdk.graal.compiler.nodes.ProxyNode;
 import jdk.graal.compiler.nodes.VirtualState;
 import jdk.graal.compiler.nodes.ControlSinkNode;
 import jdk.graal.compiler.nodes.ControlSplitNode;
@@ -78,6 +80,7 @@ final class GraphExport {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("name", methodName(method));
         out.put("descriptor", method.getSignature().toMethodDescriptor());
+        out.put("static", method.isStatic());
         List<String> unsupported = new ArrayList<>();
         out.put("unsupported", unsupported);
 
@@ -134,16 +137,21 @@ final class GraphExport {
         }
         out.put("preds", preds);
 
-        // A merge's phis first: they are the values the block receives, and the
-        // schedule does not list them among the block's nodes.
+        // A merge's phis and a loop exit's proxies first: they are the values the
+        // block receives, and the schedule does not list them among its nodes.
         List<Object> nodes = new ArrayList<>();
         if (block.getBeginNode() instanceof AbstractMergeNode merge) {
             for (PhiNode phi : merge.phis()) {
                 nodes.add(exportScheduledNode(phi, schedule.getCFG(), flowsByBci));
             }
         }
+        if (block.getBeginNode() instanceof LoopExitNode exit) {
+            for (ProxyNode proxy : exit.proxies()) {
+                nodes.add(exportScheduledNode(proxy, schedule.getCFG(), flowsByBci));
+            }
+        }
         for (Node node : schedule.nodesFor(block)) {
-            if (!(node instanceof PhiNode) && isScheduledValueOrEffect(node)) {
+            if (!(node instanceof PhiNode) && !(node instanceof ProxyNode) && isScheduledValueOrEffect(node)) {
                 nodes.add(exportScheduledNode(node, schedule.getCFG(), flowsByBci));
             }
         }
@@ -318,7 +326,6 @@ final class GraphExport {
         return out;
     }
 
-    /** "ref", "int", "long", "float", "double", "cond" for a condition, or "void". */
     private static String typeOf(Node node) {
         if (node instanceof LogicNode) {
             return "cond";
