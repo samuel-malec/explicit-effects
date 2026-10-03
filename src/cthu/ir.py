@@ -85,14 +85,17 @@ def to_text(program: Program, header: str = "") -> str:
         for i, lam in enumerate(structure.lambdas):
             if i:
                 lines.append("")
+
             params = " ".join(name for name, _ in lam.params)
             outs = " ".join(name for name, _ in lam.outs)
             types = (" × ".join(t for _, t in lam.params) or "∅") + " → " + (" × ".join(t for _, t in lam.outs) or "∅")
             lines.append(f"    {lam.name} = λ {params} → {outs}   ; {types}" + (f"; {lam.note}" if lam.note else ""))
             lines.append("    (")
+
             for instr in lam.body:
                 lines.append("        " + instr.text())
             lines.append("    )")
+
         lines.append(")")
         lines.append("")
     return "\n".join(lines)
