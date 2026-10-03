@@ -1,4 +1,4 @@
-""" Representation of Graal IR structures alongised the points-to information needed for analyis"""
+"""Representation of Graal IR structures alongised the points-to information needed for analyis"""
 
 import json
 from dataclasses import dataclass
@@ -33,16 +33,16 @@ class Node:
     type: str 
     inputs: tuple[int, ...] = ()
     bci: int = -1
-    index: int | None = None  # Parameter
-    value: str | None = None  # Constant
-    field: str | None = None  # LoadField, StoreField
-    cls: str | None = None  # NewInstance
-    args: tuple[int, ...] = ()  # invokes: the arguments, receiver first
-    target: str | None = None  # invokes: the method named in the bytecode
-    callees: tuple[str, ...] = ()  # invokes: what points-to resolved at this site
-    flow: str | None = None  # invokes: "ok" | "no-callees" | "disabled" | "missing"
+    index: int | None = None
+    value: str | None = None
+    field: str | None = None
+    cls: str | None = None
+    args: tuple[int, ...] = ()
+    target: str | None = None
+    callees: tuple[str, ...] = ()
+    flow: str | None = None
     exception_edge: bool = False 
-    phi: tuple[tuple[int, int], ...] = ()  # ValuePhi: (predecessor block, value) pairs
+    phi: tuple[tuple[int, int], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -59,7 +59,7 @@ class Block:
     succs: tuple[Edge, ...]
     exit: str | None  # "return", "unwind", "deopt", ...
     end: dict  # how the block ends: {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
-    nodes: tuple[Node, ...] = ()  # every scheduled node, phis first, in order
+    nodes: tuple[Node, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -68,9 +68,9 @@ class Graph:
     descriptor: str
     unsupported: tuple[str, ...]
     entry: int
-    blocks: dict[int, Block]  # reverse postorder, as exported
+    blocks: dict[int, Block]
     values: dict[int, str]
-    static: bool = False  # no receiver: parameter 0 is the first declared one
+    static: bool = False
 
     @property
     def supported(self) -> bool:
