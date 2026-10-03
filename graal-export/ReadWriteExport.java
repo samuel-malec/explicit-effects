@@ -64,7 +64,7 @@ public class ReadWriteExport {
             if (!isUnderAnalysis(owner)) {
                 continue;
             }
-            String name = owner + "." + method.getName();
+            String name = GraphExport.methodKey(method);
             if (ptm.ensureGraphParsed(bb).getEncodedGraph() != null) {
                 analysed.add(name);
             }
@@ -88,7 +88,7 @@ public class ReadWriteExport {
             // one. This is what the prototype's transitive closure consumes.
             for (InvokeTypeFlow invoke : graph.getInvokes()) {
                 for (AnalysisMethod callee : invoke.getOriginalCallees()) {
-                    String target = callee.getDeclaringClass().toJavaName(true) + "." + callee.getName();
+                    String target = GraphExport.methodKey(callee);
                     callees.computeIfAbsent(name, k -> new TreeSet<>()).add(target);
                 }
             }
@@ -117,7 +117,7 @@ public class ReadWriteExport {
             TreeSet<String> targets = new TreeSet<>();
             for (String t : callees.get(m)) {
                 // keep platform callees out of the listing, but note them
-                targets.add(isUnderAnalysis(t.substring(0, t.lastIndexOf('.'))) ? t : "<platform>");
+                targets.add(isUnderAnalysis(t.substring(0, t.lastIndexOf('.', t.indexOf('(')))) ? t : "<platform>");
             }
             targets.remove("<platform>");
             if (!targets.isEmpty()) {

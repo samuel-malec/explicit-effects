@@ -233,7 +233,7 @@ final class GraphExport {
         op.put("kind", "invoke");
         op.put("node", invoke.asFixedNode().getId());
         op.put("bci", invoke.bci());
-        op.put("target", methodName(invoke.getTargetMethod()));
+        op.put("target", methodKey(invoke.getTargetMethod()));
 
         List<Object> callees = new ArrayList<>();
         InvokeTypeFlow flow = flowsByBci.get(invoke.bci());
@@ -244,7 +244,7 @@ final class GraphExport {
             status = "disabled";
         } else {
             for (AnalysisMethod callee : flow.getOriginalCallees()) {
-                callees.add(methodName(callee));
+                callees.add(methodKey(callee));
             }
             status = callees.isEmpty() ? "no-callees" : "ok";
         }
@@ -422,6 +422,11 @@ final class GraphExport {
 
     static String methodName(ResolvedJavaMethod method) {
         return method.getDeclaringClass().toJavaName(true) + "." + method.getName();
+    }
+
+    /** The name and the descriptor: what tells overloads apart. */
+    static String methodKey(ResolvedJavaMethod method) {
+        return methodName(method) + method.getSignature().toMethodDescriptor();
     }
 
     static String fieldName(ResolvedJavaField field) {

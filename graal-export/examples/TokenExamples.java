@@ -7,6 +7,7 @@ public class TokenExamples {
     static void unrelatedWork(Logger logger) { logger.count++; }
     static void note(Logger logger) { logger.count++; }
     static void bump(Counter counter) { counter.value++; }
+    static void bump(Counter counter, int by) { counter.value += by; }
     static int peek(Counter counter) { return counter.value; }
 
     // --- dead stores ------------------------------------------------------
@@ -91,6 +92,12 @@ public class TokenExamples {
         bump(counter);
     }
 
+    // Overloads: each call names its own bump, by descriptor.
+    static void bumpOverloads(Counter counter) {
+        bump(counter);
+        bump(counter, 2);
+    }
+
     public static void main(String[] args) {
         Counter counter = new Counter();
         Config config = new Config();
@@ -108,6 +115,7 @@ public class TokenExamples {
         sum += readAfterBranch(counter, logger, flag);
         tick(counter, logger);
         tickTwice(counter);
+        bumpOverloads(counter);
 
         System.out.println(sum + counter.value + logger.count);
     }
