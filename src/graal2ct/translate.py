@@ -4,7 +4,6 @@ Each method becomes a structure, and each of its basic blocks a λ.
 Each basic bloc k of a method becomes a λ.
 As of now the entire memory modeling is condensed into one linear value of type `heap`.
 ( TODO: how to model exceptions ? -> Right now create a phony cthu instruction which acts as an expcetion,
-                                  -> However there might be problems with this, ...                      )
 """
 
 from itertools import count
@@ -179,7 +178,7 @@ class MethodTranslation:
                 if b in doomed:
                     continue
                 out = set()
-                
+ 
                 for e in self.successors(blocks[b]):
                     out |= live[e.to] - self._phis(e.to)
                 new = uses[b] | (out - defs[b])
@@ -188,7 +187,7 @@ class MethodTranslation:
                     live[b] = new
                     changed = True
 
-        # Determine the node ids of parameters the blocks (their lambdas) receive
+        # Determine the node ids of parameters the blocks (their respective lambdas) receive
         self.param_ids: dict[int, list[int]] = {}
         for b in self.order:
             block = blocks[b]
@@ -332,7 +331,8 @@ class MethodTranslation:
             raise Unsupported(op)
 
     def _field(self, n: Node) -> None:
-        k = self.t.program.field_index(n.field)
+        value = _type(n) if n.op == "LoadField" else self.type_of(n.inputs[-1])
+        k = self.t.program.field_index(n.field, value)
         h = self._next_heap()
         static = "static" if (n.op == "LoadField" and not n.inputs) or (n.op == "StoreField" and len(n.inputs) == 1) else ""
         ins = [self.heap, *(self.ref(i) for i in n.inputs)]

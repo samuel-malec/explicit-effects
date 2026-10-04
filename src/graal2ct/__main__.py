@@ -2,7 +2,7 @@
 
 Usage:
     cd graal-export && ./build.sh examples/TokenExamples.java && \\
-        DUMP_IR=out/token-examples.json ./run-dump.sh TokenExamples
+        DUMP_IR=out/token-examples.json ./run-dump.sh TokenExamples && cd ..
     PYTHONPATH=src python3 -m graal2ct graal-export/out/token-examples.json --method resetCounter
 
 """
@@ -11,6 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from cthu import prelude
 from cthu.ir import to_text
 from cthu.ssu import check
 from graal.graal_import import load
@@ -35,7 +36,7 @@ def main() -> int:
     else:
         print(text)
 
-    errors = check(program)
+    errors = check(program) + prelude.check(program, prelude.load())
     print(f"translated {len(program.structures)} of {len(keys)} method(s)", file=sys.stderr)
     for key, reason in translation.refused.items():
         print(f"  refused {key}: {reason}", file=sys.stderr)
