@@ -7,14 +7,10 @@ _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d",
 
 
 def function_type(params: list[str], outs: list[str]) -> str:
-    """The closure type for these parameter and output types: `f_rrh_h`
-    takes two references and the heap and gives back the heap."""
     return "f_" + "".join(_TYPE_CODES[t] for t in params) + "_" + "".join(_TYPE_CODES[t] for t in outs)
 
 
 def parse_function_type(name: str) -> tuple[list[str], list[str]] | None:
-    """The parameter and output types a closure type names, or None if `name`
-    is not one: the inverse of `function_type`."""
     types = {code: t for t, code in _TYPE_CODES.items()}
     parts = name[2:].split("_")
     if not name.startswith("f_") or len(parts) != 2 or not all(c in types for c in "".join(parts)):
