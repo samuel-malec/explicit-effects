@@ -1,0 +1,2238 @@
+{
+  "methods": {
+    "TokenExamples$Config.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "TokenExamples$Counter.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "TokenExamples$Logger.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "TokenExamples.bump(LTokenExamples$Counter;)V": {"reads": ["TokenExamples$Counter.value"], "writes": ["TokenExamples$Counter.value"], "callees": []},
+    "TokenExamples.bump(LTokenExamples$Counter;I)V": {"reads": ["TokenExamples$Counter.value"], "writes": ["TokenExamples$Counter.value"], "callees": []},
+    "TokenExamples.bumpOverloads(LTokenExamples$Counter;)V": {"reads": [], "writes": [], "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V", "TokenExamples.bump(LTokenExamples$Counter;I)V"]},
+    "TokenExamples.main([Ljava/lang/String;)V": {"reads": ["TokenExamples$Counter.value", "TokenExamples$Logger.count", "java.lang.System.out"], "writes": ["TokenExamples$Config.limit"], "callees": ["TokenExamples$Config.<init>()V", "TokenExamples$Counter.<init>()V", "TokenExamples$Logger.<init>()V", "TokenExamples.bumpOverloads(LTokenExamples$Counter;)V", "TokenExamples.readAfterBranch(LTokenExamples$Counter;LTokenExamples$Logger;Z)I", "TokenExamples.readBack(LTokenExamples$Counter;LTokenExamples$Logger;)I", "TokenExamples.readBackBump(LTokenExamples$Counter;)I", "TokenExamples.resetCounter(LTokenExamples$Counter;LTokenExamples$Logger;)V", "TokenExamples.resetCounterAdjacent(LTokenExamples$Counter;)V", "TokenExamples.resetCounterPeek(LTokenExamples$Counter;LTokenExamples$Logger;)V", "TokenExamples.resetEitherWay(LTokenExamples$Counter;Z)V", "TokenExamples.resetOneWay(LTokenExamples$Counter;Z)V", "TokenExamples.tick(LTokenExamples$Counter;LTokenExamples$Logger;)V", "TokenExamples.tickTwice(LTokenExamples$Counter;)V", "java.io.PrintStream.println(I)V"]},
+    "TokenExamples.note(LTokenExamples$Logger;)V": {"reads": ["TokenExamples$Logger.count"], "writes": ["TokenExamples$Logger.count"], "callees": []},
+    "TokenExamples.peek(LTokenExamples$Counter;)I": {"reads": ["TokenExamples$Counter.value"], "writes": [], "callees": []},
+    "TokenExamples.readAfterBranch(LTokenExamples$Counter;LTokenExamples$Logger;Z)I": {"reads": ["TokenExamples$Counter.value"], "writes": ["TokenExamples$Counter.value"], "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"]},
+    "TokenExamples.readBack(LTokenExamples$Counter;LTokenExamples$Logger;)I": {"reads": ["TokenExamples$Counter.value"], "writes": ["TokenExamples$Counter.value"], "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"]},
+    "TokenExamples.readBackBump(LTokenExamples$Counter;)I": {"reads": ["TokenExamples$Counter.value"], "writes": ["TokenExamples$Counter.value"], "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"]},
+    "TokenExamples.resetCounter(LTokenExamples$Counter;LTokenExamples$Logger;)V": {"reads": [], "writes": ["TokenExamples$Counter.value"], "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"]},
+    "TokenExamples.resetCounterAdjacent(LTokenExamples$Counter;)V": {"reads": [], "writes": ["TokenExamples$Counter.value"], "callees": []},
+    "TokenExamples.resetCounterPeek(LTokenExamples$Counter;LTokenExamples$Logger;)V": {"reads": [], "writes": ["TokenExamples$Counter.value"], "callees": ["TokenExamples.peek(LTokenExamples$Counter;)I"]},
+    "TokenExamples.resetEitherWay(LTokenExamples$Counter;Z)V": {"reads": [], "writes": ["TokenExamples$Counter.value"], "callees": []},
+    "TokenExamples.resetOneWay(LTokenExamples$Counter;Z)V": {"reads": [], "writes": ["TokenExamples$Counter.value"], "callees": []},
+    "TokenExamples.tick(LTokenExamples$Counter;LTokenExamples$Logger;)V": {"reads": [], "writes": [], "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V", "TokenExamples.note(LTokenExamples$Logger;)V"]},
+    "TokenExamples.tickTwice(LTokenExamples$Counter;)V": {"reads": [], "writes": [], "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"]},
+    "TokenExamples.unrelatedWork(LTokenExamples$Logger;)V": {"reads": ["TokenExamples$Logger.count"], "writes": ["TokenExamples$Logger.count"], "callees": []}
+  },
+  "fields": {
+    "TokenExamples$Config.limit": {"read": false, "written": true},
+    "TokenExamples$Counter.value": {"read": true, "written": true},
+    "TokenExamples$Logger.count": {"read": true, "written": true}
+  },
+  "graphs": [
+    {
+      "name": "TokenExamples$Config.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "TokenExamples$Counter.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "TokenExamples$Logger.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "TokenExamples.bump",
+      "descriptor": "(LTokenExamples$Counter;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 22, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 27, "op": "Unwind", "type": "void", "in": [22], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 7, "op": "LoadField", "type": "int", "in": [8], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 14, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 5},
+            {"id": 15, "op": "Add", "type": "int", "in": [7, 14], "bci": 6},
+            {"id": 12, "op": "StoreField", "type": "void", "in": [8, 15], "field": "TokenExamples$Counter.value", "bci": 7},
+            {"id": 17, "op": "Return", "type": "void", "in": [], "bci": 10}
+          ],
+          "ops": [
+            {"kind": "load", "node": 7, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1},
+            {"kind": "store", "node": 12, "bci": 7, "field": "TokenExamples$Counter.value", "object": 1, "value": 15}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 10}
+        }
+      ],
+      "values": {"1": "param0", "15": "AddNode#15"}
+    },
+    {
+      "name": "TokenExamples.bump",
+      "descriptor": "(LTokenExamples$Counter;I)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "int", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 22, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 27, "op": "Unwind", "type": "void", "in": [22], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 8, "op": "LoadField", "type": "int", "in": [9], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 15, "op": "Add", "type": "int", "in": [2, 8], "bci": 6},
+            {"id": 13, "op": "StoreField", "type": "void", "in": [9, 15], "field": "TokenExamples$Counter.value", "bci": 7},
+            {"id": 17, "op": "Return", "type": "void", "in": [], "bci": 10}
+          ],
+          "ops": [
+            {"kind": "load", "node": 8, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1},
+            {"kind": "store", "node": 13, "bci": 7, "field": "TokenExamples$Counter.value", "object": 1, "value": 15}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 10}
+        }
+      ],
+      "values": {"1": "param0", "15": "AddNode#15"}
+    },
+    {
+      "name": "TokenExamples.bumpOverloads",
+      "descriptor": "(LTokenExamples$Counter;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 12, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 5},
+            {"id": 11, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 12], "target": "TokenExamples.bump(LTokenExamples$Counter;I)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;I)V"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 11, "bci": 6, "target": "TokenExamples.bump(LTokenExamples$Counter;I)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;I)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 2, "label": "normal"},
+            {"to": 3, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 20, "op": "Return", "type": "void", "in": [], "bci": 9}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 9}
+        },
+        {
+          "id": 3,
+          "preds": [1],
+          "nodes": [
+            {"id": 16, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {
+              "id": 19,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 7},
+                {"block": 3, "value": 16}
+              ]
+            },
+            {"id": 22, "op": "Unwind", "type": "void", "in": [19], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "TokenExamples.main",
+      "descriptor": "([Ljava/lang/String;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 147, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 0},
+            {"id": 37, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 26},
+            {"id": 148, "op": "CommitAllocation", "type": "void", "in": [147, 37], "bci": -6},
+            {"id": 149, "op": "AllocatedObject", "type": "ref", "in": [147], "bci": 0},
+            {"id": 4, "op": "InvokeWithException", "type": "void", "in": [], "args": [149], "target": "TokenExamples$Counter.<init>()V", "callees": ["TokenExamples$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 4}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 4, "bci": 4, "target": "TokenExamples$Counter.<init>()V", "callees": ["TokenExamples$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 34, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 4}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 151, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 8},
+            {"id": 152, "op": "CommitAllocation", "type": "void", "in": [151, 37], "bci": -6},
+            {"id": 153, "op": "AllocatedObject", "type": "ref", "in": [151], "bci": 8},
+            {"id": 13, "op": "InvokeWithException", "type": "void", "in": [], "args": [153], "target": "TokenExamples$Config.<init>()V", "callees": ["TokenExamples$Config.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 12}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 13, "bci": 12, "target": "TokenExamples$Config.<init>()V", "callees": ["TokenExamples$Config.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 2, "label": "normal"},
+            {"to": 33, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 12}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 155, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 16},
+            {"id": 156, "op": "CommitAllocation", "type": "void", "in": [155, 37], "bci": -6},
+            {"id": 157, "op": "AllocatedObject", "type": "ref", "in": [155], "bci": 16},
+            {"id": 22, "op": "InvokeWithException", "type": "void", "in": [], "args": [157], "target": "TokenExamples$Logger.<init>()V", "callees": ["TokenExamples$Logger.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 20}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 22, "bci": 20, "target": "TokenExamples$Logger.<init>()V", "callees": ["TokenExamples$Logger.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 32, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 20}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 30, "op": "IsNull", "type": "cond", "in": [1], "bci": 25},
+            {"id": 29, "op": "If", "type": "void", "in": [30], "bci": 25}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 25, "cond": "IsNullNode"}
+        },
+        {
+          "id": 4,
+          "preds": [3],
+          "nodes": [
+            {"id": 142, "op": "BytecodeException", "type": "ref", "in": [], "bci": 25}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [3],
+          "nodes": [
+            {"id": 34, "op": "Pi", "type": "ref", "in": [1], "bci": 25},
+            {"id": 33, "op": "ArrayLength", "type": "int", "in": [34], "bci": 25},
+            {"id": 36, "op": "Constant", "type": "int", "in": [], "value": "10", "bci": 37},
+            {"id": 38, "op": "IntegerEquals", "type": "cond", "in": [33, 37], "bci": 26},
+            {"id": 39, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 26},
+            {"id": 40, "op": "Conditional", "type": "int", "in": [38, 37, 39], "bci": 26},
+            {"id": 35, "op": "StoreField", "type": "void", "in": [153, 36], "field": "TokenExamples$Config.limit", "bci": 39},
+            {"id": 42, "op": "InvokeWithException", "type": "void", "in": [], "args": [149, 157], "target": "TokenExamples.resetCounter(LTokenExamples$Counter;LTokenExamples$Logger;)V", "callees": ["TokenExamples.resetCounter(LTokenExamples$Counter;LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 44}
+          ],
+          "ops": [
+            {"kind": "store", "node": 35, "bci": 39, "field": "TokenExamples$Config.limit", "object": 153, "value": 36},
+            {"kind": "invoke", "node": 42, "bci": 44, "target": "TokenExamples.resetCounter(LTokenExamples$Counter;LTokenExamples$Logger;)V", "callees": ["TokenExamples.resetCounter(LTokenExamples$Counter;LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 6, "label": "normal"},
+            {"to": 31, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 44}
+        },
+        {
+          "id": 6,
+          "preds": [5],
+          "nodes": [
+            {"id": 49, "op": "InvokeWithException", "type": "void", "in": [], "args": [149, 157], "target": "TokenExamples.resetCounterPeek(LTokenExamples$Counter;LTokenExamples$Logger;)V", "callees": ["TokenExamples.resetCounterPeek(LTokenExamples$Counter;LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 49}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 49, "bci": 49, "target": "TokenExamples.resetCounterPeek(LTokenExamples$Counter;LTokenExamples$Logger;)V", "callees": ["TokenExamples.resetCounterPeek(LTokenExamples$Counter;LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 7, "label": "normal"},
+            {"to": 30, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 49}
+        },
+        {
+          "id": 7,
+          "preds": [6],
+          "nodes": [
+            {"id": 56, "op": "InvokeWithException", "type": "void", "in": [], "args": [149], "target": "TokenExamples.resetCounterAdjacent(LTokenExamples$Counter;)V", "callees": ["TokenExamples.resetCounterAdjacent(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 53}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 56, "bci": 53, "target": "TokenExamples.resetCounterAdjacent(LTokenExamples$Counter;)V", "callees": ["TokenExamples.resetCounterAdjacent(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 8, "label": "normal"},
+            {"to": 29, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 53}
+        },
+        {
+          "id": 8,
+          "preds": [7],
+          "nodes": [
+            {"id": 63, "op": "InvokeWithException", "type": "void", "in": [], "args": [149, 40], "target": "TokenExamples.resetEitherWay(LTokenExamples$Counter;Z)V", "callees": ["TokenExamples.resetEitherWay(LTokenExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true, "bci": 59}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 63, "bci": 59, "target": "TokenExamples.resetEitherWay(LTokenExamples$Counter;Z)V", "callees": ["TokenExamples.resetEitherWay(LTokenExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 9, "label": "normal"},
+            {"to": 28, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 59}
+        },
+        {
+          "id": 9,
+          "preds": [8],
+          "nodes": [
+            {"id": 70, "op": "InvokeWithException", "type": "void", "in": [], "args": [149, 40], "target": "TokenExamples.resetOneWay(LTokenExamples$Counter;Z)V", "callees": ["TokenExamples.resetOneWay(LTokenExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true, "bci": 65}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 70, "bci": 65, "target": "TokenExamples.resetOneWay(LTokenExamples$Counter;Z)V", "callees": ["TokenExamples.resetOneWay(LTokenExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 10, "label": "normal"},
+            {"to": 27, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 65}
+        },
+        {
+          "id": 10,
+          "preds": [9],
+          "nodes": [
+            {"id": 77, "op": "InvokeWithException", "type": "int", "in": [], "args": [149, 157], "target": "TokenExamples.readBack(LTokenExamples$Counter;LTokenExamples$Logger;)I", "callees": ["TokenExamples.readBack(LTokenExamples$Counter;LTokenExamples$Logger;)I"], "flow": "ok", "exception_edge": true, "bci": 70}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 77, "bci": 70, "target": "TokenExamples.readBack(LTokenExamples$Counter;LTokenExamples$Logger;)I", "callees": ["TokenExamples.readBack(LTokenExamples$Counter;LTokenExamples$Logger;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 11, "label": "normal"},
+            {"to": 26, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 70}
+        },
+        {
+          "id": 11,
+          "preds": [10],
+          "nodes": [
+            {"id": 84, "op": "InvokeWithException", "type": "int", "in": [], "args": [149], "target": "TokenExamples.readBackBump(LTokenExamples$Counter;)I", "callees": ["TokenExamples.readBackBump(LTokenExamples$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 78}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 84, "bci": 78, "target": "TokenExamples.readBackBump(LTokenExamples$Counter;)I", "callees": ["TokenExamples.readBackBump(LTokenExamples$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 12, "label": "normal"},
+            {"to": 25, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 78}
+        },
+        {
+          "id": 12,
+          "preds": [11],
+          "nodes": [
+            {"id": 93, "op": "Add", "type": "int", "in": [77, 84], "bci": 81},
+            {"id": 91, "op": "InvokeWithException", "type": "int", "in": [], "args": [149, 157, 40], "target": "TokenExamples.readAfterBranch(LTokenExamples$Counter;LTokenExamples$Logger;Z)I", "callees": ["TokenExamples.readAfterBranch(LTokenExamples$Counter;LTokenExamples$Logger;Z)I"], "flow": "ok", "exception_edge": true, "bci": 90}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 91, "bci": 90, "target": "TokenExamples.readAfterBranch(LTokenExamples$Counter;LTokenExamples$Logger;Z)I", "callees": ["TokenExamples.readAfterBranch(LTokenExamples$Counter;LTokenExamples$Logger;Z)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 13, "label": "normal"},
+            {"to": 24, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 90}
+        },
+        {
+          "id": 13,
+          "preds": [12],
+          "nodes": [
+            {"id": 101, "op": "Add", "type": "int", "in": [91, 93], "bci": 93},
+            {"id": 99, "op": "InvokeWithException", "type": "void", "in": [], "args": [149, 157], "target": "TokenExamples.tick(LTokenExamples$Counter;LTokenExamples$Logger;)V", "callees": ["TokenExamples.tick(LTokenExamples$Counter;LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 98}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 99, "bci": 98, "target": "TokenExamples.tick(LTokenExamples$Counter;LTokenExamples$Logger;)V", "callees": ["TokenExamples.tick(LTokenExamples$Counter;LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 14, "label": "normal"},
+            {"to": 23, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 98}
+        },
+        {
+          "id": 14,
+          "preds": [13],
+          "nodes": [
+            {"id": 107, "op": "InvokeWithException", "type": "void", "in": [], "args": [149], "target": "TokenExamples.tickTwice(LTokenExamples$Counter;)V", "callees": ["TokenExamples.tickTwice(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 102}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 107, "bci": 102, "target": "TokenExamples.tickTwice(LTokenExamples$Counter;)V", "callees": ["TokenExamples.tickTwice(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 15, "label": "normal"},
+            {"to": 22, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 102}
+        },
+        {
+          "id": 15,
+          "preds": [14],
+          "nodes": [
+            {"id": 114, "op": "InvokeWithException", "type": "void", "in": [], "args": [149], "target": "TokenExamples.bumpOverloads(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bumpOverloads(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 106}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 114, "bci": 106, "target": "TokenExamples.bumpOverloads(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bumpOverloads(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 16, "label": "normal"},
+            {"to": 21, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 106}
+        },
+        {
+          "id": 16,
+          "preds": [15],
+          "nodes": [
+            {"id": 121, "op": "LoadField", "type": "ref", "in": [], "field": "java.lang.System.out", "bci": 109},
+            {"id": 122, "op": "LoadField", "type": "int", "in": [149], "field": "TokenExamples$Counter.value", "bci": 115},
+            {"id": 123, "op": "LoadField", "type": "int", "in": [157], "field": "TokenExamples$Logger.count", "bci": 120},
+            {"id": 125, "op": "IsNull", "type": "cond", "in": [121], "bci": 124},
+            {"id": 124, "op": "If", "type": "void", "in": [125], "bci": 124}
+          ],
+          "ops": [
+            {"kind": "load", "node": 121, "bci": 109, "field": "java.lang.System.out", "object": null},
+            {"kind": "load", "node": 122, "bci": 115, "field": "TokenExamples$Counter.value", "object": 149},
+            {"kind": "load", "node": 123, "bci": 120, "field": "TokenExamples$Logger.count", "object": 157}
+          ],
+          "succs": [
+            {"to": 17, "label": "true"},
+            {"to": 18, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 124, "cond": "IsNullNode"}
+        },
+        {
+          "id": 17,
+          "preds": [16],
+          "nodes": [
+            {"id": 139, "op": "BytecodeException", "type": "ref", "in": [], "bci": 124}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 18,
+          "preds": [16],
+          "nodes": [
+            {"id": 129, "op": "Pi", "type": "ref", "in": [121], "bci": 124},
+            {"id": 130, "op": "Add", "type": "int", "in": [101, 122], "bci": 118},
+            {"id": 131, "op": "Add", "type": "int", "in": [123, 130], "bci": 123},
+            {"id": 128, "op": "InvokeWithException", "type": "void", "in": [], "args": [129, 131], "target": "java.io.PrintStream.println(I)V", "callees": ["java.io.PrintStream.println(I)V"], "flow": "ok", "exception_edge": true, "bci": 124}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 128, "bci": 124, "target": "java.io.PrintStream.println(I)V", "callees": ["java.io.PrintStream.println(I)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 19, "label": "normal"},
+            {"to": 20, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 124}
+        },
+        {
+          "id": 19,
+          "preds": [18],
+          "nodes": [
+            {"id": 138, "op": "Return", "type": "void", "in": [], "bci": 127}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 127}
+        },
+        {
+          "id": 20,
+          "preds": [18],
+          "nodes": [
+            {"id": 135, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 124}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 21,
+          "preds": [15],
+          "nodes": [
+            {"id": 118, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 106}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 22,
+          "preds": [14],
+          "nodes": [
+            {"id": 111, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 102}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 23,
+          "preds": [13],
+          "nodes": [
+            {"id": 104, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 98}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 24,
+          "preds": [12],
+          "nodes": [
+            {"id": 96, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 90}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 25,
+          "preds": [11],
+          "nodes": [
+            {"id": 88, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 78}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 26,
+          "preds": [10],
+          "nodes": [
+            {"id": 81, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 70}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 27,
+          "preds": [9],
+          "nodes": [
+            {"id": 74, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 65}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 28,
+          "preds": [8],
+          "nodes": [
+            {"id": 67, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 59}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 29,
+          "preds": [7],
+          "nodes": [
+            {"id": 60, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 53}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 30,
+          "preds": [6],
+          "nodes": [
+            {"id": 53, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 49}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 31,
+          "preds": [5],
+          "nodes": [
+            {"id": 46, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 44}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 32,
+          "preds": [2],
+          "nodes": [
+            {"id": 26, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 20}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 33,
+          "preds": [1],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 12}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 34,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 35, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 35,
+          "preds": [34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 17, 4],
+          "nodes": [
+            {
+              "id": 20,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 34, "value": 8},
+                {"block": 33, "value": 17},
+                {"block": 32, "value": 26},
+                {"block": 31, "value": 46},
+                {"block": 30, "value": 53},
+                {"block": 29, "value": 60},
+                {"block": 28, "value": 67},
+                {"block": 27, "value": 74},
+                {"block": 26, "value": 81},
+                {"block": 25, "value": 88},
+                {"block": 24, "value": 96},
+                {"block": 23, "value": 104},
+                {"block": 22, "value": 111},
+                {"block": 21, "value": 118},
+                {"block": 20, "value": 135},
+                {"block": 17, "value": 139},
+                {"block": 4, "value": 142}
+              ]
+            },
+            {"id": 146, "op": "Unwind", "type": "void", "in": [20], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"149": "AllocatedObjectNode#149", "153": "AllocatedObjectNode#153", "157": "AllocatedObjectNode#157", "36": "const 10"}
+    },
+    {
+      "name": "TokenExamples.note",
+      "descriptor": "(LTokenExamples$Logger;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 22, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 27, "op": "Unwind", "type": "void", "in": [22], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 7, "op": "LoadField", "type": "int", "in": [8], "field": "TokenExamples$Logger.count", "bci": 2},
+            {"id": 14, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 5},
+            {"id": 15, "op": "Add", "type": "int", "in": [7, 14], "bci": 6},
+            {"id": 12, "op": "StoreField", "type": "void", "in": [8, 15], "field": "TokenExamples$Logger.count", "bci": 7},
+            {"id": 17, "op": "Return", "type": "void", "in": [], "bci": 10}
+          ],
+          "ops": [
+            {"kind": "load", "node": 7, "bci": 2, "field": "TokenExamples$Logger.count", "object": 1},
+            {"kind": "store", "node": 12, "bci": 7, "field": "TokenExamples$Logger.count", "object": 1, "value": 15}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 10}
+        }
+      ],
+      "values": {"1": "param0", "15": "AddNode#15"}
+    },
+    {
+      "name": "TokenExamples.peek",
+      "descriptor": "(LTokenExamples$Counter;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 1},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "BytecodeException", "type": "ref", "in": [], "bci": 1},
+            {"id": 12, "op": "Unwind", "type": "void", "in": [10], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 1},
+            {"id": 7, "op": "LoadField", "type": "int", "in": [8], "field": "TokenExamples$Counter.value", "bci": 1},
+            {"id": 9, "op": "Return", "type": "void", "in": [7], "bci": 4}
+          ],
+          "ops": [
+            {"kind": "load", "node": 7, "bci": 1, "field": "TokenExamples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "TokenExamples.readAfterBranch",
+      "descriptor": "(LTokenExamples$Counter;LTokenExamples$Logger;Z)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "int", "in": [], "index": 2, "bci": -1},
+            {"id": 11, "op": "IsNull", "type": "cond", "in": [1], "bci": 6},
+            {"id": 6, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 1},
+            {"id": 7, "op": "IntegerEquals", "type": "cond", "in": [3, 6], "bci": 1},
+            {"id": 5, "op": "If", "type": "void", "in": [7], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IntegerEqualsNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 24, "op": "If", "type": "void", "in": [11], "bci": 14}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 2, "label": "true"},
+            {"to": 3, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 14, "cond": "IsNullNode"}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 32, "op": "BytecodeException", "type": "ref", "in": [], "bci": 14}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 3,
+          "preds": [1],
+          "nodes": [
+            {"id": 28, "op": "Pi", "type": "ref", "in": [1], "bci": 14},
+            {"id": 29, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 13},
+            {"id": 27, "op": "StoreField", "type": "void", "in": [28, 29], "field": "TokenExamples$Counter.value", "bci": 14}
+          ],
+          "ops": [
+            {"kind": "store", "node": 27, "bci": 14, "field": "TokenExamples$Counter.value", "object": 1, "value": 29}
+          ],
+          "succs": [
+            {"to": 7, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 17}
+        },
+        {
+          "id": 4,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "If", "type": "void", "in": [11], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": "true"},
+            {"to": 6, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IsNullNode"}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 20, "op": "BytecodeException", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 6,
+          "preds": [4],
+          "nodes": [
+            {"id": 15, "op": "Pi", "type": "ref", "in": [1], "bci": 6},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 5},
+            {"id": 14, "op": "StoreField", "type": "void", "in": [15, 16], "field": "TokenExamples$Counter.value", "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 14, "bci": 6, "field": "TokenExamples$Counter.value", "object": 1, "value": 16}
+          ],
+          "succs": [
+            {"to": 7, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 17}
+        },
+        {
+          "id": 7,
+          "preds": [6, 3],
+          "nodes": [
+            {"id": 37, "op": "InvokeWithException", "type": "void", "in": [], "args": [2], "target": "TokenExamples.unrelatedWork(LTokenExamples$Logger;)V", "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 18}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 37, "bci": 18, "target": "TokenExamples.unrelatedWork(LTokenExamples$Logger;)V", "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 8, "label": "normal"},
+            {"to": 11, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 18}
+        },
+        {
+          "id": 8,
+          "preds": [7],
+          "nodes": [
+            {"id": 44, "op": "If", "type": "void", "in": [11], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 9, "label": "true"},
+            {"to": 10, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 22, "cond": "IsNullNode"}
+        },
+        {
+          "id": 9,
+          "preds": [8],
+          "nodes": [
+            {"id": 50, "op": "BytecodeException", "type": "ref", "in": [], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 10,
+          "preds": [8],
+          "nodes": [
+            {"id": 48, "op": "Pi", "type": "ref", "in": [1], "bci": 22},
+            {"id": 47, "op": "LoadField", "type": "int", "in": [48], "field": "TokenExamples$Counter.value", "bci": 22},
+            {"id": 49, "op": "Return", "type": "void", "in": [47], "bci": 25}
+          ],
+          "ops": [
+            {"kind": "load", "node": 47, "bci": 22, "field": "TokenExamples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 25}
+        },
+        {
+          "id": 11,
+          "preds": [7],
+          "nodes": [
+            {"id": 41, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 18}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 12,
+          "preds": [5, 2, 11, 9],
+          "nodes": [
+            {
+              "id": 35,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 5, "value": 20},
+                {"block": 2, "value": 32},
+                {"block": 11, "value": 41},
+                {"block": 9, "value": 50}
+              ]
+            },
+            {"id": 54, "op": "Unwind", "type": "void", "in": [35], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "16": "const 1", "29": "const 2"}
+    },
+    {
+      "name": "TokenExamples.readBack",
+      "descriptor": "(LTokenExamples$Counter;LTokenExamples$Logger;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 30, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 12, "op": "InvokeWithException", "type": "void", "in": [], "args": [2], "target": "TokenExamples.unrelatedWork(LTokenExamples$Logger;)V", "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1, "value": 10},
+            {"kind": "invoke", "node": 12, "bci": 6, "target": "TokenExamples.unrelatedWork(LTokenExamples$Logger;)V", "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "TokenExamples$Counter.value", "bci": 10},
+            {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 13}
+          ],
+          "ops": [
+            {"kind": "load", "node": 23, "bci": 10, "field": "TokenExamples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 13}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 16, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 29,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 16},
+                {"block": 1, "value": 30}
+              ]
+            },
+            {"id": 34, "op": "Unwind", "type": "void", "in": [29], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 5"}
+    },
+    {
+      "name": "TokenExamples.readBackBump",
+      "descriptor": "(LTokenExamples$Counter;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 29, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 9, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 11, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 7, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1, "value": 9},
+            {"kind": "invoke", "node": 11, "bci": 6, "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 22, "op": "LoadField", "type": "int", "in": [8], "field": "TokenExamples$Counter.value", "bci": 10},
+            {"id": 24, "op": "Return", "type": "void", "in": [22], "bci": 13}
+          ],
+          "ops": [
+            {"kind": "load", "node": 22, "bci": 10, "field": "TokenExamples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 13}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 15, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 28,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 15},
+                {"block": 1, "value": 29}
+              ]
+            },
+            {"id": 33, "op": "Unwind", "type": "void", "in": [28], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "9": "const 5"}
+    },
+    {
+      "name": "TokenExamples.resetCounter",
+      "descriptor": "(LTokenExamples$Counter;LTokenExamples$Logger;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 32, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 12, "op": "InvokeWithException", "type": "void", "in": [], "args": [2], "target": "TokenExamples.unrelatedWork(LTokenExamples$Logger;)V", "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1, "value": 10},
+            {"kind": "invoke", "node": 12, "bci": 6, "target": "TokenExamples.unrelatedWork(LTokenExamples$Logger;)V", "callees": ["TokenExamples.unrelatedWork(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 25, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 10},
+            {"id": 23, "op": "StoreField", "type": "void", "in": [9, 25], "field": "TokenExamples$Counter.value", "bci": 11},
+            {"id": 27, "op": "Return", "type": "void", "in": [], "bci": 14}
+          ],
+          "ops": [
+            {"kind": "store", "node": 23, "bci": 11, "field": "TokenExamples$Counter.value", "object": 1, "value": 25}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 16, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 31,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 16},
+                {"block": 1, "value": 32}
+              ]
+            },
+            {"id": 36, "op": "Unwind", "type": "void", "in": [31], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 1", "25": "const 2"}
+    },
+    {
+      "name": "TokenExamples.resetCounterAdjacent",
+      "descriptor": "(LTokenExamples$Counter;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 23, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 28, "op": "Unwind", "type": "void", "in": [23], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 9, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 6},
+            {"id": 14, "op": "StoreField", "type": "void", "in": [8, 16], "field": "TokenExamples$Counter.value", "bci": 7},
+            {"id": 18, "op": "Return", "type": "void", "in": [], "bci": 10}
+          ],
+          "ops": [
+            {"kind": "store", "node": 7, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1, "value": 9},
+            {"kind": "store", "node": 14, "bci": 7, "field": "TokenExamples$Counter.value", "object": 1, "value": 16}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 10}
+        }
+      ],
+      "values": {"1": "param0", "16": "const 2", "9": "const 1"}
+    },
+    {
+      "name": "TokenExamples.resetCounterPeek",
+      "descriptor": "(LTokenExamples$Counter;LTokenExamples$Logger;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 32, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 12, "op": "InvokeWithException", "type": "int", "in": [], "args": [1], "target": "TokenExamples.peek(LTokenExamples$Counter;)I", "callees": ["TokenExamples.peek(LTokenExamples$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1, "value": 10},
+            {"kind": "invoke", "node": 12, "bci": 6, "target": "TokenExamples.peek(LTokenExamples$Counter;)I", "callees": ["TokenExamples.peek(LTokenExamples$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 25, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 11},
+            {"id": 23, "op": "StoreField", "type": "void", "in": [9, 25], "field": "TokenExamples$Counter.value", "bci": 12},
+            {"id": 27, "op": "Return", "type": "void", "in": [], "bci": 15}
+          ],
+          "ops": [
+            {"kind": "store", "node": 23, "bci": 12, "field": "TokenExamples$Counter.value", "object": 1, "value": 25}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 15}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 16, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 31,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 16},
+                {"block": 1, "value": 32}
+              ]
+            },
+            {"id": 36, "op": "Unwind", "type": "void", "in": [31], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 1", "25": "const 2"}
+    },
+    {
+      "name": "TokenExamples.resetEitherWay",
+      "descriptor": "(LTokenExamples$Counter;Z)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "int", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 41, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 47, "op": "Unwind", "type": "void", "in": [41], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 13, "op": "IntegerEquals", "type": "cond", "in": [2, 10], "bci": 6},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IntegerEqualsNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 34, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 18},
+            {"id": 32, "op": "StoreField", "type": "void", "in": [9, 34], "field": "TokenExamples$Counter.value", "bci": 19}
+          ],
+          "ops": [
+            {"kind": "store", "node": 32, "bci": 19, "field": "TokenExamples$Counter.value", "object": 1, "value": 34}
+          ],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 21, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 10},
+            {"id": 19, "op": "StoreField", "type": "void", "in": [9, 21], "field": "TokenExamples$Counter.value", "bci": 11}
+          ],
+          "ops": [
+            {"kind": "store", "node": 19, "bci": 11, "field": "TokenExamples$Counter.value", "object": 1, "value": 21}
+          ],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {"id": 45, "op": "Return", "type": "void", "in": [], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 22}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 0", "21": "const 1", "34": "const 2"}
+    },
+    {
+      "name": "TokenExamples.resetOneWay",
+      "descriptor": "(LTokenExamples$Counter;Z)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "int", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 30, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 37, "op": "Unwind", "type": "void", "in": [30], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "TokenExamples$Counter.value", "bci": 2},
+            {"id": 13, "op": "IntegerEquals", "type": "cond", "in": [2, 10], "bci": 6},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "TokenExamples$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IntegerEqualsNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 21, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 10},
+            {"id": 19, "op": "StoreField", "type": "void", "in": [9, 21], "field": "TokenExamples$Counter.value", "bci": 11}
+          ],
+          "ops": [
+            {"kind": "store", "node": 19, "bci": 11, "field": "TokenExamples$Counter.value", "object": 1, "value": 21}
+          ],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 14}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {"id": 35, "op": "Return", "type": "void", "in": [], "bci": 14}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 0", "21": "const 1"}
+    },
+    {
+      "name": "TokenExamples.tick",
+      "descriptor": "(LTokenExamples$Counter;LTokenExamples$Logger;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 4, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 4, "bci": 1, "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 12, "op": "InvokeWithException", "type": "void", "in": [], "args": [2], "target": "TokenExamples.note(LTokenExamples$Logger;)V", "callees": ["TokenExamples.note(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 5}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 12, "bci": 5, "target": "TokenExamples.note(LTokenExamples$Logger;)V", "callees": ["TokenExamples.note(LTokenExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 2, "label": "normal"},
+            {"to": 3, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 5}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 20, "op": "Return", "type": "void", "in": [], "bci": 8}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 8}
+        },
+        {
+          "id": 3,
+          "preds": [1],
+          "nodes": [
+            {"id": 16, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 5}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {
+              "id": 19,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 8},
+                {"block": 3, "value": 16}
+              ]
+            },
+            {"id": 22, "op": "Unwind", "type": "void", "in": [19], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "TokenExamples.tickTwice",
+      "descriptor": "(LTokenExamples$Counter;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 11, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 5}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 11, "bci": 5, "target": "TokenExamples.bump(LTokenExamples$Counter;)V", "callees": ["TokenExamples.bump(LTokenExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 2, "label": "normal"},
+            {"to": 3, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 5}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 19, "op": "Return", "type": "void", "in": [], "bci": 8}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 8}
+        },
+        {
+          "id": 3,
+          "preds": [1],
+          "nodes": [
+            {"id": 15, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 5}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {
+              "id": 18,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 7},
+                {"block": 3, "value": 15}
+              ]
+            },
+            {"id": 21, "op": "Unwind", "type": "void", "in": [18], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "TokenExamples.unrelatedWork",
+      "descriptor": "(LTokenExamples$Logger;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 22, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 27, "op": "Unwind", "type": "void", "in": [22], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 7, "op": "LoadField", "type": "int", "in": [8], "field": "TokenExamples$Logger.count", "bci": 2},
+            {"id": 14, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 5},
+            {"id": 15, "op": "Add", "type": "int", "in": [7, 14], "bci": 6},
+            {"id": 12, "op": "StoreField", "type": "void", "in": [8, 15], "field": "TokenExamples$Logger.count", "bci": 7},
+            {"id": 17, "op": "Return", "type": "void", "in": [], "bci": 10}
+          ],
+          "ops": [
+            {"kind": "load", "node": 7, "bci": 2, "field": "TokenExamples$Logger.count", "object": 1},
+            {"kind": "store", "node": 12, "bci": 7, "field": "TokenExamples$Logger.count", "object": 1, "value": 15}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 10}
+        }
+      ],
+      "values": {"1": "param0", "15": "AddNode#15"}
+    }
+  ]
+}
