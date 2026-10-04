@@ -1,9 +1,9 @@
-type int    ; also Java's boolean, byte, char and short
+type int    ; int also represents Java's boolean, byte, char and short
 type long
 type float
 type double
 type ref
-type bool   ; not to be confused with Java's boolean; it is the input type of opt and the result of comparisons
+type bool   ; !!! not to be confused with Java's boolean; this is the input type of opt and the result of comparisons
 type heap
 type stck
 
