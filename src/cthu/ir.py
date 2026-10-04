@@ -12,6 +12,16 @@ def function_type(params: list[str], outs: list[str]) -> str:
     return "f_" + "".join(_TYPE_CODES[t] for t in params) + "_" + "".join(_TYPE_CODES[t] for t in outs)
 
 
+def parse_function_type(name: str) -> tuple[list[str], list[str]] | None:
+    """The parameter and output types a closure type names, or None if `name`
+    is not one: the inverse of `function_type`."""
+    types = {code: t for t, code in _TYPE_CODES.items()}
+    parts = name[2:].split("_")
+    if not name.startswith("f_") or len(parts) != 2 or not all(c in types for c in "".join(parts)):
+        return None
+    return [types[c] for c in parts[0]], [types[c] for c in parts[1]]
+
+
 @dataclass
 class Instr:
     type: str
@@ -51,14 +61,14 @@ class Structure:
 @dataclass
 class Program:
     structures: list[Structure] = field(default_factory=list)
-    fields: list[str] = field(default_factory=list)  # `field` declarations: get_i / set_i
+    fields: dict[str, str] = field(default_factory=dict)  # `field T "name"` declarations, in order: get_i / set_i
     classes: list[str] = field(default_factory=list)  # `class` declarations: new_i
     externals: list[str] = field(default_factory=list)  # external functions called from the analyzed code
 
-    def field_index(self, name: str) -> int:
-        if name not in self.fields:
-            self.fields.append(name)
-        return self.fields.index(name)
+    def field_index(self, name: str, type_: str) -> int:
+        if self.fields.setdefault(name, type_) != type_:
+            raise ValueError(f"field {name} is both {self.fields[name]} and {type_}")
+        return list(self.fields).index(name)
 
     def class_index(self, name: str) -> int:
         if name not in self.classes:
@@ -70,8 +80,8 @@ def to_text(program: Program, header: str = "") -> str:
     lines = [f"; {line}" for line in header.splitlines()]
     if lines:
         lines.append("")
-    for i, name in enumerate(program.fields):
-        lines.append(f'field "{name}"   ; get_{i}, set_{i}')
+    for i, (name, type_) in enumerate(program.fields.items()):
+        lines.append(f'field {type_} "{name}"   ; get_{i}, set_{i}')
     for i, name in enumerate(program.classes):
         lines.append(f'class "{name}"   ; new_{i}')
     for name in program.externals:
