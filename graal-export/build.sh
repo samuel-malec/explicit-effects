@@ -3,14 +3,14 @@
 #DUMP_JSON=out/my.json ./run-dump.sh my.pkg.Main
 
 # JAVAC_CP adds a compile classpath for the target, e.g.
-#   JAVAC_CP=$G/sdk/mxbuild/dists/collections.jar ./build.sh Bench.java
+#   JAVAC_CP=$G/sdk/mxbuild/dists/collections.jar ./build.sh path/to/My.java
 #
 # Sources land in classes/, which is what run-dump.sh analyses.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 SOURCES=("$@")
 if [[ ${#SOURCES[@]} -eq 0 ]]; then
-    SOURCES=("$HERE/Demo.java")
+    SOURCES=("$HERE/examples/Examples.java")
 fi
 
 rm -rf "$HERE/classes"

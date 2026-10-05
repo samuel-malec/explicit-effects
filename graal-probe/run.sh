@@ -2,8 +2,8 @@
 # Measure what Graal does to the examples' memory operations, with the graal
 # tree's own test harness (GraalCompilerTest), without mx.
 #
-#   ./run.sh                          # TokenExamples and Examples
-#   ./run.sh TokenExamples            # chosen classes from ../graal-export/examples
+#   ./run.sh                          # Examples
+#   ./run.sh Examples                 # chosen classes from ../graal-export/examples
 #   GRAAL_HOME=/path/to/graal ./run.sh
 PROBE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # G, UPGRADE_MP, MODULE_PATH, ADD_MODULES and EXPORTS: the same module and JVMCI
@@ -12,7 +12,7 @@ source "$PROBE/../graal-export/env.sh"
 
 EXAMPLES=("$@")
 if [[ ${#EXAMPLES[@]} -eq 0 ]]; then
-    EXAMPLES=(TokenExamples Examples)
+    EXAMPLES=(Examples)
 fi
 
 JUNIT=$(find "$HOME/.mx/cache" -path "*/JUNIT_*/junit.jar" 2>/dev/null | head -1)

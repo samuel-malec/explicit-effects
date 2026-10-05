@@ -139,7 +139,7 @@ public class MemoryProbe extends GraalCompilerTest {
         }
     }
 
-    /** TokenExamples$Counter.value -> Counter.value */
+    /** Examples$Counter.value -> Counter.value */
     private static String shorten(LocationIdentity location) {
         String id = location.toString();
         return id.substring(id.lastIndexOf('$') + 1);
@@ -217,10 +217,10 @@ public class MemoryProbe extends GraalCompilerTest {
         suite.insertAtIndex(0, new Record(tier + " (entry)"));
     }
 
-    /** Compiles one TokenExamples method with the suite instrumented, collecting the trace. */
+    /** Compiles one Examples method with the suite instrumented, collecting the trace. */
     private void compileTraced(String method, OptionValues options) {
         trace.clear();
-        Class<?> examples = tokenExamples();
+        Class<?> examples = examplesClass();
         ResolvedJavaMethod m = getResolvedJavaMethod(examples, method);
         if (options == null) {
             getFinalGraph(m);
@@ -229,10 +229,10 @@ public class MemoryProbe extends GraalCompilerTest {
         }
     }
 
-    /** The deep dives use TokenExamples; skipped when it is not among the examples. */
-    private static Class<?> tokenExamples() {
-        Assume.assumeTrue(System.getProperty("probe.examples", "TokenExamples").contains("TokenExamples"));
-        return example("TokenExamples");
+    /** The deep dives use Examples; skipped when it is not among the examples. */
+    private static Class<?> examplesClass() {
+        Assume.assumeTrue(System.getProperty("probe.examples", "Examples").contains("Examples"));
+        return example("Examples");
     }
 
     private void traceMethod(String method, OptionValues options, String note) {
@@ -256,26 +256,25 @@ public class MemoryProbe extends GraalCompilerTest {
 
     @Test
     public void whichPhase() {
-        tokenExamples();
+        examplesClass();
         System.out.println();
         System.out.println("=== where the counts change, phase by phase ===");
-        traceMethod("resetCounterAdjacent", null, "");
-        traceMethod("resetCounterWriteBetween", null, "");
-        traceMethod("resetCounter", null, "");
-        traceMethod("resetCounter", noInlining(), "  [no inlining]");
-        traceMethod("resetCounterVirtual", null, "");
-        traceMethod("readBack", null, "");
-        traceMethod("readBack", noInlining(), "  [no inlining]");
-        traceMethod("resetEitherWay", null, "");
-        traceMethod("resetOneWay", null, "");
+        traceMethod("deadStoreOtherField", null, "");
+        traceMethod("deadStoreBothArms", null, "");
+        traceMethod("deadStoreOneArm", null, "");
+        traceMethod("forwardAcrossCall", null, "");
+        traceMethod("forwardAcrossCall", noInlining(), "  [no inlining]");
+        traceMethod("forwardAcrossWritingCall", null, "");
+        traceMethod("forwardAcrossVirtualCall", null, "");
+        traceMethod("hoistLoadOutOfLoop", null, "");
         System.out.println();
     }
 
     // --- the memory graph around FloatingReadPhase ------------------------
     //
     // WriteNode.simplify removes a store only when next() is the write that
-    // overwrites it. Dump the fixed memory accesses either side of
-    // FloatingReadPhase, which builds the lastLocationAccess edges.
+    // overwrites it. Dump the memory accesses either side of FloatingReadPhase,
+    // which builds the lastLocationAccess edges and floats the reads.
 
     static final class DumpChain extends BasePhase<Object> {
         private final String label;
@@ -298,7 +297,7 @@ public class MemoryProbe extends GraalCompilerTest {
         protected void run(StructuredGraph graph, Object context) {
             trace.add("    " + label);
             for (Node n : graph.getNodes()) {
-                if (n instanceof FixedAccessNode access) {
+                if ((n instanceof FixedAccessNode || n instanceof FloatingReadNode) && n instanceof MemoryAccess access) {
                     trace.add(String.format("      %-12s loc=%-16s usages=%d  next=%-14s lastLocationAccess=%s",
                                     brief(n), shorten(access.getLocationIdentity()), n.getUsageCount(),
                                     n instanceof FixedWithNextNode fixed ? brief(fixed.next()) : "-",
@@ -338,14 +337,13 @@ public class MemoryProbe extends GraalCompilerTest {
 
     @Test
     public void memoryChain() {
-        tokenExamples();
+        examplesClass();
         System.out.println();
-        System.out.println("=== fixed memory accesses either side of FloatingReadPhase ===");
-        chainDump("resetCounterWriteBetween", null, "");
-        chainDump("resetCounterReadBetween", null, "");
-        chainDump("resetCounter", noInlining(), "  [no inlining]");
-        chainDump("resetCounterVirtual", null, "");
-        chainDump("resetEitherWay", null, "");
+        System.out.println("=== memory accesses either side of FloatingReadPhase ===");
+        chainDump("deadStoreOtherField", null, "");
+        chainDump("deadStoreBothArms", null, "");
+        chainDump("forwardAcrossCall", noInlining(), "  [no inlining]");
+        chainDump("forwardAcrossVirtualCall", null, "");
         System.out.println();
     }
 }

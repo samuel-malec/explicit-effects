@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dump per-method field read/write sets from Native Image's points-to analysis.
 #
-#   ./run-dump.sh                        # entry class Demo
+#   ./run-dump.sh                        # entry class Examples
 #   ./run-dump.sh my.pkg.Main            # your own entry class
 #   ./run-dump.sh my.pkg.Main -H:...     # plus extra analyzer options
 #
@@ -12,7 +12,7 @@
 #                that isn't a JDK/Graal platform class)
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
-ENTRY=Demo
+ENTRY=Examples
 if [[ $# -gt 0 && "$1" != -* ]]; then
     ENTRY="$1"
     shift

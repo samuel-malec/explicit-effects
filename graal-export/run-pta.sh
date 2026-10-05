@@ -11,7 +11,7 @@ exec java \
   "${EXPORTS[@]}" @"$HERE/exports.args" \
   -cp "$CP" \
   com.oracle.graal.pointsto.standalone.PointsToAnalyzer \
-  Demo \
+  Examples \
   -H:StandaloneAnalysisTargetAppCP="$HERE/classes" \
   -H:StandaloneAnalysisReportsPath="$HERE/out" \
   "$@"
