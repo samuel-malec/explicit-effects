@@ -18,7 +18,7 @@ def linearize(lam: Lambda) -> None:
     remaining.update(name for name, _ in lam.outs)
 
     fresh = count(1)
-    current: dict[str, str] = {}  # a dup'ed value's name for its next use
+    current: dict[str, str] = {} 
     body: list[Instr] = []
 
     def unused(name: str) -> None:

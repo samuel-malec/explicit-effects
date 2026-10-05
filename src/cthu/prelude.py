@@ -1,4 +1,5 @@
-"""Type-checking programs against Graal dialect"""
+""" Representation of the Prelude for Graal dialect in Cthu,
+    extended with parsing logic. """
 
 import re
 from dataclasses import dataclass
@@ -111,7 +112,7 @@ def _cycle(signatures: dict[str, Signature], start: str) -> list[str] | None:
 def check(program: Program, prelude: Prelude) -> list[str]:
     errors = [f"prelude: {e}" for e in prelude.errors]
     lambdas = {(s.name, lam.name): lam for s in program.structures for lam in s.lambdas}
-    externals = {re.sub(r"\W", "_", name) for name in program.externals}  # the structures graal2ct names them by
+    externals = set(program.externals)
     
     for s in program.structures:
         for lam in s.lambdas:

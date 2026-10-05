@@ -59,7 +59,7 @@ class Program:
     structures: list[Structure] = field(default_factory=list)
     fields: dict[str, str] = field(default_factory=dict)  # `field T "name"` declarations, in order: get_i / set_i
     classes: list[str] = field(default_factory=list)  # `class` declarations: new_i
-    externals: list[str] = field(default_factory=list)  # external functions called from the analyzed code
+    externals: dict[str, str] = field(default_factory=dict)  # external functions called from the analyzed code: structure → method
 
     def field_index(self, name: str, type_: str) -> int:
         if self.fields.setdefault(name, type_) != type_:
@@ -80,7 +80,7 @@ def to_text(program: Program, header: str = "") -> str:
         lines.append(f'field {type_} "{name}"   ; get_{i}, set_{i}')
     for i, name in enumerate(program.classes):
         lines.append(f'class "{name}"   ; new_{i}')
-    for name in program.externals:
+    for name in program.externals.values():
         lines.append(f"; external: {name}")
     if program.fields or program.classes or program.externals:
         lines.append("")
