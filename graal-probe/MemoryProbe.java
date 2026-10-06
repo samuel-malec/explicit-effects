@@ -77,7 +77,6 @@ public class MemoryProbe extends GraalCompilerTest {
         }
     }
 
-    /** The example's own static methods, except main. */
     private static List<Method> methods(Class<?> example) {
         return Arrays.stream(example.getDeclaredMethods())
                         .filter(m -> Modifier.isStatic(m.getModifiers()) && !m.isSynthetic() && !m.getName().equals("main"))
@@ -85,15 +84,9 @@ public class MemoryProbe extends GraalCompilerTest {
                         .collect(Collectors.toList());
     }
 
-    /**
-     * No inlining at all: neither the inlining phase nor the parser, which on
-     * its own inlines methods of up to TrivialInliningSize bytes of bytecode.
-     */
     private OptionValues noInlining() {
         return new OptionValues(getInitialOptions(), HighTier.Options.Inline, false, BytecodeParserOptions.InlineDuringParsing, false);
     }
-
-    // --- counting ---------------------------------------------------------
 
     /** The field stores, field loads and calls in a graph, by location. */
     private record Memory(Map<String, Integer> writes, Map<String, Integer> reads, int calls) {
@@ -118,7 +111,6 @@ public class MemoryProbe extends GraalCompilerTest {
             return new Memory(writes, reads, calls);
         }
 
-        /** Whether a fixed access is in a loop. A floating one has no block yet, so it is not. */
         private static boolean inLoop(ControlFlowGraph cfg, Node n) {
             HIRBlock block = cfg.blockFor(n);
             return block != null && block.getLoop() != null;
@@ -168,7 +160,6 @@ public class MemoryProbe extends GraalCompilerTest {
     private static boolean dumpingChain;
     private static final List<String> trace = new ArrayList<>();
 
-    /** A no-op phase that records the counts at its position in the suite. */
     static final class Record extends BasePhase<Object> {
         private final String label;
 
@@ -269,12 +260,6 @@ public class MemoryProbe extends GraalCompilerTest {
         traceMethod("hoistLoadOutOfLoop", null, "");
         System.out.println();
     }
-
-    // --- the memory graph around FloatingReadPhase ------------------------
-    //
-    // WriteNode.simplify removes a store only when next() is the write that
-    // overwrites it. Dump the memory accesses either side of FloatingReadPhase,
-    // which builds the lastLocationAccess edges and floats the reads.
 
     static final class DumpChain extends BasePhase<Object> {
         private final String label;

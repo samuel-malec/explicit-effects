@@ -1,11 +1,5 @@
 /**
  * Optimizations Graal misses and the token form should make.
- *
- * Each example is measured with graal-probe: Graal leaves the store, load or
- * call in place, with inlining and without. Each has a control, where the same
- * transformation would be wrong, which the token form must leave alone too.
- * Every example is legal under Java's own semantics, exceptions included, for
- * the reason its section gives.
  */
 public class Examples {
 
@@ -13,7 +7,7 @@ public class Examples {
     static class Logger { int count; }
     static class Link { Link next; }
 
-    // Recursive, so inlining can't remove the call. It reads Link.next only.
+    // This is recursive on purpose, so inlining can't remove the call.
     static int length(Link link) {
         return link == null ? 0 : 1 + length(link.next);
     }

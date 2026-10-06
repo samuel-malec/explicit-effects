@@ -67,9 +67,7 @@ import jdk.vm.ci.meta.ResolvedJavaField;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
 
 /**
- * Exports a method's Graal IR, as the points-to analysis saw it, in the shape
- * prototype/cthulhu/graal_ir.py turns into token form: basic blocks, the
- * memory operations in each block in order, successors and exits.
+ * Exports a method's Graal IR annotated with points-to analysis information
  */
 final class GraphExport {
 
@@ -97,10 +95,6 @@ final class GraphExport {
             throw graph.getDebug().handle(e);
         }
 
-        // Scheduled, so every node, floating ones included, sits in one block
-        // in an order that respects its inputs. A translation into a language
-        // without floating values (Cthulhu) needs exactly that. Immutable: the
-        // schedule is computed, the graph is left as it is.
         SchedulePhase.runWithoutContextOptimizations(graph, SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS, true);
         StructuredGraph.ScheduleResult schedule = graph.getLastSchedule();
         ControlFlowGraph cfg = schedule.getCFG();
