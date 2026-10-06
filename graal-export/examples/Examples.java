@@ -28,49 +28,32 @@ public class Examples {
         }
     }
 
-    // Two implementations, both instantiated in main, so a call through Shape
-    // can't be devirtualized. Each reads only its own fields.
     interface Shape { int area(); }
     static final class Square implements Shape { int side; public int area() { return side * side; } }
     static final class Rect implements Shape { int width, height; public int area() { return width * height; } }
 
-    // --- dead stores ------------------------------------------------------
-    // Nothing between the two stores can throw, so no exception handler can
-    // see the first one. That rules out calls: any call can throw, if only a
-    // StackOverflowError.
-
-    // counter was dereferenced by the first store, so writing its other field
-    // can't throw. Graal keeps the dead store, because its peephole wants the
-    // overwrite to be the very next node. Needs per-field tokens.
+    
     static void deadStoreOtherField(Counter counter) {
-        counter.value = 1;
+        counter.value = 1; // dead store
         counter.other = 7;
         counter.value = 2;
     }
 
-    // Control: a read between through another reference, which may be the
-    // same object, so it may see the first store. (A read through counter
-    // itself would not do: forwarding it makes the store dead again.)
     static void deadStoreMaybeAliasControl(Counter counter, Counter alias) {
         counter.value = 1;
         counter.other = alias.value;
         counter.value = 2;
     }
 
-    // The same with another object, read before the first store, so writing
-    // to it can't throw a NullPointerException between the stores.
     static void deadStoreOtherObject(Counter counter, Logger logger) {
         int seen = logger.count;
-        counter.value = 1;
+        counter.value = 1; // dead store 
         logger.count = seen + 1;
         counter.value = 2;
     }
 
-    // Overwritten on both arms of a branch. Graal's peephole wants one usage
-    // and the overwrite next; here there are two usages and the If. Needs no
-    // more than one heap token.
     static void deadStoreBothArms(Counter counter, boolean flag) {
-        counter.value = 0;
+        counter.value = 0; // dead store
         if (flag) {
             counter.value = 1;
         } else {
@@ -78,53 +61,43 @@ public class Examples {
         }
     }
 
-    // Control: overwritten on one arm only.
     static void deadStoreOneArm(Counter counter, boolean flag) {
-        counter.value = 0;
+        counter.value = 0; // not necessarily a dead store
         if (flag) {
             counter.value = 1;
         }
     }
 
-    // --- loads across calls -----------------------------------------------
-    // If the call throws, the load after it never runs, so these are legal
-    // whatever the call may throw. Graal misses them because a call kills
-    // every location. They need a signature for the callee.
-
-    // The load gets the stored 5: length doesn't write Counter.value.
     static int forwardAcrossCall(Counter counter, Link list) {
         counter.value = 5;
-        int n = length(list);
-        return counter.value + n;
+        int n = length(list); // length(list) doesn't touch Counter.value, yet
+        return counter.value + n;  // Graal produces redundant load here
     }
 
     // Control: countInto writes Counter.value.
     static int forwardAcrossCallControl(Counter counter, Link list) {
         counter.value = 5;
-        countInto(counter, list);
-        return counter.value;
+        countInto(counter, list); // countInto(counter, list) writes into counter.value
+        return counter.value; // so this is not a redundant load
     }
 
-    // The load still gets the stored 5: this call writes, but only
-    // Logger.count. Example II's call, with a load instead of the overwrite.
     static int forwardAcrossWritingCall(Counter counter, Logger logger, Link list) {
         counter.value = 5;
-        countInto(logger, list);
-        return counter.value;
+        countInto(logger, list); // countInto(logger, list) doesn't write into counter.value
+        return counter.value; // therefore this is a redundant load
     }
 
-    // The second load repeats the first.
     static int repeatedLoadAcrossCall(Counter counter, Link list) {
+        // Yet another example of the same phenomenon (just to make sure)
         int before = counter.value;
         int n = length(list);
         return before + counter.value + n;
     }
 
-    // Control: countInto writes Counter.value between the loads.
     static int repeatedLoadAcrossCallControl(Counter counter, Link list) {
         int before = counter.value;
-        countInto(counter, list);
-        return before + counter.value;
+        countInto(counter, list); // Count write may write into counter.value
+        return before + counter.value; // therefore we can't remove counter.value load
     }
 
     // counter.value doesn't change in the loop, so its load could leave it.
@@ -137,7 +110,7 @@ public class Examples {
         return sum;
     }
 
-    // Control: countInto changes counter.value in every iteration.
+    // countInto changes counter.value in every iteration.
     static int hoistLoadOutOfLoopControl(Counter counter, Link list, int times) {
         int sum = 0;
         for (int i = 0; i < times; i++) {
@@ -155,32 +128,27 @@ public class Examples {
         return counter.value + area;
     }
 
-    // --- calls ------------------------------------------------------------
-    // Removing a call also removes the StackOverflowError it might throw, as
-    // removing any dead code does. They need a signature showing the callee
-    // only reads.
-
-    // length's result is unused, and it only reads: the call can go.
     static void unusedReadOnlyCall(Link list) {
-        length(list);
+        length(list); // length's result is unused, and it only reads: the call can go.
+        // Removing this call also removes the potential StackOverFlowError it might throw,
+        // Which leads to simplifying the control flow (e.g. no exceptional edges)
     }
 
-    // Control: countInto writes, so it stays.
     static void unusedWritingCall(Counter counter, Link list) {
-        countInto(counter, list);
+        countInto(counter, list); // this call actually writes to a field, so we can't remove it
     }
 
-    // The second call repeats the first: nothing between writes Link.next.
     static int repeatedReadOnlyCall(Link list) {
+        // The second call repeats the first: nothing between writes Link.next.
         return length(list) + length(list);
     }
 
-    // Control: the list changes between the calls.
     static int repeatedReadOnlyCallControl(Link list) {
         int first = length(list);
         if (list != null) {
             list.next = null;
         }
+        // The list may change between the calls, therefore we must call length(list) again.
         return first + length(list);
     }
 
