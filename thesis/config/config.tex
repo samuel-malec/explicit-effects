@@ -1,0 +1,44 @@
+\documentclass{mimosis}
+
+\usepackage[english]{babel}
+
+\usepackage{graphicx}
+
+\usepackage[
+    unicode=true,
+    plainpages=false,
+    pdfpagelabels,
+    draft=false,
+    hyperfootnotes=false,
+    colorlinks=true,
+    linkcolor={Sepia},
+    citecolor={PineGreen},
+    urlcolor={MidnightBlue},
+]{hyperref}
+
+\hypersetup{
+    pdfauthor={Author Name},
+    pdftitle={Thesis Title},
+    pdfsubject={Master's Thesis},
+}
+
+% Fonts taken from the Mimosis example used by dipr.
+\usepackage[sb]{ebgaramond}
+
+% Similar to \usepackage{ebgaramond-maths}, but with tabular figures.
+\DeclareSymbolFont{letters}{OML}{EBGaramond-TLF}{m}{it}
+\DeclareSymbolFont{operators}{OT1}{EBGaramond-TLF}{m}{n}
+\SetSymbolFont{letters}{bold}{OML}{EBGaramond-TLF}{b}{it}
+\SetSymbolFont{operators}{bold}{OT1}{EBGaramond-TLF}{bx}{n}
+\DeclareFontSubstitution{OML}{EBGaramond-Maths}{m}{it}
+\DeclareFontSubstitution{OT1}{EBGaramond-TLF}{m}{n}
+
+\usepackage[oldstyle,scale=0.7]{sourcecodepro}
+
+\usepackage[
+    backend=bibtex8,
+    sortlocale=en_US,
+    bibencoding=UTF8,
+    maxnames=100,
+]{biblatex}
+\addbibresource{bibliography.bib}
