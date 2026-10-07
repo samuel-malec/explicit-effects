@@ -1,5 +1,3 @@
-"""Parsing Cthulhu into a syntax tree"""
-
 from dataclasses import dataclass, field
 
 from .lexer import Category, ParseError, Token, tokenize

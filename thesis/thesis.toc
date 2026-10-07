@@ -1,4 +1,8 @@
 \babel@toc {english}{}\relax 
 \contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}%
-\contentsline {chapter}{\nonumberline Bibliography}{2}{chapter*.6}%
+\contentsline {section}{\numberline {1.1}Side Effects}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}GraalVM}{1}{section.1.2}%
+\contentsline {chapter}{\numberline {2}Implementation}{2}{chapter.2}%
+\contentsline {chapter}{\numberline {3}Evaluation}{3}{chapter.3}%
+\contentsline {chapter}{\nonumberline Bibliography}{4}{chapter*.6}%
 \providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

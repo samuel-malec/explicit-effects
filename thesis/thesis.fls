@@ -397,8 +397,6 @@ INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regul
 INPUT ./thesis.toc
 INPUT ./thesis.toc
 INPUT thesis.toc
-OUTPUT thesis.toc
-INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Italic-osf-t1.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regular-tlf-ot1.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regular-tlf-ot1.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regular-tlf-ot1.tfm
@@ -411,6 +409,8 @@ INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmsy6.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
+OUTPUT thesis.toc
+INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Italic-osf-t1.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/ebgaramond/EBGaramond-Regular-osf-sc-t1.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regular-osf-sc-t1--base.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/ebgaramond/EBGaramond-Regular-osf-sc-t1.vf
@@ -421,8 +421,18 @@ INPUT ./chapters/introduction.tex
 INPUT ./chapters/introduction.tex
 INPUT chapters/introduction.tex
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regular-osf-sc-t1.tfm
+INPUT ./chapters/implementation.tex
+INPUT ./chapters/implementation.tex
+INPUT ./chapters/implementation.tex
+INPUT ./chapters/implementation.tex
+INPUT chapters/implementation.tex
 INPUT /usr/share/texlive/texmf-dist/fonts/vf/public/ebgaramond/EBGaramond-Regular-osf-sc-t1.vf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regular-osf-sc-t1--base.tfm
+INPUT ./chapters/evaluation.tex
+INPUT ./chapters/evaluation.tex
+INPUT ./chapters/evaluation.tex
+INPUT ./chapters/evaluation.tex
+INPUT chapters/evaluation.tex
 INPUT thesis.aux
 INPUT ./thesis.out
 INPUT ./thesis.out
