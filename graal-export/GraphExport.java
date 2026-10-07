@@ -91,9 +91,6 @@ final class GraphExport {
         SchedulePhase.runWithoutContextOptimizations(graph, SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS, true);
         StructuredGraph.ScheduleResult schedule = graph.getLastSchedule();
         ControlFlowGraph cfg = schedule.getCFG();
-        if (!cfg.getLoops().isEmpty()) {
-            unsupported.add("loop");
-        }
 
         Map<Integer, InvokeTypeFlow> flowsByBci = new TreeMap<>();
         for (InvokeTypeFlow flow : method.getTypeFlow().getMethodFlowsGraph().getInvokes()) {
