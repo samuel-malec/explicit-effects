@@ -8,8 +8,10 @@
 # Env:
 #   GRAAL_HOME   graal checkout (default /home/xmalec/graal)
 #   TARGET_CP    classes to analyse (default ./classes)
-#   DUMP_FILTER  report only classes under this prefix (default: everything
-#                that isn't a JDK/Graal platform class)
+#   DUMP_FILTER  the program: report, export graphs and list fields only for
+#                classes under this prefix (default: everything that isn't a
+#                JDK/Graal platform class). Facts are exported for every
+#                reachable method either way.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 ENTRY=Examples

@@ -18,6 +18,11 @@ import com.oracle.graal.pointsto.meta.AnalysisUniverse;
 import com.oracle.graal.pointsto.meta.PointsToAnalysisMethod;
 import com.oracle.graal.pointsto.standalone.PointsToAnalyzer;
 
+import jdk.graal.compiler.graph.Node;
+import jdk.graal.compiler.nodes.StructuredGraph;
+import jdk.graal.compiler.nodes.java.LoadFieldNode;
+import jdk.graal.compiler.nodes.java.StoreFieldNode;
+
 public class ReadWriteExport {
 
     /** Packages treated as "not the program under analysis" by default. */
@@ -52,6 +57,7 @@ public class ReadWriteExport {
         TreeMap<String, TreeSet<String>> callees = new TreeMap<>();
         PointsToAnalysis bb = analyzer.getResultAnalysis();
         TreeSet<String> analysed = new TreeSet<>();
+        TreeSet<String> program = new TreeSet<>();
 
         for (AnalysisMethod method : universe.getMethods()) {
             if (!method.isReachable() || !(method instanceof PointsToAnalysisMethod ptm)) {
@@ -60,16 +66,22 @@ public class ReadWriteExport {
             if (!ptm.getTypeFlow().flowsGraphCreated()) {
                 continue;
             }
-            String owner = method.getDeclaringClass().toJavaName(true);
-            if (!isUnderAnalysis(owner)) {
-                continue;
-            }
             String name = GraphExport.methodKey(method);
-            if (ptm.ensureGraphParsed(bb).getEncodedGraph() != null) {
-                analysed.add(name);
+            if (isUnderAnalysis(method.getDeclaringClass().toJavaName(true))) {
+                program.add(name);
             }
-            // NB: flows(), not getNodeFlows() -- store flows live in
-            // miscEntryFlows, and getNodeFlows() silently yields no writes.
+            
+            StructuredGraph body = GraphExport.analysisGraph(bb, ptm);
+            if (body != null) {
+                analysed.add(name);
+                for (Node n : body.getNodes()) {
+                    if (n instanceof LoadFieldNode load) {
+                        reads.computeIfAbsent(name, k -> new TreeSet<>()).add(GraphExport.fieldName(load.field()));
+                    } else if (n instanceof StoreFieldNode store) {
+                        writes.computeIfAbsent(name, k -> new TreeSet<>()).add(GraphExport.fieldName(store.field()));
+                    }
+                }
+            }
             MethodFlowsGraph graph = ptm.getTypeFlow().getMethodFlowsGraph();
             for (TypeFlow<?> flow : graph.flows()) {
                 if (flow instanceof AccessFieldTypeFlow access) {
@@ -85,7 +97,7 @@ public class ReadWriteExport {
 
             // The call graph, points-to resolved: a virtual call yields every
             // target the analysis considers possible, not just the declared
-            // one. This is what the prototype's transitive closure consumes.
+            // one. 
             for (InvokeTypeFlow invoke : graph.getInvokes()) {
                 for (AnalysisMethod callee : invoke.getOriginalCallees()) {
                     String target = GraphExport.methodKey(callee);
@@ -97,6 +109,7 @@ public class ReadWriteExport {
         Set<String> all = new TreeSet<>();
         all.addAll(reads.keySet());
         all.addAll(writes.keySet());
+        all.retainAll(program);
 
         System.out.println();
         System.out.println("=== local per-method field effects ===");
@@ -114,9 +127,11 @@ public class ReadWriteExport {
         System.out.println();
         System.out.println("=== call graph with points-to resolved callees ===");
         for (String m : new TreeSet<>(callees.keySet())) {
+            if (!program.contains(m)) {
+                continue;
+            }
             TreeSet<String> targets = new TreeSet<>();
             for (String t : callees.get(m)) {
-                // keep platform callees out of the listing, but note them
                 targets.add(isUnderAnalysis(t.substring(0, t.lastIndexOf('.', t.indexOf('(')))) ? t : "<platform>");
             }
             targets.remove("<platform>");
@@ -148,9 +163,6 @@ public class ReadWriteExport {
             System.out.println("wrote " + jsonPath);
         }
 
-        // The IR, for the token-form conversion. A superset of the effects
-        // JSON (same "methods" and "fields"), so one file carries both the
-        // facts the signatures are derived from and the graphs they apply to.
         String irPath = System.getProperty("dump.ir", "");
         if (!irPath.isEmpty()) {
             List<Map<String, Object>> graphs = new ArrayList<>();
@@ -167,11 +179,6 @@ public class ReadWriteExport {
         }
     }
 
-    /**
-     * Machine-readable form, for the prototype's partitioner/derivation to
-     * consume. Hand-rolled so this stays dependency-free. Returns the members
-     * without the enclosing braces, so the IR dump can add its own.
-     */
     private static String factsJson(Set<String> methods,
                     TreeMap<String, TreeSet<String>> reads,
                     TreeMap<String, TreeSet<String>> writes,

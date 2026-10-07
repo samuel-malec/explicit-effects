@@ -82,17 +82,10 @@ final class GraphExport {
         List<String> unsupported = new ArrayList<>();
         out.put("unsupported", unsupported);
 
-        AnalysisParsedGraph parsed = method.ensureGraphParsed(bb);
-        if (parsed.getEncodedGraph() == null) {
+        StructuredGraph graph = analysisGraph(bb, method);
+        if (graph == null) {
             unsupported.add("no graph");
             return out;
-        }
-
-        StructuredGraph graph = InlineBeforeAnalysis.decodeGraph(bb, method, parsed);
-        try (DebugContext.Scope s = graph.getDebug().scope("GraphExport", graph)) {
-            MethodTypeFlowBuilder.optimizeGraphBeforeAnalysis(bb, method, graph);
-        } catch (Throwable e) {
-            throw graph.getDebug().handle(e);
         }
 
         SchedulePhase.runWithoutContextOptimizations(graph, SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS, true);
@@ -118,6 +111,21 @@ final class GraphExport {
         out.put("blocks", blocks);
         out.put("values", values);
         return out;
+    }
+
+    /** The graph the analysis built the method's flows from, null for a method without a body. */
+    static StructuredGraph analysisGraph(PointsToAnalysis bb, PointsToAnalysisMethod method) {
+        AnalysisParsedGraph parsed = method.ensureGraphParsed(bb);
+        if (parsed.getEncodedGraph() == null) {
+            return null;
+        }
+        StructuredGraph graph = InlineBeforeAnalysis.decodeGraph(bb, method, parsed);
+        try (DebugContext.Scope s = graph.getDebug().scope("GraphExport", graph)) {
+            MethodTypeFlowBuilder.optimizeGraphBeforeAnalysis(bb, method, graph);
+        } catch (Throwable e) {
+            throw graph.getDebug().handle(e);
+        }
+        return graph;
     }
 
     private static Map<String, Object> exportBlock(HIRBlock block, StructuredGraph.ScheduleResult schedule,
@@ -249,26 +257,14 @@ final class GraphExport {
         return op;
     }
 
-    /**
-     * The nodes a translation has to see: values and operations with effects.
-     * Begins, ends and merges are control flow the blocks already describe,
-     * frame states are deoptimization metadata, and a call target is folded
-     * into its invoke.
-     */
     private static boolean isScheduledValueOrEffect(Node node) {
         if (node instanceof ExceptionObjectNode) {
-            return true; // a begin that also produces the exception
+            return true;
         }
         return !(node instanceof AbstractBeginNode || node instanceof AbstractEndNode || node instanceof VirtualState ||
                         node instanceof MethodCallTargetNode);
     }
 
-    /**
-     * One scheduled node: its operation, type and data inputs in order, plus
-     * what the operation needs beyond them (a constant's value, a parameter's
-     * index, a field, a call's arguments and callees, a phi's value per
-     * predecessor block).
-     */
     private static Map<String, Object> exportScheduledNode(Node node, ControlFlowGraph cfg, Map<Integer, InvokeTypeFlow> flowsByBci) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", node.getId());
@@ -379,11 +375,6 @@ final class GraphExport {
         return end.getClass().getSimpleName();
     }
 
-    /**
-     * The node standing for a value, with Pi nodes looked through, so two
-     * accesses to one object compare equal. Also records a readable
-     * description, which is all the exported values are used for.
-     */
     private static int valueId(ValueNode value, Map<String, String> values) {
         ValueNode root = GraphUtil.unproxify(value);
         values.putIfAbsent(String.valueOf(root.getId()), describe(root));
