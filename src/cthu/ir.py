@@ -72,10 +72,8 @@ class Program:
         return self.classes.index(name)
 
 
-def to_text(program: Program, header: str = "") -> str:
-    lines = [f"; {line}" for line in header.splitlines()]
-    if lines:
-        lines.append("")
+def to_text(program: Program) -> str:
+    lines = []
     for i, (name, type_) in enumerate(program.fields.items()):
         lines.append(f'field {type_} "{name}"   ; get_{i}, set_{i}')
     for i, name in enumerate(program.classes):

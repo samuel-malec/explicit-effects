@@ -30,7 +30,7 @@ def main() -> int:
     keys = [key for key in sorted(graphs) if args.method in key]
     translation = Translation(graphs)
     program = translation.translate(keys)
-    text = to_text(program, header=f"graal2ct {args.dump.name}: Graal IR in Cthulhu, one heap token")
+    text = to_text(program)
     if args.out:
         args.out.write_text(text + "\n")
     else:
