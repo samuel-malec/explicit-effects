@@ -1,0 +1,3614 @@
+{
+  "methods": {
+    "Examples$Counter.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "Examples$Link.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "Examples$Logger.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "Examples$Rect.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "Examples$Rect.area()I": {"reads": ["Examples$Rect.height", "Examples$Rect.width"], "writes": [], "callees": []},
+    "Examples$Square.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "Examples$Square.area()I": {"reads": ["Examples$Square.side"], "writes": [], "callees": []},
+    "Examples.countInto(LExamples$Counter;LExamples$Link;)V": {"reads": ["Examples$Counter.value", "Examples$Link.next"], "writes": ["Examples$Counter.value"], "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"]},
+    "Examples.countInto(LExamples$Logger;LExamples$Link;)V": {"reads": ["Examples$Link.next", "Examples$Logger.count"], "writes": ["Examples$Logger.count"], "callees": ["Examples.countInto(LExamples$Logger;LExamples$Link;)V"]},
+    "Examples.deadStoreBothArms(LExamples$Counter;Z)V": {"reads": [], "writes": ["Examples$Counter.value"], "callees": []},
+    "Examples.deadStoreMaybeAliasControl(LExamples$Counter;LExamples$Counter;)V": {"reads": ["Examples$Counter.value"], "writes": ["Examples$Counter.other", "Examples$Counter.value"], "callees": []},
+    "Examples.deadStoreOneArm(LExamples$Counter;Z)V": {"reads": [], "writes": ["Examples$Counter.value"], "callees": []},
+    "Examples.deadStoreOtherField(LExamples$Counter;)V": {"reads": [], "writes": ["Examples$Counter.other", "Examples$Counter.value"], "callees": []},
+    "Examples.deadStoreOtherObject(LExamples$Counter;LExamples$Logger;)V": {"reads": ["Examples$Logger.count"], "writes": ["Examples$Counter.value", "Examples$Logger.count"], "callees": []},
+    "Examples.forwardAcrossCall(LExamples$Counter;LExamples$Link;)I": {"reads": ["Examples$Counter.value"], "writes": ["Examples$Counter.value"], "callees": ["Examples.length(LExamples$Link;)I"]},
+    "Examples.forwardAcrossCallControl(LExamples$Counter;LExamples$Link;)I": {"reads": ["Examples$Counter.value"], "writes": ["Examples$Counter.value"], "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"]},
+    "Examples.forwardAcrossVirtualCall(LExamples$Counter;LExamples$Shape;)I": {"reads": ["Examples$Counter.value"], "writes": ["Examples$Counter.value"], "callees": ["Examples$Rect.area()I", "Examples$Square.area()I"]},
+    "Examples.forwardAcrossWritingCall(LExamples$Counter;LExamples$Logger;LExamples$Link;)I": {"reads": ["Examples$Counter.value"], "writes": ["Examples$Counter.value"], "callees": ["Examples.countInto(LExamples$Logger;LExamples$Link;)V"]},
+    "Examples.hoistLoadOutOfLoop(LExamples$Counter;LExamples$Link;I)I": {"reads": ["Examples$Counter.value"], "writes": [], "callees": ["Examples.length(LExamples$Link;)I"]},
+    "Examples.hoistLoadOutOfLoopControl(LExamples$Counter;LExamples$Link;I)I": {"reads": ["Examples$Counter.value"], "writes": [], "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"]},
+    "Examples.length(LExamples$Link;)I": {"reads": ["Examples$Link.next"], "writes": [], "callees": ["Examples.length(LExamples$Link;)I"]},
+    "Examples.main([Ljava/lang/String;)V": {"reads": ["Examples$Counter.other", "Examples$Counter.value", "Examples$Logger.count", "java.lang.System.out"], "writes": ["Examples$Link.next"], "callees": ["Examples$Counter.<init>()V", "Examples$Link.<init>()V", "Examples$Logger.<init>()V", "Examples$Rect.<init>()V", "Examples$Square.<init>()V", "Examples.deadStoreBothArms(LExamples$Counter;Z)V", "Examples.deadStoreMaybeAliasControl(LExamples$Counter;LExamples$Counter;)V", "Examples.deadStoreOneArm(LExamples$Counter;Z)V", "Examples.deadStoreOtherField(LExamples$Counter;)V", "Examples.deadStoreOtherObject(LExamples$Counter;LExamples$Logger;)V", "Examples.forwardAcrossCall(LExamples$Counter;LExamples$Link;)I", "Examples.forwardAcrossCallControl(LExamples$Counter;LExamples$Link;)I", "Examples.forwardAcrossVirtualCall(LExamples$Counter;LExamples$Shape;)I", "Examples.forwardAcrossWritingCall(LExamples$Counter;LExamples$Logger;LExamples$Link;)I", "Examples.hoistLoadOutOfLoop(LExamples$Counter;LExamples$Link;I)I", "Examples.hoistLoadOutOfLoopControl(LExamples$Counter;LExamples$Link;I)I", "Examples.repeatedLoadAcrossCall(LExamples$Counter;LExamples$Link;)I", "Examples.repeatedLoadAcrossCallControl(LExamples$Counter;LExamples$Link;)I", "Examples.repeatedReadOnlyCall(LExamples$Link;)I", "Examples.repeatedReadOnlyCallControl(LExamples$Link;)I", "Examples.unusedReadOnlyCall(LExamples$Link;)V", "Examples.unusedWritingCall(LExamples$Counter;LExamples$Link;)V", "java.io.PrintStream.println(I)V"]},
+    "Examples.repeatedLoadAcrossCall(LExamples$Counter;LExamples$Link;)I": {"reads": ["Examples$Counter.value"], "writes": [], "callees": ["Examples.length(LExamples$Link;)I"]},
+    "Examples.repeatedLoadAcrossCallControl(LExamples$Counter;LExamples$Link;)I": {"reads": ["Examples$Counter.value"], "writes": [], "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"]},
+    "Examples.repeatedReadOnlyCall(LExamples$Link;)I": {"reads": [], "writes": [], "callees": ["Examples.length(LExamples$Link;)I"]},
+    "Examples.repeatedReadOnlyCallControl(LExamples$Link;)I": {"reads": [], "writes": ["Examples$Link.next"], "callees": ["Examples.length(LExamples$Link;)I"]},
+    "Examples.unusedReadOnlyCall(LExamples$Link;)V": {"reads": [], "writes": [], "callees": ["Examples.length(LExamples$Link;)I"]},
+    "Examples.unusedWritingCall(LExamples$Counter;LExamples$Link;)V": {"reads": [], "writes": [], "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"]},
+    "java.io.PrintStream.println(I)V": {"reads": [], "writes": [], "callees": ["java.lang.Object.getClass()Ljava/lang/Class;"]},
+    "java.lang.Boolean.booleanValue()Z": {"reads": ["java.lang.Boolean.value"], "writes": [], "callees": []},
+    "java.lang.Boolean.valueOf(Z)Ljava/lang/Boolean;": {"reads": [], "writes": [], "callees": []},
+    "java.lang.Byte.byteValue()B": {"reads": ["java.lang.Byte.value"], "writes": [], "callees": []},
+    "java.lang.Byte.valueOf(B)Ljava/lang/Byte;": {"reads": [], "writes": [], "callees": []},
+    "java.lang.Character.<init>(C)V": {"reads": [], "writes": ["java.lang.Character.value"], "callees": ["java.lang.Object.<init>()V"]},
+    "java.lang.Character.charValue()C": {"reads": ["java.lang.Character.value"], "writes": [], "callees": []},
+    "java.lang.Character.valueOf(C)Ljava/lang/Character;": {"reads": [], "writes": [], "callees": ["java.lang.Character.<init>(C)V"]},
+    "java.lang.Double.<init>(D)V": {"reads": [], "writes": ["java.lang.Double.value"], "callees": ["java.lang.Number.<init>()V"]},
+    "java.lang.Double.doubleValue()D": {"reads": ["java.lang.Double.value"], "writes": [], "callees": []},
+    "java.lang.Double.valueOf(D)Ljava/lang/Double;": {"reads": [], "writes": [], "callees": ["java.lang.Double.<init>(D)V"]},
+    "java.lang.Float.<init>(F)V": {"reads": [], "writes": ["java.lang.Float.value"], "callees": ["java.lang.Number.<init>()V"]},
+    "java.lang.Float.floatValue()F": {"reads": ["java.lang.Float.value"], "writes": [], "callees": []},
+    "java.lang.Float.valueOf(F)Ljava/lang/Float;": {"reads": [], "writes": [], "callees": ["java.lang.Float.<init>(F)V"]},
+    "java.lang.Integer.<init>(I)V": {"reads": [], "writes": ["java.lang.Integer.value"], "callees": ["java.lang.Number.<init>()V"]},
+    "java.lang.Integer.intValue()I": {"reads": ["java.lang.Integer.value"], "writes": [], "callees": []},
+    "java.lang.Integer.valueOf(I)Ljava/lang/Integer;": {"reads": [], "writes": [], "callees": ["java.lang.Integer.<init>(I)V"]},
+    "java.lang.Long.<init>(J)V": {"reads": [], "writes": ["java.lang.Long.value"], "callees": ["java.lang.Number.<init>()V"]},
+    "java.lang.Long.longValue()J": {"reads": ["java.lang.Long.value"], "writes": [], "callees": []},
+    "java.lang.Long.valueOf(J)Ljava/lang/Long;": {"reads": [], "writes": [], "callees": ["java.lang.Long.<init>(J)V"]},
+    "java.lang.Number.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"]},
+    "java.lang.Object.<init>()V": {"reads": [], "writes": [], "callees": []},
+    "java.lang.Short.<init>(S)V": {"reads": [], "writes": ["java.lang.Short.value"], "callees": ["java.lang.Number.<init>()V"]},
+    "java.lang.Short.shortValue()S": {"reads": ["java.lang.Short.value"], "writes": [], "callees": []},
+    "java.lang.Short.valueOf(S)Ljava/lang/Short;": {"reads": [], "writes": [], "callees": ["java.lang.Short.<init>(S)V"]}
+  },
+  "fields": {
+    "Examples$Counter.other": {"read": true, "written": true},
+    "Examples$Counter.value": {"read": true, "written": true},
+    "Examples$Link.next": {"read": true, "written": true},
+    "Examples$Logger.count": {"read": true, "written": true},
+    "Examples$Rect.height": {"read": true, "written": false},
+    "Examples$Rect.width": {"read": true, "written": false},
+    "Examples$Square.side": {"read": true, "written": false}
+  },
+  "graphs": [
+    {
+      "name": "Examples$Counter.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Examples$Link.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Examples$Logger.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Examples$Rect.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Examples$Rect.area",
+      "descriptor": "()I",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "LoadField", "type": "int", "in": [1], "field": "Examples$Rect.width", "bci": 1},
+            {"id": 4, "op": "LoadField", "type": "int", "in": [1], "field": "Examples$Rect.height", "bci": 5},
+            {"id": 6, "op": "Mul", "type": "int", "in": [3, 4], "bci": 8},
+            {"id": 5, "op": "Return", "type": "void", "in": [6], "bci": 9}
+          ],
+          "ops": [
+            {"kind": "load", "node": 3, "bci": 1, "field": "Examples$Rect.width", "object": 1},
+            {"kind": "load", "node": 4, "bci": 5, "field": "Examples$Rect.height", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 9}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Examples$Square.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Examples$Square.area",
+      "descriptor": "()I",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "LoadField", "type": "int", "in": [1], "field": "Examples$Square.side", "bci": 1},
+            {"id": 6, "op": "Mul", "type": "int", "in": [3, 3], "bci": 8},
+            {"id": 5, "op": "Return", "type": "void", "in": [6], "bci": 9}
+          ],
+          "ops": [
+            {"kind": "load", "node": 3, "bci": 1, "field": "Examples$Square.side", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 9}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Examples.countInto",
+      "descriptor": "(LExamples$Counter;LExamples$Link;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [2], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "IsNull", "type": "cond", "in": [1], "bci": 6},
+            {"id": 8, "op": "If", "type": "void", "in": [9], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 44, "op": "BytecodeException", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 13, "op": "Pi", "type": "ref", "in": [1], "bci": 6},
+            {"id": 12, "op": "LoadField", "type": "int", "in": [13], "field": "Examples$Counter.value", "bci": 6},
+            {"id": 19, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 9},
+            {"id": 20, "op": "Add", "type": "int", "in": [12, 19], "bci": 10},
+            {"id": 17, "op": "StoreField", "type": "void", "in": [13, 20], "field": "Examples$Counter.value", "bci": 11},
+            {"id": 26, "op": "Pi", "type": "ref", "in": [2], "bci": 16},
+            {"id": 25, "op": "LoadField", "type": "ref", "in": [26], "field": "Examples$Link.next", "bci": 16},
+            {"id": 27, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 25], "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 19}
+          ],
+          "ops": [
+            {"kind": "load", "node": 12, "bci": 6, "field": "Examples$Counter.value", "object": 1},
+            {"kind": "store", "node": 17, "bci": 11, "field": "Examples$Counter.value", "object": 1, "value": 20},
+            {"kind": "load", "node": 25, "bci": 16, "field": "Examples$Link.next", "object": 2},
+            {"kind": "invoke", "node": 27, "bci": 19, "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 7, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 19}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 6,
+          "preds": [5, 1],
+          "nodes": [
+            {"id": 51, "op": "Return", "type": "void", "in": [], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 22}
+        },
+        {
+          "id": 7,
+          "preds": [4],
+          "nodes": [
+            {"id": 31, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 19}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 8,
+          "preds": [7, 3],
+          "nodes": [
+            {
+              "id": 40,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 7, "value": 31},
+                {"block": 3, "value": 44}
+              ]
+            },
+            {"id": 49, "op": "Unwind", "type": "void", "in": [40], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "2": "param1", "20": "AddNode#20"}
+    },
+    {
+      "name": "Examples.countInto",
+      "descriptor": "(LExamples$Logger;LExamples$Link;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [2], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "IsNull", "type": "cond", "in": [1], "bci": 6},
+            {"id": 8, "op": "If", "type": "void", "in": [9], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 44, "op": "BytecodeException", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 13, "op": "Pi", "type": "ref", "in": [1], "bci": 6},
+            {"id": 12, "op": "LoadField", "type": "int", "in": [13], "field": "Examples$Logger.count", "bci": 6},
+            {"id": 19, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 9},
+            {"id": 20, "op": "Add", "type": "int", "in": [12, 19], "bci": 10},
+            {"id": 17, "op": "StoreField", "type": "void", "in": [13, 20], "field": "Examples$Logger.count", "bci": 11},
+            {"id": 26, "op": "Pi", "type": "ref", "in": [2], "bci": 16},
+            {"id": 25, "op": "LoadField", "type": "ref", "in": [26], "field": "Examples$Link.next", "bci": 16},
+            {"id": 27, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 25], "target": "Examples.countInto(LExamples$Logger;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Logger;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 19}
+          ],
+          "ops": [
+            {"kind": "load", "node": 12, "bci": 6, "field": "Examples$Logger.count", "object": 1},
+            {"kind": "store", "node": 17, "bci": 11, "field": "Examples$Logger.count", "object": 1, "value": 20},
+            {"kind": "load", "node": 25, "bci": 16, "field": "Examples$Link.next", "object": 2},
+            {"kind": "invoke", "node": 27, "bci": 19, "target": "Examples.countInto(LExamples$Logger;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Logger;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 7, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 19}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 6,
+          "preds": [5, 1],
+          "nodes": [
+            {"id": 51, "op": "Return", "type": "void", "in": [], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 22}
+        },
+        {
+          "id": 7,
+          "preds": [4],
+          "nodes": [
+            {"id": 31, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 19}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 8,
+          "preds": [7, 3],
+          "nodes": [
+            {
+              "id": 40,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 7, "value": 31},
+                {"block": 3, "value": 44}
+              ]
+            },
+            {"id": 49, "op": "Unwind", "type": "void", "in": [40], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "2": "param1", "20": "AddNode#20"}
+    },
+    {
+      "name": "Examples.deadStoreBothArms",
+      "descriptor": "(LExamples$Counter;Z)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "int", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 41, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 47, "op": "Unwind", "type": "void", "in": [41], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 13, "op": "IntegerEquals", "type": "cond", "in": [2, 10], "bci": 6},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IntegerEqualsNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 34, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 18},
+            {"id": 32, "op": "StoreField", "type": "void", "in": [9, 34], "field": "Examples$Counter.value", "bci": 19}
+          ],
+          "ops": [
+            {"kind": "store", "node": 32, "bci": 19, "field": "Examples$Counter.value", "object": 1, "value": 34}
+          ],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 21, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 10},
+            {"id": 19, "op": "StoreField", "type": "void", "in": [9, 21], "field": "Examples$Counter.value", "bci": 11}
+          ],
+          "ops": [
+            {"kind": "store", "node": 19, "bci": 11, "field": "Examples$Counter.value", "object": 1, "value": 21}
+          ],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {"id": 45, "op": "Return", "type": "void", "in": [], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 22}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 0", "21": "const 1", "34": "const 2"}
+    },
+    {
+      "name": "Examples.deadStoreMaybeAliasControl",
+      "descriptor": "(LExamples$Counter;LExamples$Counter;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 43, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 13, "op": "IsNull", "type": "cond", "in": [2], "bci": 7},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 7}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 7, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 40, "op": "BytecodeException", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 39,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 3, "value": 40},
+                {"block": 1, "value": 43}
+              ]
+            },
+            {"id": 47, "op": "Unwind", "type": "void", "in": [39], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "Pi", "type": "ref", "in": [2], "bci": 7},
+            {"id": 16, "op": "LoadField", "type": "int", "in": [17], "field": "Examples$Counter.value", "bci": 7},
+            {"id": 21, "op": "StoreField", "type": "void", "in": [9, 16], "field": "Examples$Counter.other", "bci": 10},
+            {"id": 29, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 14},
+            {"id": 27, "op": "StoreField", "type": "void", "in": [9, 29], "field": "Examples$Counter.value", "bci": 15},
+            {"id": 31, "op": "Return", "type": "void", "in": [], "bci": 18}
+          ],
+          "ops": [
+            {"kind": "load", "node": 16, "bci": 7, "field": "Examples$Counter.value", "object": 2},
+            {"kind": "store", "node": 21, "bci": 10, "field": "Examples$Counter.other", "object": 1, "value": 16},
+            {"kind": "store", "node": 27, "bci": 15, "field": "Examples$Counter.value", "object": 1, "value": 29}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 18}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 1", "16": "load Examples$Counter.value@7", "2": "param1", "29": "const 2"}
+    },
+    {
+      "name": "Examples.deadStoreOneArm",
+      "descriptor": "(LExamples$Counter;Z)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "int", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 30, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 37, "op": "Unwind", "type": "void", "in": [30], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 13, "op": "IntegerEquals", "type": "cond", "in": [2, 10], "bci": 6},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IntegerEqualsNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 21, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 10},
+            {"id": 19, "op": "StoreField", "type": "void", "in": [9, 21], "field": "Examples$Counter.value", "bci": 11}
+          ],
+          "ops": [
+            {"kind": "store", "node": 19, "bci": 11, "field": "Examples$Counter.value", "object": 1, "value": 21}
+          ],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 14}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {"id": 35, "op": "Return", "type": "void", "in": [], "bci": 14}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 0", "21": "const 1"}
+    },
+    {
+      "name": "Examples.deadStoreOtherField",
+      "descriptor": "(LExamples$Counter;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 34, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2},
+            {"id": 38, "op": "Unwind", "type": "void", "in": [34], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 9, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "7", "bci": 6},
+            {"id": 14, "op": "StoreField", "type": "void", "in": [8, 16], "field": "Examples$Counter.other", "bci": 8},
+            {"id": 23, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 12},
+            {"id": 21, "op": "StoreField", "type": "void", "in": [8, 23], "field": "Examples$Counter.value", "bci": 13},
+            {"id": 25, "op": "Return", "type": "void", "in": [], "bci": 16}
+          ],
+          "ops": [
+            {"kind": "store", "node": 7, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 9},
+            {"kind": "store", "node": 14, "bci": 8, "field": "Examples$Counter.other", "object": 1, "value": 16},
+            {"kind": "store", "node": 21, "bci": 13, "field": "Examples$Counter.value", "object": 1, "value": 23}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 16}
+        }
+      ],
+      "values": {"1": "param0", "16": "const 7", "23": "const 2", "9": "const 1"}
+    },
+    {
+      "name": "Examples.deadStoreOtherObject",
+      "descriptor": "(LExamples$Counter;LExamples$Logger;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [2], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 44, "op": "BytecodeException", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [2], "bci": 1},
+            {"id": 8, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Logger.count", "bci": 1},
+            {"id": 11, "op": "IsNull", "type": "cond", "in": [1], "bci": 7},
+            {"id": 10, "op": "If", "type": "void", "in": [11], "bci": 7}
+          ],
+          "ops": [
+            {"kind": "load", "node": 8, "bci": 1, "field": "Examples$Logger.count", "object": 2}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 7, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 41, "op": "BytecodeException", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 40,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 3, "value": 41},
+                {"block": 1, "value": 44}
+              ]
+            },
+            {"id": 48, "op": "Unwind", "type": "void", "in": [40], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 15, "op": "Pi", "type": "ref", "in": [1], "bci": 7},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 6},
+            {"id": 14, "op": "StoreField", "type": "void", "in": [15, 16], "field": "Examples$Counter.value", "bci": 7},
+            {"id": 23, "op": "Add", "type": "int", "in": [8, 16], "bci": 13},
+            {"id": 21, "op": "StoreField", "type": "void", "in": [9, 23], "field": "Examples$Logger.count", "bci": 14},
+            {"id": 30, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 18},
+            {"id": 28, "op": "StoreField", "type": "void", "in": [15, 30], "field": "Examples$Counter.value", "bci": 19},
+            {"id": 32, "op": "Return", "type": "void", "in": [], "bci": 22}
+          ],
+          "ops": [
+            {"kind": "store", "node": 14, "bci": 7, "field": "Examples$Counter.value", "object": 1, "value": 16},
+            {"kind": "store", "node": 21, "bci": 14, "field": "Examples$Logger.count", "object": 2, "value": 23},
+            {"kind": "store", "node": 28, "bci": 19, "field": "Examples$Counter.value", "object": 1, "value": 30}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 22}
+        }
+      ],
+      "values": {"1": "param0", "16": "const 1", "2": "param1", "23": "AddNode#23", "30": "const 2"}
+    },
+    {
+      "name": "Examples.forwardAcrossCall",
+      "descriptor": "(LExamples$Counter;LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 31, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 12, "op": "InvokeWithException", "type": "int", "in": [], "args": [2], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 10},
+            {"kind": "invoke", "node": 12, "bci": 6, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Counter.value", "bci": 11},
+            {"id": 26, "op": "Add", "type": "int", "in": [12, 23], "bci": 15},
+            {"id": 25, "op": "Return", "type": "void", "in": [26], "bci": 16}
+          ],
+          "ops": [
+            {"kind": "load", "node": 23, "bci": 11, "field": "Examples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 16}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 16, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 30,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 16},
+                {"block": 1, "value": 31}
+              ]
+            },
+            {"id": 35, "op": "Unwind", "type": "void", "in": [30], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 5"}
+    },
+    {
+      "name": "Examples.forwardAcrossCallControl",
+      "descriptor": "(LExamples$Counter;LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 30, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 12, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 2], "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 7}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 10},
+            {"kind": "invoke", "node": 12, "bci": 7, "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 7}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Counter.value", "bci": 11},
+            {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 14}
+          ],
+          "ops": [
+            {"kind": "load", "node": 23, "bci": 11, "field": "Examples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 16, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 29,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 16},
+                {"block": 1, "value": 30}
+              ]
+            },
+            {"id": 34, "op": "Unwind", "type": "void", "in": [29], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 5"}
+    },
+    {
+      "name": "Examples.forwardAcrossVirtualCall",
+      "descriptor": "(LExamples$Counter;LExamples$Shape;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 39, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 7, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 13, "op": "IsNull", "type": "cond", "in": [2], "bci": 6},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 6}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 36, "op": "BytecodeException", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 7, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "Pi", "type": "ref", "in": [2], "bci": 6},
+            {"id": 16, "op": "InvokeWithException", "type": "int", "in": [], "args": [17], "target": "Examples$Shape.area()I", "callees": ["Examples$Rect.area()I", "Examples$Square.area()I"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 16, "bci": 6, "target": "Examples$Shape.area()I", "callees": ["Examples$Rect.area()I", "Examples$Square.area()I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 6, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 28, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Counter.value", "bci": 13},
+            {"id": 31, "op": "Add", "type": "int", "in": [16, 28], "bci": 17},
+            {"id": 30, "op": "Return", "type": "void", "in": [31], "bci": 18}
+          ],
+          "ops": [
+            {"kind": "load", "node": 28, "bci": 13, "field": "Examples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 18}
+        },
+        {
+          "id": 6,
+          "preds": [4],
+          "nodes": [
+            {"id": 21, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 7, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 7,
+          "preds": [6, 3, 1],
+          "nodes": [
+            {
+              "id": 35,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 6, "value": 21},
+                {"block": 3, "value": 36},
+                {"block": 1, "value": 39}
+              ]
+            },
+            {"id": 43, "op": "Unwind", "type": "void", "in": [35], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 5"}
+    },
+    {
+      "name": "Examples.forwardAcrossWritingCall",
+      "descriptor": "(LExamples$Counter;LExamples$Logger;LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "ref", "in": [], "index": 2, "bci": -1},
+            {"id": 6, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 5, "op": "If", "type": "void", "in": [6], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 31, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 11, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 9, "op": "StoreField", "type": "void", "in": [10, 11], "field": "Examples$Counter.value", "bci": 2},
+            {"id": 13, "op": "InvokeWithException", "type": "void", "in": [], "args": [2, 3], "target": "Examples.countInto(LExamples$Logger;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Logger;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 7}
+          ],
+          "ops": [
+            {"kind": "store", "node": 9, "bci": 2, "field": "Examples$Counter.value", "object": 1, "value": 11},
+            {"kind": "invoke", "node": 13, "bci": 7, "target": "Examples.countInto(LExamples$Logger;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Logger;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 7}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 24, "op": "LoadField", "type": "int", "in": [10], "field": "Examples$Counter.value", "bci": 11},
+            {"id": 26, "op": "Return", "type": "void", "in": [24], "bci": 14}
+          ],
+          "ops": [
+            {"kind": "load", "node": 24, "bci": 11, "field": "Examples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 30,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 17},
+                {"block": 1, "value": 31}
+              ]
+            },
+            {"id": 35, "op": "Unwind", "type": "void", "in": [30], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "11": "const 5"}
+    },
+    {
+      "name": "Examples.hoistLoadOutOfLoop",
+      "descriptor": "(LExamples$Counter;LExamples$Link;I)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "int", "in": [], "index": 2, "bci": -1},
+            {"id": 40, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 23},
+            {"id": 20, "op": "IsNull", "type": "cond", "in": [1], "bci": 13},
+            {"id": 7, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 0}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 5}
+        },
+        {
+          "id": 1,
+          "preds": [0, 5],
+          "nodes": [
+            {
+              "id": 8,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 0, "value": 7},
+                {"block": 5, "value": 39}
+              ]
+            },
+            {
+              "id": 9,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 0, "value": 7},
+                {"block": 5, "value": 41}
+              ]
+            },
+            {"id": 12, "op": "IntegerLessThan", "type": "cond", "in": [9, 3], "bci": 8},
+            {"id": 11, "op": "If", "type": "void", "in": [12], "bci": 8}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 2, "label": "true"},
+            {"to": 9, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 8, "cond": "IntegerLessThanNode"}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 19, "op": "If", "type": "void", "in": [20], "bci": 13}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 13, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 42, "op": "BytecodeException", "type": "ref", "in": [], "bci": 13}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 7, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "BytecodeExceptionNode", "bci": 13}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 24, "op": "Pi", "type": "ref", "in": [1], "bci": 13},
+            {"id": 23, "op": "LoadField", "type": "int", "in": [24], "field": "Examples$Counter.value", "bci": 13},
+            {"id": 25, "op": "InvokeWithException", "type": "int", "in": [], "args": [2], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 17}
+          ],
+          "ops": [
+            {"kind": "load", "node": 23, "bci": 13, "field": "Examples$Counter.value", "object": 1},
+            {"kind": "invoke", "node": 25, "bci": 17, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 6, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 17}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 38, "op": "Add", "type": "int", "in": [23, 25], "bci": 20},
+            {"id": 39, "op": "Add", "type": "int", "in": [8, 38], "bci": 21},
+            {"id": 41, "op": "Add", "type": "int", "in": [9, 40], "bci": 23}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "LoopEndNode", "bci": 26}
+        },
+        {
+          "id": 6,
+          "preds": [4],
+          "nodes": [
+            {"id": 29, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 17}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "ExceptionObjectNode", "bci": 17}
+        },
+        {
+          "id": 7,
+          "preds": [3],
+          "nodes": [
+            {"id": 46, "op": "ValueProxy", "type": "ref", "in": [42], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 10, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 8,
+          "preds": [6],
+          "nodes": [
+            {"id": 33, "op": "ValueProxy", "type": "ref", "in": [29], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 10, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 9,
+          "preds": [1],
+          "nodes": [
+            {"id": 16, "op": "ValueProxy", "type": "int", "in": [8], "bci": 29},
+            {"id": 17, "op": "ValueProxy", "type": "int", "in": [9], "bci": 29},
+            {"id": 15, "op": "Return", "type": "void", "in": [16], "bci": 30}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 30}
+        },
+        {
+          "id": 10,
+          "preds": [8, 7],
+          "nodes": [
+            {
+              "id": 51,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 8, "value": 33},
+                {"block": 7, "value": 46}
+              ]
+            },
+            {"id": 53, "op": "Unwind", "type": "void", "in": [51], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Examples.hoistLoadOutOfLoopControl",
+      "descriptor": "(LExamples$Counter;LExamples$Link;I)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "int", "in": [], "index": 2, "bci": -1},
+            {"id": 39, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 23},
+            {"id": 32, "op": "IsNull", "type": "cond", "in": [1], "bci": 18},
+            {"id": 7, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 0}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 5}
+        },
+        {
+          "id": 1,
+          "preds": [0, 5],
+          "nodes": [
+            {
+              "id": 8,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 0, "value": 7},
+                {"block": 5, "value": 38}
+              ]
+            },
+            {
+              "id": 9,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 0, "value": 7},
+                {"block": 5, "value": 40}
+              ]
+            },
+            {"id": 12, "op": "IntegerLessThan", "type": "cond", "in": [9, 3], "bci": 8},
+            {"id": 11, "op": "If", "type": "void", "in": [12], "bci": 8}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 2, "label": "true"},
+            {"to": 9, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 8, "cond": "IntegerLessThanNode"}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 19, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 2], "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 13}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 19, "bci": 13, "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 6, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 13}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 31, "op": "If", "type": "void", "in": [32], "bci": 18}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 18, "cond": "IsNullNode"}
+        },
+        {
+          "id": 4,
+          "preds": [3],
+          "nodes": [
+            {"id": 41, "op": "BytecodeException", "type": "ref", "in": [], "bci": 18}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 7, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "BytecodeExceptionNode", "bci": 18}
+        },
+        {
+          "id": 5,
+          "preds": [3],
+          "nodes": [
+            {"id": 36, "op": "Pi", "type": "ref", "in": [1], "bci": 18},
+            {"id": 35, "op": "LoadField", "type": "int", "in": [36], "field": "Examples$Counter.value", "bci": 18},
+            {"id": 38, "op": "Add", "type": "int", "in": [8, 35], "bci": 21},
+            {"id": 40, "op": "Add", "type": "int", "in": [9, 39], "bci": 23}
+          ],
+          "ops": [
+            {"kind": "load", "node": 35, "bci": 18, "field": "Examples$Counter.value", "object": 1}
+          ],
+          "succs": [
+            {"to": 1, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "LoopEndNode", "bci": 26}
+        },
+        {
+          "id": 6,
+          "preds": [2],
+          "nodes": [
+            {"id": 23, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 13}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "ExceptionObjectNode", "bci": 13}
+        },
+        {
+          "id": 7,
+          "preds": [4],
+          "nodes": [
+            {"id": 45, "op": "ValueProxy", "type": "ref", "in": [41], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 10, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 8,
+          "preds": [6],
+          "nodes": [
+            {"id": 27, "op": "ValueProxy", "type": "ref", "in": [23], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 10, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 9,
+          "preds": [1],
+          "nodes": [
+            {"id": 16, "op": "ValueProxy", "type": "int", "in": [8], "bci": 29},
+            {"id": 17, "op": "ValueProxy", "type": "int", "in": [9], "bci": 29},
+            {"id": 15, "op": "Return", "type": "void", "in": [16], "bci": 30}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 30}
+        },
+        {
+          "id": 10,
+          "preds": [8, 7],
+          "nodes": [
+            {
+              "id": 50,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 8, "value": 27},
+                {"block": 7, "value": 45}
+              ]
+            },
+            {"id": 52, "op": "Unwind", "type": "void", "in": [50], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Examples.length",
+      "descriptor": "(LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 1},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 29, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 17}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 11, "op": "Pi", "type": "ref", "in": [1], "bci": 10},
+            {"id": 10, "op": "LoadField", "type": "ref", "in": [11], "field": "Examples$Link.next", "bci": 10},
+            {"id": 14, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 8},
+            {"id": 12, "op": "InvokeWithException", "type": "int", "in": [], "args": [10], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 13}
+          ],
+          "ops": [
+            {"kind": "load", "node": 10, "bci": 10, "field": "Examples$Link.next", "object": 1},
+            {"kind": "invoke", "node": 12, "bci": 13, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 5, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 13}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 23, "op": "Add", "type": "int", "in": [12, 14], "bci": 16}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 17}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 30,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 3, "value": 23},
+                {"block": 1, "value": 29}
+              ]
+            },
+            {"id": 34, "op": "Return", "type": "void", "in": [30], "bci": 17}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 17}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 13},
+            {"id": 32, "op": "Unwind", "type": "void", "in": [17], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Examples.main",
+      "descriptor": "([Ljava/lang/String;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 239, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 0},
+            {"id": 46, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 37},
+            {"id": 240, "op": "CommitAllocation", "type": "void", "in": [239, 46, 46], "bci": -6},
+            {"id": 241, "op": "AllocatedObject", "type": "ref", "in": [239], "bci": 0},
+            {"id": 4, "op": "InvokeWithException", "type": "void", "in": [], "args": [241], "target": "Examples$Counter.<init>()V", "callees": ["Examples$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 4}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 4, "bci": 4, "target": "Examples$Counter.<init>()V", "callees": ["Examples$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 57, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 4}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 243, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 8},
+            {"id": 244, "op": "CommitAllocation", "type": "void", "in": [243, 46], "bci": -6},
+            {"id": 245, "op": "AllocatedObject", "type": "ref", "in": [243], "bci": 8},
+            {"id": 13, "op": "InvokeWithException", "type": "void", "in": [], "args": [245], "target": "Examples$Logger.<init>()V", "callees": ["Examples$Logger.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 12}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 13, "bci": 12, "target": "Examples$Logger.<init>()V", "callees": ["Examples$Logger.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 2, "label": "normal"},
+            {"to": 56, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 12}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 247, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 16},
+            {"id": 238, "op": "Constant", "type": "ref", "in": [], "value": "null", "bci": -1},
+            {"id": 248, "op": "CommitAllocation", "type": "void", "in": [247, 238], "bci": -6},
+            {"id": 249, "op": "AllocatedObject", "type": "ref", "in": [247], "bci": 16},
+            {"id": 22, "op": "InvokeWithException", "type": "void", "in": [], "args": [249], "target": "Examples$Link.<init>()V", "callees": ["Examples$Link.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 20}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 22, "bci": 20, "target": "Examples$Link.<init>()V", "callees": ["Examples$Link.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 55, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 20}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 251, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 25},
+            {"id": 252, "op": "CommitAllocation", "type": "void", "in": [251, 238], "bci": -6},
+            {"id": 253, "op": "AllocatedObject", "type": "ref", "in": [251], "bci": 25},
+            {"id": 30, "op": "InvokeWithException", "type": "void", "in": [], "args": [253], "target": "Examples$Link.<init>()V", "callees": ["Examples$Link.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 29}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 30, "bci": 29, "target": "Examples$Link.<init>()V", "callees": ["Examples$Link.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 4, "label": "normal"},
+            {"to": 54, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 29}
+        },
+        {
+          "id": 4,
+          "preds": [3],
+          "nodes": [
+            {"id": 37, "op": "StoreField", "type": "void", "in": [249, 253], "field": "Examples$Link.next", "bci": 32},
+            {"id": 40, "op": "IsNull", "type": "cond", "in": [1], "bci": 36},
+            {"id": 39, "op": "If", "type": "void", "in": [40], "bci": 36}
+          ],
+          "ops": [
+            {"kind": "store", "node": 37, "bci": 32, "field": "Examples$Link.next", "object": 249, "value": 253}
+          ],
+          "succs": [
+            {"to": 5, "label": "true"},
+            {"to": 6, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 36, "cond": "IsNullNode"}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 72, "op": "BytecodeException", "type": "ref", "in": [], "bci": 36}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 6,
+          "preds": [4],
+          "nodes": [
+            {"id": 44, "op": "Pi", "type": "ref", "in": [1], "bci": 36},
+            {"id": 43, "op": "ArrayLength", "type": "int", "in": [44], "bci": 36},
+            {"id": 47, "op": "IntegerEquals", "type": "cond", "in": [43, 46], "bci": 37},
+            {"id": 53, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 37},
+            {"id": 54, "op": "Conditional", "type": "int", "in": [47, 46, 53], "bci": 37},
+            {"id": 45, "op": "If", "type": "void", "in": [47], "bci": 49}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 7, "label": "true"},
+            {"to": 10, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 49, "cond": "IntegerEqualsNode"}
+        },
+        {
+          "id": 7,
+          "preds": [6],
+          "nodes": [
+            {"id": 255, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 62},
+            {"id": 256, "op": "CommitAllocation", "type": "void", "in": [255, 46, 46], "bci": -6},
+            {"id": 257, "op": "AllocatedObject", "type": "ref", "in": [255], "bci": 62},
+            {"id": 63, "op": "InvokeWithException", "type": "void", "in": [], "args": [257], "target": "Examples$Rect.<init>()V", "callees": ["Examples$Rect.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 66}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 63, "bci": 66, "target": "Examples$Rect.<init>()V", "callees": ["Examples$Rect.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 8, "label": "normal"},
+            {"to": 9, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 66}
+        },
+        {
+          "id": 8,
+          "preds": [7],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 69}
+        },
+        {
+          "id": 9,
+          "preds": [7],
+          "nodes": [
+            {"id": 67, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 66}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 10,
+          "preds": [6],
+          "nodes": [
+            {"id": 259, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 52},
+            {"id": 260, "op": "CommitAllocation", "type": "void", "in": [259, 46], "bci": -6},
+            {"id": 261, "op": "AllocatedObject", "type": "ref", "in": [259], "bci": 52},
+            {"id": 51, "op": "InvokeWithException", "type": "void", "in": [], "args": [261], "target": "Examples$Square.<init>()V", "callees": ["Examples$Square.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 56}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 51, "bci": 56, "target": "Examples$Square.<init>()V", "callees": ["Examples$Square.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 11, "label": "normal"},
+            {"to": 53, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 56}
+        },
+        {
+          "id": 11,
+          "preds": [10],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 69}
+        },
+        {
+          "id": 12,
+          "preds": [11, 8],
+          "nodes": [
+            {
+              "id": 71,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 11, "value": 261},
+                {"block": 8, "value": 257}
+              ]
+            },
+            {"id": 76, "op": "InvokeWithException", "type": "void", "in": [], "args": [241], "target": "Examples.deadStoreOtherField(LExamples$Counter;)V", "callees": ["Examples.deadStoreOtherField(LExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 72}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 76, "bci": 72, "target": "Examples.deadStoreOtherField(LExamples$Counter;)V", "callees": ["Examples.deadStoreOtherField(LExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 13, "label": "normal"},
+            {"to": 52, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 72}
+        },
+        {
+          "id": 13,
+          "preds": [12],
+          "nodes": [
+            {"id": 263, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 76},
+            {"id": 264, "op": "CommitAllocation", "type": "void", "in": [263, 46, 46], "bci": -6},
+            {"id": 265, "op": "AllocatedObject", "type": "ref", "in": [263], "bci": 76},
+            {"id": 84, "op": "InvokeWithException", "type": "void", "in": [], "args": [265], "target": "Examples$Counter.<init>()V", "callees": ["Examples$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 80}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 84, "bci": 80, "target": "Examples$Counter.<init>()V", "callees": ["Examples$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 14, "label": "normal"},
+            {"to": 51, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 80}
+        },
+        {
+          "id": 14,
+          "preds": [13],
+          "nodes": [
+            {"id": 91, "op": "InvokeWithException", "type": "void", "in": [], "args": [241, 265], "target": "Examples.deadStoreMaybeAliasControl(LExamples$Counter;LExamples$Counter;)V", "callees": ["Examples.deadStoreMaybeAliasControl(LExamples$Counter;LExamples$Counter;)V"], "flow": "ok", "exception_edge": true, "bci": 83}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 91, "bci": 83, "target": "Examples.deadStoreMaybeAliasControl(LExamples$Counter;LExamples$Counter;)V", "callees": ["Examples.deadStoreMaybeAliasControl(LExamples$Counter;LExamples$Counter;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 15, "label": "normal"},
+            {"to": 50, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 83}
+        },
+        {
+          "id": 15,
+          "preds": [14],
+          "nodes": [
+            {"id": 98, "op": "InvokeWithException", "type": "void", "in": [], "args": [241, 245], "target": "Examples.deadStoreOtherObject(LExamples$Counter;LExamples$Logger;)V", "callees": ["Examples.deadStoreOtherObject(LExamples$Counter;LExamples$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 88}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 98, "bci": 88, "target": "Examples.deadStoreOtherObject(LExamples$Counter;LExamples$Logger;)V", "callees": ["Examples.deadStoreOtherObject(LExamples$Counter;LExamples$Logger;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 16, "label": "normal"},
+            {"to": 49, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 88}
+        },
+        {
+          "id": 16,
+          "preds": [15],
+          "nodes": [
+            {"id": 105, "op": "InvokeWithException", "type": "void", "in": [], "args": [241, 54], "target": "Examples.deadStoreBothArms(LExamples$Counter;Z)V", "callees": ["Examples.deadStoreBothArms(LExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true, "bci": 94}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 105, "bci": 94, "target": "Examples.deadStoreBothArms(LExamples$Counter;Z)V", "callees": ["Examples.deadStoreBothArms(LExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 17, "label": "normal"},
+            {"to": 48, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 94}
+        },
+        {
+          "id": 17,
+          "preds": [16],
+          "nodes": [
+            {"id": 112, "op": "InvokeWithException", "type": "void", "in": [], "args": [241, 54], "target": "Examples.deadStoreOneArm(LExamples$Counter;Z)V", "callees": ["Examples.deadStoreOneArm(LExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true, "bci": 100}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 112, "bci": 100, "target": "Examples.deadStoreOneArm(LExamples$Counter;Z)V", "callees": ["Examples.deadStoreOneArm(LExamples$Counter;Z)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 18, "label": "normal"},
+            {"to": 47, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 100}
+        },
+        {
+          "id": 18,
+          "preds": [17],
+          "nodes": [
+            {"id": 119, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 249], "target": "Examples.forwardAcrossCall(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.forwardAcrossCall(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 105}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 119, "bci": 105, "target": "Examples.forwardAcrossCall(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.forwardAcrossCall(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 19, "label": "normal"},
+            {"to": 46, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 105}
+        },
+        {
+          "id": 19,
+          "preds": [18],
+          "nodes": [
+            {"id": 126, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 249], "target": "Examples.forwardAcrossCallControl(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.forwardAcrossCallControl(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 114}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 126, "bci": 114, "target": "Examples.forwardAcrossCallControl(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.forwardAcrossCallControl(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 20, "label": "normal"},
+            {"to": 45, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 114}
+        },
+        {
+          "id": 20,
+          "preds": [19],
+          "nodes": [
+            {"id": 135, "op": "Add", "type": "int", "in": [119, 126], "bci": 117},
+            {"id": 133, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 245, 249], "target": "Examples.forwardAcrossWritingCall(LExamples$Counter;LExamples$Logger;LExamples$Link;)I", "callees": ["Examples.forwardAcrossWritingCall(LExamples$Counter;LExamples$Logger;LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 125}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 133, "bci": 125, "target": "Examples.forwardAcrossWritingCall(LExamples$Counter;LExamples$Logger;LExamples$Link;)I", "callees": ["Examples.forwardAcrossWritingCall(LExamples$Counter;LExamples$Logger;LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 21, "label": "normal"},
+            {"to": 44, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 125}
+        },
+        {
+          "id": 21,
+          "preds": [20],
+          "nodes": [
+            {"id": 143, "op": "Add", "type": "int", "in": [133, 135], "bci": 128},
+            {"id": 141, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 249], "target": "Examples.repeatedLoadAcrossCall(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.repeatedLoadAcrossCall(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 135}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 141, "bci": 135, "target": "Examples.repeatedLoadAcrossCall(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.repeatedLoadAcrossCall(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 22, "label": "normal"},
+            {"to": 43, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 135}
+        },
+        {
+          "id": 22,
+          "preds": [21],
+          "nodes": [
+            {"id": 151, "op": "Add", "type": "int", "in": [141, 143], "bci": 138},
+            {"id": 149, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 249], "target": "Examples.repeatedLoadAcrossCallControl(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.repeatedLoadAcrossCallControl(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 145}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 149, "bci": 145, "target": "Examples.repeatedLoadAcrossCallControl(LExamples$Counter;LExamples$Link;)I", "callees": ["Examples.repeatedLoadAcrossCallControl(LExamples$Counter;LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 23, "label": "normal"},
+            {"to": 42, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 145}
+        },
+        {
+          "id": 23,
+          "preds": [22],
+          "nodes": [
+            {"id": 160, "op": "Add", "type": "int", "in": [149, 151], "bci": 148},
+            {"id": 158, "op": "Constant", "type": "int", "in": [], "value": "3", "bci": 155},
+            {"id": 157, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 249, 158], "target": "Examples.hoistLoadOutOfLoop(LExamples$Counter;LExamples$Link;I)I", "callees": ["Examples.hoistLoadOutOfLoop(LExamples$Counter;LExamples$Link;I)I"], "flow": "ok", "exception_edge": true, "bci": 156}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 157, "bci": 156, "target": "Examples.hoistLoadOutOfLoop(LExamples$Counter;LExamples$Link;I)I", "callees": ["Examples.hoistLoadOutOfLoop(LExamples$Counter;LExamples$Link;I)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 24, "label": "normal"},
+            {"to": 41, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 156}
+        },
+        {
+          "id": 24,
+          "preds": [23],
+          "nodes": [
+            {"id": 168, "op": "Add", "type": "int", "in": [157, 160], "bci": 159},
+            {"id": 166, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 249, 158], "target": "Examples.hoistLoadOutOfLoopControl(LExamples$Counter;LExamples$Link;I)I", "callees": ["Examples.hoistLoadOutOfLoopControl(LExamples$Counter;LExamples$Link;I)I"], "flow": "ok", "exception_edge": true, "bci": 167}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 166, "bci": 167, "target": "Examples.hoistLoadOutOfLoopControl(LExamples$Counter;LExamples$Link;I)I", "callees": ["Examples.hoistLoadOutOfLoopControl(LExamples$Counter;LExamples$Link;I)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 25, "label": "normal"},
+            {"to": 40, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 167}
+        },
+        {
+          "id": 25,
+          "preds": [24],
+          "nodes": [
+            {"id": 176, "op": "Add", "type": "int", "in": [166, 168], "bci": 170},
+            {"id": 174, "op": "InvokeWithException", "type": "int", "in": [], "args": [241, 71], "target": "Examples.forwardAcrossVirtualCall(LExamples$Counter;LExamples$Shape;)I", "callees": ["Examples.forwardAcrossVirtualCall(LExamples$Counter;LExamples$Shape;)I"], "flow": "ok", "exception_edge": true, "bci": 178}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 174, "bci": 178, "target": "Examples.forwardAcrossVirtualCall(LExamples$Counter;LExamples$Shape;)I", "callees": ["Examples.forwardAcrossVirtualCall(LExamples$Counter;LExamples$Shape;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 26, "label": "normal"},
+            {"to": 39, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 178}
+        },
+        {
+          "id": 26,
+          "preds": [25],
+          "nodes": [
+            {"id": 184, "op": "Add", "type": "int", "in": [174, 176], "bci": 181},
+            {"id": 182, "op": "InvokeWithException", "type": "void", "in": [], "args": [249], "target": "Examples.unusedReadOnlyCall(LExamples$Link;)V", "callees": ["Examples.unusedReadOnlyCall(LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 185}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 182, "bci": 185, "target": "Examples.unusedReadOnlyCall(LExamples$Link;)V", "callees": ["Examples.unusedReadOnlyCall(LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 27, "label": "normal"},
+            {"to": 38, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 185}
+        },
+        {
+          "id": 27,
+          "preds": [26],
+          "nodes": [
+            {"id": 190, "op": "InvokeWithException", "type": "void", "in": [], "args": [241, 249], "target": "Examples.unusedWritingCall(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.unusedWritingCall(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 190}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 190, "bci": 190, "target": "Examples.unusedWritingCall(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.unusedWritingCall(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 28, "label": "normal"},
+            {"to": 37, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 190}
+        },
+        {
+          "id": 28,
+          "preds": [27],
+          "nodes": [
+            {"id": 197, "op": "InvokeWithException", "type": "int", "in": [], "args": [249], "target": "Examples.repeatedReadOnlyCall(LExamples$Link;)I", "callees": ["Examples.repeatedReadOnlyCall(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 196}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 197, "bci": 196, "target": "Examples.repeatedReadOnlyCall(LExamples$Link;)I", "callees": ["Examples.repeatedReadOnlyCall(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 29, "label": "normal"},
+            {"to": 36, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 196}
+        },
+        {
+          "id": 29,
+          "preds": [28],
+          "nodes": [
+            {"id": 206, "op": "Add", "type": "int", "in": [184, 197], "bci": 199},
+            {"id": 204, "op": "InvokeWithException", "type": "int", "in": [], "args": [249], "target": "Examples.repeatedReadOnlyCallControl(LExamples$Link;)I", "callees": ["Examples.repeatedReadOnlyCallControl(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 205}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 204, "bci": 205, "target": "Examples.repeatedReadOnlyCallControl(LExamples$Link;)I", "callees": ["Examples.repeatedReadOnlyCallControl(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 30, "label": "normal"},
+            {"to": 35, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 205}
+        },
+        {
+          "id": 30,
+          "preds": [29],
+          "nodes": [
+            {"id": 212, "op": "LoadField", "type": "ref", "in": [], "field": "java.lang.System.out", "bci": 211},
+            {"id": 213, "op": "LoadField", "type": "int", "in": [241], "field": "Examples$Counter.value", "bci": 217},
+            {"id": 214, "op": "LoadField", "type": "int", "in": [241], "field": "Examples$Counter.other", "bci": 222},
+            {"id": 215, "op": "LoadField", "type": "int", "in": [245], "field": "Examples$Logger.count", "bci": 227},
+            {"id": 217, "op": "IsNull", "type": "cond", "in": [212], "bci": 231},
+            {"id": 222, "op": "Add", "type": "int", "in": [204, 206], "bci": 208},
+            {"id": 216, "op": "If", "type": "void", "in": [217], "bci": 231}
+          ],
+          "ops": [
+            {"kind": "load", "node": 212, "bci": 211, "field": "java.lang.System.out", "object": null},
+            {"kind": "load", "node": 213, "bci": 217, "field": "Examples$Counter.value", "object": 241},
+            {"kind": "load", "node": 214, "bci": 222, "field": "Examples$Counter.other", "object": 241},
+            {"kind": "load", "node": 215, "bci": 227, "field": "Examples$Logger.count", "object": 245}
+          ],
+          "succs": [
+            {"to": 31, "label": "true"},
+            {"to": 32, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 231, "cond": "IsNullNode"}
+        },
+        {
+          "id": 31,
+          "preds": [30],
+          "nodes": [
+            {"id": 233, "op": "BytecodeException", "type": "ref", "in": [], "bci": 231}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 32,
+          "preds": [30],
+          "nodes": [
+            {"id": 221, "op": "Pi", "type": "ref", "in": [212], "bci": 231},
+            {"id": 223, "op": "Add", "type": "int", "in": [213, 222], "bci": 220},
+            {"id": 224, "op": "Add", "type": "int", "in": [214, 223], "bci": 225},
+            {"id": 225, "op": "Add", "type": "int", "in": [215, 224], "bci": 230},
+            {"id": 220, "op": "InvokeWithException", "type": "void", "in": [], "args": [221, 225], "target": "java.io.PrintStream.println(I)V", "callees": ["java.io.PrintStream.println(I)V"], "flow": "ok", "exception_edge": true, "bci": 231}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 220, "bci": 231, "target": "java.io.PrintStream.println(I)V", "callees": ["java.io.PrintStream.println(I)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 33, "label": "normal"},
+            {"to": 34, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 231}
+        },
+        {
+          "id": 33,
+          "preds": [32],
+          "nodes": [
+            {"id": 232, "op": "Return", "type": "void", "in": [], "bci": 234}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 234}
+        },
+        {
+          "id": 34,
+          "preds": [32],
+          "nodes": [
+            {"id": 229, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 231}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 35,
+          "preds": [29],
+          "nodes": [
+            {"id": 209, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 205}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 36,
+          "preds": [28],
+          "nodes": [
+            {"id": 201, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 196}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 37,
+          "preds": [27],
+          "nodes": [
+            {"id": 194, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 190}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 38,
+          "preds": [26],
+          "nodes": [
+            {"id": 187, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 185}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 39,
+          "preds": [25],
+          "nodes": [
+            {"id": 179, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 178}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 40,
+          "preds": [24],
+          "nodes": [
+            {"id": 171, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 167}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 41,
+          "preds": [23],
+          "nodes": [
+            {"id": 163, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 156}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 42,
+          "preds": [22],
+          "nodes": [
+            {"id": 154, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 145}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 43,
+          "preds": [21],
+          "nodes": [
+            {"id": 146, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 135}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 44,
+          "preds": [20],
+          "nodes": [
+            {"id": 138, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 125}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 45,
+          "preds": [19],
+          "nodes": [
+            {"id": 130, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 114}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 46,
+          "preds": [18],
+          "nodes": [
+            {"id": 123, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 105}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 47,
+          "preds": [17],
+          "nodes": [
+            {"id": 116, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 100}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 48,
+          "preds": [16],
+          "nodes": [
+            {"id": 109, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 94}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 49,
+          "preds": [15],
+          "nodes": [
+            {"id": 102, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 88}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 50,
+          "preds": [14],
+          "nodes": [
+            {"id": 95, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 83}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 51,
+          "preds": [13],
+          "nodes": [
+            {"id": 88, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 80}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 52,
+          "preds": [12],
+          "nodes": [
+            {"id": 80, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 72}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 53,
+          "preds": [10],
+          "nodes": [
+            {"id": 57, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 56}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 54,
+          "preds": [3],
+          "nodes": [
+            {"id": 34, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 29}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 55,
+          "preds": [2],
+          "nodes": [
+            {"id": 26, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 20}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 56,
+          "preds": [1],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 12}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 57,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 58, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 58,
+          "preds": [57, 56, 55, 54, 53, 9, 5, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 31],
+          "nodes": [
+            {
+              "id": 20,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 57, "value": 8},
+                {"block": 56, "value": 17},
+                {"block": 55, "value": 26},
+                {"block": 54, "value": 34},
+                {"block": 53, "value": 57},
+                {"block": 9, "value": 67},
+                {"block": 5, "value": 72},
+                {"block": 52, "value": 80},
+                {"block": 51, "value": 88},
+                {"block": 50, "value": 95},
+                {"block": 49, "value": 102},
+                {"block": 48, "value": 109},
+                {"block": 47, "value": 116},
+                {"block": 46, "value": 123},
+                {"block": 45, "value": 130},
+                {"block": 44, "value": 138},
+                {"block": 43, "value": 146},
+                {"block": 42, "value": 154},
+                {"block": 41, "value": 163},
+                {"block": 40, "value": 171},
+                {"block": 39, "value": 179},
+                {"block": 38, "value": 187},
+                {"block": 37, "value": 194},
+                {"block": 36, "value": 201},
+                {"block": 35, "value": 209},
+                {"block": 34, "value": 229},
+                {"block": 31, "value": 233}
+              ]
+            },
+            {"id": 237, "op": "Unwind", "type": "void", "in": [20], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"241": "AllocatedObjectNode#241", "245": "AllocatedObjectNode#245", "249": "AllocatedObjectNode#249", "253": "AllocatedObjectNode#253"}
+    },
+    {
+      "name": "Examples.repeatedLoadAcrossCall",
+      "descriptor": "(LExamples$Counter;LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 30, "op": "BytecodeException", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 1},
+            {"id": 8, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Counter.value", "bci": 1},
+            {"id": 10, "op": "InvokeWithException", "type": "int", "in": [], "args": [2], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 6}
+          ],
+          "ops": [
+            {"kind": "load", "node": 8, "bci": 1, "field": "Examples$Counter.value", "object": 1},
+            {"kind": "invoke", "node": 10, "bci": 6, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 6}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 21, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Counter.value", "bci": 12},
+            {"id": 24, "op": "Add", "type": "int", "in": [8, 21], "bci": 15},
+            {"id": 25, "op": "Add", "type": "int", "in": [10, 24], "bci": 17},
+            {"id": 23, "op": "Return", "type": "void", "in": [25], "bci": 18}
+          ],
+          "ops": [
+            {"kind": "load", "node": 21, "bci": 12, "field": "Examples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 18}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 14, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 29,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 14},
+                {"block": 1, "value": 30}
+              ]
+            },
+            {"id": 34, "op": "Unwind", "type": "void", "in": [29], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Examples.repeatedLoadAcrossCallControl",
+      "descriptor": "(LExamples$Counter;LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 29, "op": "BytecodeException", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 1},
+            {"id": 8, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Counter.value", "bci": 1},
+            {"id": 10, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 2], "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 7}
+          ],
+          "ops": [
+            {"kind": "load", "node": 8, "bci": 1, "field": "Examples$Counter.value", "object": 1},
+            {"kind": "invoke", "node": 10, "bci": 7, "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 7}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 21, "op": "LoadField", "type": "int", "in": [9], "field": "Examples$Counter.value", "bci": 12},
+            {"id": 24, "op": "Add", "type": "int", "in": [8, 21], "bci": 15},
+            {"id": 23, "op": "Return", "type": "void", "in": [24], "bci": 16}
+          ],
+          "ops": [
+            {"kind": "load", "node": 21, "bci": 12, "field": "Examples$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 16}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 14, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 28,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 14},
+                {"block": 1, "value": 29}
+              ]
+            },
+            {"id": 33, "op": "Unwind", "type": "void", "in": [28], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Examples.repeatedReadOnlyCall",
+      "descriptor": "(LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "int", "in": [], "args": [1], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 11, "op": "InvokeWithException", "type": "int", "in": [], "args": [1], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 5}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 11, "bci": 5, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 2, "label": "normal"},
+            {"to": 3, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 5}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 20, "op": "Add", "type": "int", "in": [3, 11], "bci": 8},
+            {"id": 19, "op": "Return", "type": "void", "in": [20], "bci": 9}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 9}
+        },
+        {
+          "id": 3,
+          "preds": [1],
+          "nodes": [
+            {"id": 15, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 5}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 3],
+          "nodes": [
+            {
+              "id": 18,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 7},
+                {"block": 3, "value": 15}
+              ]
+            },
+            {"id": 22, "op": "Unwind", "type": "void", "in": [18], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Examples.repeatedReadOnlyCallControl",
+      "descriptor": "(LExamples$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "int", "in": [], "args": [1], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 7, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 12, "op": "IsNull", "type": "cond", "in": [1], "bci": 6},
+            {"id": 11, "op": "If", "type": "void", "in": [12], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 2, "label": "true"},
+            {"to": 3, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IsNullNode"}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 14}
+        },
+        {
+          "id": 3,
+          "preds": [1],
+          "nodes": [
+            {"id": 19, "op": "Pi", "type": "ref", "in": [1], "bci": 11},
+            {"id": 20, "op": "Constant", "type": "ref", "in": [], "value": "null", "bci": 6},
+            {"id": 18, "op": "StoreField", "type": "void", "in": [19, 20], "field": "Examples$Link.next", "bci": 11}
+          ],
+          "ops": [
+            {"kind": "store", "node": 18, "bci": 11, "field": "Examples$Link.next", "object": 1, "value": 20}
+          ],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [3, 2],
+          "nodes": [
+            {"id": 30, "op": "InvokeWithException", "type": "int", "in": [], "args": [1], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 16}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 30, "bci": 16, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 6, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 16}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 38, "op": "Add", "type": "int", "in": [3, 30], "bci": 19},
+            {"id": 37, "op": "Return", "type": "void", "in": [38], "bci": 20}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 20}
+        },
+        {
+          "id": 6,
+          "preds": [4],
+          "nodes": [
+            {"id": 34, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 16}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 7,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 8,
+          "preds": [7, 6],
+          "nodes": [
+            {
+              "id": 27,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 7, "value": 7},
+                {"block": 6, "value": 34}
+              ]
+            },
+            {"id": 40, "op": "Unwind", "type": "void", "in": [27], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "20": "const null"}
+    },
+    {
+      "name": "Examples.unusedReadOnlyCall",
+      "descriptor": "(LExamples$Link;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "int", "in": [], "args": [1], "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "Examples.length(LExamples$Link;)I", "callees": ["Examples.length(LExamples$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 5}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 5}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Examples.unusedWritingCall",
+      "descriptor": "(LExamples$Counter;LExamples$Link;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 4, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 2], "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 2}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 4, "bci": 2, "target": "Examples.countInto(LExamples$Counter;LExamples$Link;)V", "callees": ["Examples.countInto(LExamples$Counter;LExamples$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 2}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 11, "op": "Return", "type": "void", "in": [], "bci": 5}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 5}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 2},
+            {"id": 10, "op": "Unwind", "type": "void", "in": [8], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    }
+  ]
+}
