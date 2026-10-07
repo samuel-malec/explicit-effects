@@ -1,9 +1,9 @@
 """Compiler Driver of Graal -> Cthu pipeline
 
 Usage:
-    cd graal-export && ./build.sh examples/TokenExamples.java && \\
-        DUMP_IR=out/token-examples.json ./run-dump.sh TokenExamples && cd ..
-    PYTHONPATH=src python3 -m graal2ct graal-export/out/token-examples.json --method resetCounter
+    cd graal-export && ./build.sh examples/Examples.java && \\
+        DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
+    PYTHONPATH=src python3 -m graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
 
 """
 

@@ -1,0 +1,243 @@
+type int
+type long
+type float
+type double
+type ref
+type bool
+type heap
+type stck
+
+signature lattice[ T, B ]
+(
+    join ∷ T × T → T
+    bot  ∷ ∅ → T
+    top  ∷ ∅ → T
+    opt  ∷ B × T → T
+)
+
+signature linear[ T, S, B ] : lattice[ T, B ]
+(
+    fork ∷ T → T × T
+    move ∷ T → T
+    push ∷ S × T → S
+    pop  ∷ S → T × S
+)
+
+signature affine[ T, S, B ] : linear[ T, S, B ]
+(
+    drop ∷ T → ∅
+)
+
+signature simple[ T, S, B ] : affine[ T, S, B ]
+(
+    dup ∷ T → T × T
+)
+
+signature arithmetic[ T, S, B ] : simple[ T, S, B ]
+(
+    add  ∷ T × T → T
+    sub  ∷ T × T → T
+    mul  ∷ T × T → T
+    div  ∷ T × T → T
+    rem  ∷ T × T → T
+    neg  ∷ T → T
+
+    eq?  ∷ T × T → B
+    lt?  ∷ T × T → B
+    ult? ∷ T × T → B
+)
+
+signature bitwise[ T, I ]
+(
+    and  ∷ T × T → T
+    or   ∷ T × T → T
+    xor  ∷ T × T → T
+    not  ∷ T → T 
+    shl  ∷ T × I → T
+    shr  ∷ T × I → T
+    ushr ∷ T × I → T
+)
+
+signature floating[ T, S, B ] : simple[ T, S, B ]
+(
+    add ∷ T × T → T
+    sub ∷ T × T → T
+    mul ∷ T × T → T
+    neg ∷ T → T
+)
+
+signature logical[ B, S ] : simple[ B, S, B ]
+(
+    not ∷ B → B
+)
+
+signature reference[ R, S, B, I ] : simple[ R, S, B ]
+(
+    null   ∷ ∅ → R
+    nil?   ∷ R → B
+    eq?    ∷ R × R → B
+    length ∷ R → I
+)
+
+signature memory[ H, S, B ] : linear[ H, S, B ]
+(
+    trap ∷ H → ∅        ; for now, this is how we model a Java exception
+)
+
+signature function[ F, S, B, I, O, G ] : simple[ F, S, B ]
+(
+    call ∷ F × I → O
+    opt  ∷ B × F → F
+    join ∷ F × F × G → F
+)
+
+structure int : arithmetic[ int, stck, bool ], bitwise[ int, int ]
+(
+    join = graal_int_join   ; lattice
+    bot  = graal_int_bot
+    top  = graal_int_top
+    opt  = graal_int_opt
+    fork = graal_int_fork   ; linear
+    move = graal_int_move
+    push = graal_int_push
+    pop  = graal_int_pop
+    drop = graal_int_drop   ; affine
+    dup  = graal_int_dup    ; simple
+
+    add  = graal_int_add    ; arithmetic
+    sub  = graal_int_sub
+    mul  = graal_int_mul
+    div  = graal_int_div
+    rem  = graal_int_rem
+    neg  = graal_int_neg
+    eq?  = graal_int_eq
+    lt?  = graal_int_lt
+    ult? = graal_int_ult
+
+    and  = graal_int_and    ; bitwise
+    or   = graal_int_or
+    xor  = graal_int_xor
+    not  = graal_int_not
+    shl  = graal_int_shl
+    shr  = graal_int_shr
+    ushr = graal_int_ushr
+)
+
+structure long : arithmetic[ long, stck, bool ], bitwise[ long, int ]
+(
+    join = graal_long_join   ; lattice
+    bot  = graal_long_bot
+    top  = graal_long_top
+    opt  = graal_long_opt
+    fork = graal_long_fork   ; linear
+    move = graal_long_move
+    push = graal_long_push
+    pop  = graal_long_pop
+    drop = graal_long_drop   ; affine
+    dup  = graal_long_dup    ; simple
+
+    add  = graal_long_add    ; arithmetic
+    sub  = graal_long_sub
+    mul  = graal_long_mul
+    div  = graal_long_div
+    rem  = graal_long_rem
+    neg  = graal_long_neg
+    eq?  = graal_long_eq
+    lt?  = graal_long_lt
+    ult? = graal_long_ult
+
+    and  = graal_long_and    ; bitwise
+    or   = graal_long_or
+    xor  = graal_long_xor
+    not  = graal_long_not
+    shl  = graal_long_shl
+    shr  = graal_long_shr
+    ushr = graal_long_ushr
+)
+
+structure float : floating[ float, stck, bool ]
+(
+    join = graal_float_join   ; lattice
+    bot  = graal_float_bot
+    top  = graal_float_top
+    opt  = graal_float_opt
+    fork = graal_float_fork   ; linear
+    move = graal_float_move
+    push = graal_float_push
+    pop  = graal_float_pop
+    drop = graal_float_drop   ; affine
+    dup  = graal_float_dup    ; simple
+
+    add  = graal_float_add    ; floating
+    sub  = graal_float_sub
+    mul  = graal_float_mul
+    neg  = graal_float_neg
+)
+
+structure double : floating[ double, stck, bool ]
+(
+    join = graal_double_join   ; lattice
+    bot  = graal_double_bot
+    top  = graal_double_top
+    opt  = graal_double_opt
+    fork = graal_double_fork   ; linear
+    move = graal_double_move
+    push = graal_double_push
+    pop  = graal_double_pop
+    drop = graal_double_drop   ; affine
+    dup  = graal_double_dup    ; simple
+
+    add  = graal_double_add    ; floating
+    sub  = graal_double_sub
+    mul  = graal_double_mul
+    neg  = graal_double_neg
+)
+
+structure bool : logical[ bool, stck ]
+(
+    join = graal_bool_join   ; lattice
+    bot  = graal_bool_bot
+    top  = graal_bool_top
+    opt  = graal_bool_opt
+    fork = graal_bool_fork   ; linear
+    move = graal_bool_move
+    push = graal_bool_push
+    pop  = graal_bool_pop
+    drop = graal_bool_drop   ; affine
+    dup  = graal_bool_dup    ; simple
+
+    not  = graal_bool_not    ; logical
+)
+
+structure ref : reference[ ref, stck, bool, int ]
+(
+    join   = graal_ref_join   ; lattice
+    bot    = graal_ref_bot
+    top    = graal_ref_top
+    opt    = graal_ref_opt
+    fork   = graal_ref_fork   ; linear
+    move   = graal_ref_move
+    push   = graal_ref_push
+    pop    = graal_ref_pop
+    drop   = graal_ref_drop   ; affine
+    dup    = graal_ref_dup    ; simple
+
+    null   = graal_ref_null   ; reference
+    nil?   = graal_ref_nil
+    eq?    = graal_ref_eq
+    length = graal_ref_length
+)
+
+structure heap : memory[ heap, stck, bool ]
+(
+    join = graal_heap_join   ; lattice
+    bot  = graal_heap_bot
+    top  = graal_heap_top
+    opt  = graal_heap_opt
+    fork = graal_heap_fork   ; linear
+    move = graal_heap_move
+    push = graal_heap_push
+    pop  = graal_heap_pop
+
+    trap = graal_heap_trap   ; memory
+)

@@ -1,8 +1,5 @@
 """Graal IR → Cthulhu transformation
 
-Each method becomes a structure, and each of its basic blocks a λ.
-Each basic bloc k of a method becomes a λ.
-As of now the entire memory modeling is condensed into one linear value of type `heap`.
 ( TODO: how to model exceptions ? -> Right now create a phony cthu instruction which acts as an expcetion,
 """
 
@@ -77,11 +74,16 @@ class Translation:
         self.refused: dict[str, str] = {}
 
     def translate(self, keys: list[str]) -> Program:
+        calls: dict[str, str] = {}
         for key in keys:
             graph = self.graphs[key]
 
             if "no graph" in graph.unsupported:
                 self.refused[key] = "no graph (native or abstract)"
+                continue
+
+            if graph.unsupported:
+                self.refused[key] = "; ".join(graph.unsupported)
                 continue
 
             method = MethodTranslation(self, graph, structure_name(key))
@@ -93,11 +95,13 @@ class Translation:
                 continue
             
             self.program.structures.append(structure)
-            
-            for external in method.externals:
-                if external not in self.program.externals:
-                    self.program.externals.append(external)
-        
+            calls.update(method.calls)
+
+        # Called but not defined here: outside the export, refused, or not selected.
+        defined = {s.name for s in self.program.structures}
+        for structure, method in calls.items():
+            if structure not in defined:
+                self.program.externals.setdefault(structure, method)
         return self.program
 
     def callee_structure(self, method: str) -> tuple[str, bool]:
@@ -116,7 +120,7 @@ class MethodTranslation:
         result = return_type(graph.descriptor)
         self.outs = ([("r", result)] if result else []) + [("hout", "heap")]
         self.out_types = [t for _, t in self.outs]
-        self.externals: list[str] = []
+        self.calls: dict[str, str] = {}  # the structures this method calls, and the methods they stand for
         self.frames: dict[str, Lambda] = {}
 
     def value(self, node_id: int) -> int:
@@ -162,7 +166,11 @@ class MethodTranslation:
                     reached.add(e.to)
                     work.append(e.to)
 
-        self.order = [b for b in blocks if b in reached]  # Keep the rpo order of blocks 
+        for b in reached - doomed:
+            if any(e.label == "exception" and e.to not in doomed for e in blocks[b].succs):
+                raise Unsupported(f"exception handler (a caught exception) for bci {blocks[b].end.get('bci')}")
+
+        self.order = [b for b in blocks if b in reached]  # Keep the rpo order of blocks
 
         # Find which values must come to a block from a different block
         defs, uses = {}, {}
@@ -281,8 +289,11 @@ class MethodTranslation:
     def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "") -> None:
         self.body.append(Instr(type_, op, ins, outs, out_types, note))
 
-    def _next_heap(self) -> str:
-        return f"h{next(self.heaps)}"
+    def _advance(self) -> tuple[str, str]:
+        """The heap's current version, and its next, which becomes current."""
+        before, after = self.heap, f"h{next(self.heaps)}"
+        self.heap = after
+        return before, after
 
     def _node(self, n: Node) -> None:
         op, v, t = n.op, f"v{n.id}", _type(n)
@@ -317,14 +328,13 @@ class MethodTranslation:
         elif op in ("LoadField", "StoreField"):
             self._field(n)
         elif op == "NewInstance":
-            h = self._next_heap()
+            before, after = self._advance()
             k = self.t.program.class_index(n.cls)
-            self._emit("heap", f"new_{k}", [self.heap], [v, h], ["ref", "heap"], note=n.cls)
-            self.heap = h
+            self._emit("heap", f"new_{k}", [before], [v, after], ["ref", "heap"], note=n.cls)
         elif op in CALLS:
             self._call(n)
         elif op in ("BytecodeException", "ExceptionObject"):
-            raise Unsupported("exception handler (a caught exception)")
+            raise Unsupported(f"exception handler (a caught exception) for bci {n.bci}")
         elif op in ("CommitAllocation", "VirtualInstance", "AllocatedObject"):
             raise Unsupported("allocation after escape analysis")
         else:
@@ -333,35 +343,31 @@ class MethodTranslation:
     def _field(self, n: Node) -> None:
         value = _type(n) if n.op == "LoadField" else self.type_of(n.inputs[-1])
         k = self.t.program.field_index(n.field, value)
-        h = self._next_heap()
+        before, after = self._advance()
         static = "static" if (n.op == "LoadField" and not n.inputs) or (n.op == "StoreField" and len(n.inputs) == 1) else ""
-        ins = [self.heap, *(self.ref(i) for i in n.inputs)]
+        ins = [before, *(self.ref(i) for i in n.inputs)]
 
         if n.op == "LoadField":
-            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", h], [_type(n), "heap"], note=n.field)
+            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.field)
         else:
-            self._emit("heap", f"set{static}_{k}", ins, [h], ["heap"], note=n.field)
-        self.heap = h
+            self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], note=n.field)
 
     def _call(self, n: Node) -> None:
         if len(n.callees) > 1:
             raise Unsupported(f"call to {n.target} with {len(n.callees)} targets")
         callee = n.callees[0] if n.callees else n.target
-        structure, external = self.t.callee_structure(callee)
-
-        if external and callee not in self.externals:
-            self.externals.append(callee)
+        structure, _ = self.t.callee_structure(callee)
+        self.calls[structure] = callee
 
         result = None if n.type == "void" else _type(n)
         arg_types = [self.type_of(a) for a in n.args]
         ftype = function_type(arg_types + ["heap"], ([result] if result else []) + ["heap"])
-        h = self._next_heap()
-        outs = ([f"v{n.id}"] if result else []) + [h]
+        before, after = self._advance()
+        outs = ([f"v{n.id}"] if result else []) + [after]
         self._emit(structure, "run", [], [f"k{n.id}"], [ftype])
 
-        self._emit(ftype, "call", [f"k{n.id}", *(self.ref(a) for a in n.args), self.heap], outs,
+        self._emit(ftype, "call", [f"k{n.id}", *(self.ref(a) for a in n.args), before], outs,
                    ([result] if result else []) + ["heap"], note=callee)
-        self.heap = h
 
     def _end(self, block: Block) -> None:
         succ = self.successors(block)

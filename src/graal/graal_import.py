@@ -18,8 +18,8 @@ def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
     if not path.exists():
         raise FileNotFoundError(
             f"{path} not found -- generate it with:\n"
-            "  cd graal-export && ./build.sh [Demo.java] && "
-            "DUMP_IR=out/out.json ./run-dump.sh Demo"
+            "  cd graal-export && ./build.sh examples/Examples.java && "
+            "DUMP_IR=out/examples.json ./run-dump.sh Examples"
         )
 
     data = json.loads(path.read_text())

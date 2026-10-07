@@ -9,7 +9,7 @@ from . import parser
 from .ir import Instr, Lambda, Program, parse_function_type
 from .parser import OpType, Signature
 
-JAVA = Path(__file__).with_name("java.ct")
+GRAAL = Path(__file__).with_name("graal.ct")
 
 FUNCTION = ("function", "stck", "bool", "frame") # operations a function supports
 CONSTANTS = {"int", "long"}  # the structures with cons_<n>
@@ -43,7 +43,7 @@ class Prelude:
         return ops
 
 
-def load(path: Path = JAVA) -> Prelude:
+def load(path: Path = GRAAL) -> Prelude:
     return parse(path.read_text())
 
 
