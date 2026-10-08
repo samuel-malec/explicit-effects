@@ -4,6 +4,7 @@ Usage:
     cd graal-export && ./build.sh examples/Examples.java && \\
         DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
     PYTHONPATH=src python3 -m graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
+    PYTHONPATH=src python3 -m graal2ct graal-export/out/examples.json --partition field
 
 """
 
@@ -14,6 +15,7 @@ from pathlib import Path
 from cthu import prelude
 from cthu.ir import to_text
 from cthu.ssu import check
+from effects.signatures import analyse, by_field, no_analysis
 from graal.graal_import import load
 
 from .translate import Translation
@@ -24,11 +26,14 @@ def main() -> int:
     parser.add_argument("dump", type=Path)
     parser.add_argument("--method", default="", help="only methods whose name contains this")
     parser.add_argument("-o", "--out", type=Path, help="write the .ct text here instead of printing it")
+    parser.add_argument("--partition", choices=["none", "field"], default="none",
+                        help="none: one heap token in every method; field: a token per field and array kind, from the facts")
     args = parser.parse_args()
 
-    _, graphs = load(args.dump)
+    facts, graphs = load(args.dump)
     keys = [key for key in sorted(graphs) if args.method in key]
-    translation = Translation(graphs)
+    effects = no_analysis() if args.partition == "none" else analyse(facts, by_field)
+    translation = Translation(graphs, effects)
     program = translation.translate(keys)
     text = to_text(program)
     if args.out:

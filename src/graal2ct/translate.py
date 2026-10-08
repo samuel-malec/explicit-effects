@@ -3,10 +3,12 @@
 ( TODO: how to model exceptions ? -> Right now create a phony cthu instruction which acts as an expcetion,
 """
 
+import re
 from itertools import count
 
 from cthu.ir import Instr, Lambda, Program, Structure, function_type
 from cthu.ssu import linearize
+from effects.signatures import REST, Effects, no_analysis
 from graal.graal_ir import Block, Edge, Graph, Node
 
 ARITHMETIC = {
@@ -39,6 +41,22 @@ def structure_name(method: str) -> str:
     return "".join(c if c.isalnum() else "_" for c in method)
 
 
+def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
+    """A token name per partition: `h` for all of memory, `h_rest` for memory
+    no field names, `h_int_arr` for an array kind, otherwise `h_` and the
+    field's last name, `h_value`, qualified as far as it takes to tell them apart."""
+    names = {p: "h" if p == "heap" else "h_rest" for p in partitions if p in ("heap", REST)}
+    names |= {p: "h_" + p[:-2] + "_arr" for p in partitions if p.endswith("[]")}
+    parts = {p: re.split(r"[.$]", p) for p in partitions if p not in names}
+    for depth in range(1, max((len(s) for s in parts.values()), default=0) + 1):
+        candidates = {p: "h_" + "_".join(s[-depth:]) for p, s in parts.items()}
+        if len(set(candidates.values()) | set(names.values())) == len(candidates) + len(names):
+            break
+    for p, s in parts.items():
+        names[p] = "".join(c if c.isalnum() else "_" for c in "h_" + "_".join(s[-depth:]))
+    return names
+
+
 def parameter_types(descriptor: str, static: bool) -> list[str]:
     types = [] if static else ["ref"]
     i = 1
@@ -66,8 +84,10 @@ def return_type(descriptor: str) -> str | None:
 
 class Translation:
     
-    def __init__(self, graphs: dict[str, Graph]):
+    def __init__(self, graphs: dict[str, Graph], effects: Effects | None = None):
         self.graphs = graphs
+        self.effects = effects or no_analysis()
+        self.token_names = token_names(self.effects.partitions)
         # A call names its callee by name and descriptor, which tells overloads apart.
         self.keys = {graph.name + graph.descriptor: key for key, graph in graphs.items()}
         self.program = Program()
@@ -118,7 +138,17 @@ class MethodTranslation:
         self.alias = {n.id: n.inputs[0] for n in self.nodes.values() if n.op in ALIASES}
         self.params = parameter_types(graph.descriptor, graph.static)
         result = return_type(graph.descriptor)
-        self.outs = ([("r", result)] if result else []) + [("hout", "heap")]
+        # A constructor returns its receiver, now initialized, and every later
+        # use of the object takes that: nothing can publish the object before
+        # the constructor, and its final fields, are done.
+        self.constructor = graph.name.endswith(".<init>")
+        self.receiver = next((n.id for n in self.nodes.values() if n.op == "Parameter" and n.index == 0), None)
+        if self.constructor:
+            result = "ref"
+        self.renamed: dict[int, str] = {}  # objects a constructor call has initialized, in the current λ
+        self.token = {p: translation.token_names[p] for p in translation.effects.tokens(graph.name + graph.descriptor)}
+        self.tokens = list(self.token.values())
+        self.outs = ([("r", result)] if result else []) + [(f"{t}out", "heap") for t in self.tokens]
         self.out_types = [t for _, t in self.outs]
         self.calls: dict[str, str] = {}  # the structures this method calls, and the methods they stand for
         self.frames: dict[str, Lambda] = {}
@@ -130,6 +160,8 @@ class MethodTranslation:
 
     def ref(self, node_id: int) -> str:
         node = self.nodes[self.value(node_id)]
+        if node.id in self.renamed:
+            return self.renamed[node.id]
         return f"p{node.index}" if node.op == "Parameter" else f"v{node.id}"
 
     def type_of(self, node_id: int) -> str:
@@ -227,6 +259,9 @@ class MethodTranslation:
             if n.type != "void" and n.op not in ENDS:
                 defs.add(n.id)
 
+        if self.constructor and block.exit == "return" and self.receiver not in defs:
+            uses.add(self.receiver)  # a constructor returns it
+
         for e in self.successors(block):  # the phi values this block passes on
             for n in self.g.blocks[e.to].nodes:
                 if n.op == "ValuePhi":
@@ -244,6 +279,8 @@ class MethodTranslation:
         return labels["true"], labels["false"]
 
     def structure(self) -> Structure:
+        if self.constructor and self.receiver is None:
+            raise Unsupported("a constructor without its receiver")
         self._analyse()
         structure = Structure(self.name, note=self.g.name)
 
@@ -261,15 +298,17 @@ class MethodTranslation:
         return "run" if block_id == self.g.entry else f"b{block_id}"
 
     def _lambda_params(self, block_id: int) -> list[tuple[str, str]]:
+        tokens = [(t, "heap") for t in self.tokens]
         if block_id == self.g.entry:
-            return [(f"p{i}", t) for i, t in enumerate(self.params)] + [("h", "heap")]
-        return [(self.ref(i), self.type_of(i)) for i in self.param_ids[block_id]] + [("h", "heap")]
+            return [(f"p{i}", t) for i, t in enumerate(self.params)] + tokens
+        return [(self.ref(i), self.type_of(i)) for i in self.param_ids[block_id]] + tokens
 
     def _trap(self, block_id: int) -> Lambda:
         lam = Lambda(self._lambda_name(block_id), self._lambda_params(block_id), list(self.outs),
                      note="traps: every path from here throws")
 
-        lam.body.append(Instr("heap", "trap", ["h"]))
+        for t in self.tokens:
+            lam.body.append(Instr("heap", "trap", [t]))
 
         for name, t in self.outs:
             lam.body.append(Instr(t, "bot", [], [name], [t]))
@@ -277,8 +316,11 @@ class MethodTranslation:
 
     def _block(self, block_id: int) -> Lambda:
         block = self.g.blocks[block_id]
+        self.renamed = {}
         lam = Lambda(self._lambda_name(block_id), self._lambda_params(block_id), list(self.outs))
-        self.body, self.heap, self.heaps = lam.body, "h", count(1)
+        self.body = lam.body
+        self.current = {t: t for t in self.tokens}  # each token's version so far in this λ
+        self.versions = {t: count(1) for t in self.tokens}
 
         for n in block.nodes:
             self._node(n)
@@ -289,11 +331,16 @@ class MethodTranslation:
     def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "") -> None:
         self.body.append(Instr(type_, op, ins, outs, out_types, note))
 
-    def _advance(self) -> tuple[str, str]:
-        """The heap's current version, and its next, which becomes current."""
-        before, after = self.heap, f"h{next(self.heaps)}"
-        self.heap = after
+    def _advance(self, token: str) -> tuple[str, str]:
+        """The token's current version, and its next, which becomes current."""
+        before, after = self.current[token], f"{token}{next(self.versions[token])}"
+        self.current[token] = after
         return before, after
+
+    def _token_for(self, partition: str, what: str) -> str:
+        if partition not in self.token:
+            raise Unsupported(f"{what} touches {partition}, which the signature of {self.g.name} lacks")
+        return self.token[partition]
 
     def _node(self, n: Node) -> None:
         op, v, t = n.op, f"v{n.id}", _type(n)
@@ -328,7 +375,8 @@ class MethodTranslation:
         elif op in ("LoadField", "StoreField"):
             self._field(n)
         elif op == "NewInstance":
-            before, after = self._advance()
+            # An allocation takes the rest of memory.
+            before, after = self._advance(self._token_for(self.t.effects.partition(REST), f"allocating {n.cls}"))
             k = self.t.program.class_index(n.cls)
             self._emit("heap", f"new_{k}", [before], [v, after], ["ref", "heap"], note=n.cls)
         elif op in CALLS:
@@ -337,13 +385,15 @@ class MethodTranslation:
             raise Unsupported(f"exception handler (a caught exception) for bci {n.bci}")
         elif op in ("CommitAllocation", "VirtualInstance", "AllocatedObject"):
             raise Unsupported("allocation after escape analysis")
+        elif op == "FinalFieldBarrier" and self.constructor:
+            pass  # ordered by the receiver the constructor returns
         else:
             raise Unsupported(op)
 
     def _field(self, n: Node) -> None:
         value = _type(n) if n.op == "LoadField" else self.type_of(n.inputs[-1])
         k = self.t.program.field_index(n.field, value)
-        before, after = self._advance()
+        before, after = self._advance(self._token_for(self.t.effects.partition(n.field), n.field))
         static = "static" if (n.op == "LoadField" and not n.inputs) or (n.op == "StoreField" and len(n.inputs) == 1) else ""
         ins = [before, *(self.ref(i) for i in n.inputs)]
 
@@ -359,15 +409,23 @@ class MethodTranslation:
         structure, _ = self.t.callee_structure(callee)
         self.calls[structure] = callee
 
-        result = None if n.type == "void" else _type(n)
+        # The callee gets the tokens of its own signature; a call the analysis
+        # did not resolve gets all of them.
+        partitions = self.t.effects.tokens(callee) if n.flow == "ok" else self.t.effects.partitions
+        tokens = [self._token_for(p, f"the call to {callee}") for p in partitions]
+        heaps = ["heap"] * len(tokens)
+        constructs = ".<init>(" in callee  # gives back the object it initialized
+        result = "ref" if constructs else None if n.type == "void" else _type(n)
         arg_types = [self.type_of(a) for a in n.args]
-        ftype = function_type(arg_types + ["heap"], ([result] if result else []) + ["heap"])
-        before, after = self._advance()
-        outs = ([f"v{n.id}"] if result else []) + [after]
+        ftype = function_type(arg_types + heaps, ([result] if result else []) + heaps)
+        versions = [self._advance(t) for t in tokens]
+        outs = ([f"v{n.id}"] if result else []) + [after for _, after in versions]
         self._emit(structure, "run", [], [f"k{n.id}"], [ftype])
 
-        self._emit(ftype, "call", [f"k{n.id}", *(self.ref(a) for a in n.args), before], outs,
-                   ([result] if result else []) + ["heap"], note=callee)
+        self._emit(ftype, "call", [f"k{n.id}", *(self.ref(a) for a in n.args), *(before for before, _ in versions)], outs,
+                   ([result] if result else []) + heaps, note=callee)
+        if constructs:
+            self.renamed[self.value(n.args[0])] = f"v{n.id}"
 
     def _end(self, block: Block) -> None:
         succ = self.successors(block)
@@ -378,9 +436,12 @@ class MethodTranslation:
 
         elif block.exit == "return":
             ret = next(n for n in block.nodes if n.op == "Return")
-            if ret.inputs:
+            if self.constructor:
+                self._emit("ref", "move", [self.ref(self.receiver)], ["r"], ["ref"])
+            elif ret.inputs:
                 self._emit(self.outs[0][1], "move", [self.ref(ret.inputs[0])], ["r"], [self.outs[0][1]])
-            self._emit("heap", "move", [self.heap], ["hout"], ["heap"])
+            for t in self.tokens:
+                self._emit("heap", "move", [self.current[t]], [f"{t}out"], ["heap"])
 
         elif len(succ) == 1:
             self._jump(block.id, succ[0].to)
@@ -392,7 +453,7 @@ class MethodTranslation:
         args = [self.ref(phis[i][src]) if i in phis else self.ref(i) for i in self.param_ids[dst]]
         ftype = function_type([t for _, t in self._lambda_params(dst)], self.out_types)
         self._emit(self.name, self._lambda_name(dst), [], [f"k{dst}"], [ftype])
-        self._emit(ftype, "call", [f"k{dst}", *args, self.heap], [n for n, _ in self.outs], self.out_types)
+        self._emit(ftype, "call", [f"k{dst}", *args, *(self.current[t] for t in self.tokens)], [n for n, _ in self.outs], self.out_types)
 
     def _branch(self, cond: int, true: int, false: int) -> None:
         params = self._lambda_params(true)
@@ -407,19 +468,20 @@ class MethodTranslation:
         self._emit(ftype, "opt", ["cn", "kf"], ["af"], [ftype])
         self._emit(ftype, "join", ["at", "af", "frame"], ["k"], [ftype])
         args = [self.ref(i) for i in self.param_ids[true]]
-        self._emit(ftype, "call", ["k", *args, self.heap], [n for n, _ in self.outs], self.out_types)
+        self._emit(ftype, "call", ["k", *args, *(self.current[t] for t in self.tokens)], [n for n, _ in self.outs], self.out_types)
 
     def _frame(self, ftype: str, params: list[tuple[str, str]]) -> Lambda:
         if ftype in self.frames:
             return self.frames[ftype]
 
-        xs = [(f"x{i}", t) for i, (_, t) in enumerate(params[:-1])]
-        lam = Lambda(f"frame_{len(self.frames)}", [("A", ftype), ("B", ftype), *xs, ("h", "heap")], list(self.outs))
-        lam.body.append(Instr("heap", "fork", ["h"], ["h_a", "h_b"], ["heap", "heap"]))
+        xs = [(f"x{i}", t) for i, (_, t) in enumerate(params[:len(params) - len(self.tokens)])]
+        lam = Lambda(f"frame_{len(self.frames)}", [("A", ftype), ("B", ftype), *xs, *((t, "heap") for t in self.tokens)], list(self.outs))
+        for t in self.tokens:
+            lam.body.append(Instr("heap", "fork", [t], [f"{t}_a", f"{t}_b"], ["heap", "heap"]))
         outs_a = [f"{name}_a" for name, _ in self.outs]
         outs_b = [f"{name}_b" for name, _ in self.outs]
-        lam.body.append(Instr(ftype, "call", ["A", *(x for x, _ in xs), "h_a"], outs_a, self.out_types))
-        lam.body.append(Instr(ftype, "call", ["B", *(x for x, _ in xs), "h_b"], outs_b, self.out_types))
+        lam.body.append(Instr(ftype, "call", ["A", *(x for x, _ in xs), *(f"{t}_a" for t in self.tokens)], outs_a, self.out_types))
+        lam.body.append(Instr(ftype, "call", ["B", *(x for x, _ in xs), *(f"{t}_b" for t in self.tokens)], outs_b, self.out_types))
 
         for (name, t), a, b in zip(self.outs, outs_a, outs_b):
             lam.body.append(Instr(t, "join", [a, b], [name], [t]))
