@@ -397,7 +397,7 @@ final class GraphExport {
         return value.getClass().getSimpleName() + "#" + value.getId();
     }
 
-    private static int bci(ValueNode node) {
+    static int bci(ValueNode node) {
         NodeSourcePosition position = node.getNodeSourcePosition();
         return position == null ? -1 : position.getBCI();
     }

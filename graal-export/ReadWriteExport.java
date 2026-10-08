@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,9 +20,24 @@ import com.oracle.graal.pointsto.meta.PointsToAnalysisMethod;
 import com.oracle.graal.pointsto.standalone.PointsToAnalyzer;
 
 import jdk.graal.compiler.graph.Node;
+import jdk.graal.compiler.nodes.Invoke;
+import jdk.graal.compiler.nodes.StartNode;
 import jdk.graal.compiler.nodes.StructuredGraph;
+import jdk.graal.compiler.nodes.ValueNode;
+import jdk.graal.compiler.nodes.java.AbstractNewObjectNode;
+import jdk.graal.compiler.nodes.java.AccessFieldNode;
+import jdk.graal.compiler.nodes.extended.BytecodeExceptionNode;
+import jdk.graal.compiler.nodes.java.AccessIndexedNode;
+import jdk.graal.compiler.nodes.java.ArrayLengthNode;
+import jdk.graal.compiler.nodes.java.ExceptionObjectNode;
+import jdk.graal.compiler.nodes.java.FinalFieldBarrierNode;
 import jdk.graal.compiler.nodes.java.LoadFieldNode;
-import jdk.graal.compiler.nodes.java.StoreFieldNode;
+import jdk.graal.compiler.nodes.java.LoadIndexedNode;
+import jdk.graal.compiler.nodes.memory.MemoryAccess;
+import jdk.graal.compiler.nodes.memory.MemoryKill;
+import jdk.graal.compiler.nodes.virtual.CommitAllocationNode;
+import jdk.graal.compiler.replacements.nodes.BasicArrayCopyNode;
+import jdk.vm.ci.meta.JavaKind;
 
 public class ReadWriteExport {
 
@@ -58,6 +74,9 @@ public class ReadWriteExport {
         PointsToAnalysis bb = analyzer.getResultAnalysis();
         TreeSet<String> analysed = new TreeSet<>();
         TreeSet<String> program = new TreeSet<>();
+        TreeSet<String> allocates = new TreeSet<>();
+        TreeMap<String, TreeSet<String>> unknown = new TreeMap<>();
+        TreeMap<String, TreeSet<String>> unresolved = new TreeMap<>();
 
         for (AnalysisMethod method : universe.getMethods()) {
             if (!method.isReachable() || !(method instanceof PointsToAnalysisMethod ptm)) {
@@ -74,11 +93,39 @@ public class ReadWriteExport {
             StructuredGraph body = GraphExport.analysisGraph(bb, ptm);
             if (body != null) {
                 analysed.add(name);
+                Map<Integer, InvokeTypeFlow> flows = new HashMap<>();
+                for (InvokeTypeFlow flow : ptm.getTypeFlow().getMethodFlowsGraph().getInvokes()) {
+                    flows.put(flow.getBci(), flow);
+                }
                 for (Node n : body.getNodes()) {
-                    if (n instanceof LoadFieldNode load) {
-                        reads.computeIfAbsent(name, k -> new TreeSet<>()).add(GraphExport.fieldName(load.field()));
-                    } else if (n instanceof StoreFieldNode store) {
-                        writes.computeIfAbsent(name, k -> new TreeSet<>()).add(GraphExport.fieldName(store.field()));
+                    String at = " at bci " + (n instanceof ValueNode value ? GraphExport.bci(value) : -1);
+                    if (n instanceof AccessFieldNode access) {
+                        String field = GraphExport.fieldName(access.field());
+                        add(access instanceof LoadFieldNode ? reads : writes, name, field);
+                        if (access.ordersMemoryAccesses()) {
+                            add(unknown, name, "volatile access to " + field + at);
+                        }
+                    } else if (n instanceof AccessIndexedNode access) {
+                        add(access instanceof LoadIndexedNode ? reads : writes, name, arrayPartition(access.elementKind()));
+                    } else if (n instanceof BasicArrayCopyNode copy && copy.getElementKind() != null) {
+                        add(reads, name, arrayPartition(copy.getElementKind()));
+                        add(writes, name, arrayPartition(copy.getElementKind()));
+                    } else if (n instanceof AbstractNewObjectNode || n instanceof CommitAllocationNode) {
+                        allocates.add(name);
+                    } else if (n instanceof Invoke invoke) {
+                        // No flow, a disabled one or one without callees: the analysis
+                        // found no target. Its reasons can be wrong (a field a native
+                        // writes looks always null), so the call may touch anything.
+                        InvokeTypeFlow flow = flows.get(invoke.bci());
+                        String why = flow == null ? "no flow" : !flow.isFlowEnabled() ? "disabled" : flow.getOriginalCallees().isEmpty() ? "no callees" : null;
+                        if (why != null) {
+                            add(unresolved, name, GraphExport.methodKey(invoke.getTargetMethod()) + at + " (" + why + ")");
+                        }
+                    } else if (n instanceof FinalFieldBarrierNode && ptm.isConstructor()) {
+                        // Ordered by the reference: the translation has a constructor
+                        // return its receiver, and every later use take that.
+                    } else if ((MemoryKill.isMemoryKill(n) || n instanceof MemoryAccess) && !isBookkeeping(n)) {
+                        add(unknown, name, n.getClass().getSimpleName() + at);
                     }
                 }
             }
@@ -155,7 +202,18 @@ public class ReadWriteExport {
                             e.getKey(), e.getValue()[0], e.getValue()[1]);
         }
 
-        String facts = factsJson(analysed, reads, writes, callees, fields);
+        System.out.println();
+        System.out.println("=== memory effects the facts can't name, and calls without a target ===");
+        for (String m : program) {
+            for (String what : unknown.getOrDefault(m, new TreeSet<>())) {
+                System.out.printf("  %-34s %s%n", m, what);
+            }
+            for (String what : unresolved.getOrDefault(m, new TreeSet<>())) {
+                System.out.printf("  %-34s unresolved call to %s%n", m, what);
+            }
+        }
+
+        String facts = factsJson(analysed, reads, writes, callees, allocates, unknown, unresolved, fields);
         String jsonPath = System.getProperty("dump.json", "");
         if (!jsonPath.isEmpty()) {
             write(jsonPath, "{\n" + facts + "\n}\n");
@@ -183,6 +241,9 @@ public class ReadWriteExport {
                     TreeMap<String, TreeSet<String>> reads,
                     TreeMap<String, TreeSet<String>> writes,
                     TreeMap<String, TreeSet<String>> callees,
+                    Set<String> allocates,
+                    TreeMap<String, TreeSet<String>> unknown,
+                    TreeMap<String, TreeSet<String>> unresolved,
                     TreeMap<String, boolean[]> fields) {
         Set<String> allMethods = new TreeSet<>(methods);
         allMethods.addAll(callees.keySet());
@@ -198,6 +259,9 @@ public class ReadWriteExport {
                             .append("\"reads\": ").append(jsonArray(reads.get(m)))
                             .append(", \"writes\": ").append(jsonArray(writes.get(m)))
                             .append(", \"callees\": ").append(jsonArray(callees.get(m)))
+                            .append(", \"allocates\": ").append(allocates.contains(m))
+                            .append(", \"unknown\": ").append(jsonArray(unknown.get(m)))
+                            .append(", \"unresolved\": ").append(jsonArray(unresolved.get(m)))
                             .append("}");
         }
         sb.append("\n  },\n  \"fields\": {\n");
@@ -214,6 +278,32 @@ public class ReadWriteExport {
         }
         sb.append("\n  }");
         return sb.toString();
+    }
+
+    /**
+     * Nodes that kill or read memory for Graal's bookkeeping only: the state at
+     * the method's start and at a handler's, the creation of an exception on a
+     * path that throws, and an array's length, which never changes.
+     */
+    private static boolean isBookkeeping(Node n) {
+        return n instanceof StartNode || n instanceof ExceptionObjectNode || n instanceof BytecodeExceptionNode || n instanceof ArrayLengthNode;
+    }
+
+    private static void add(TreeMap<String, TreeSet<String>> facts, String method, String fact) {
+        facts.computeIfAbsent(method, k -> new TreeSet<>()).add(fact);
+    }
+
+    /**
+     * An array element's partition, by element kind. boolean[] and byte[]
+     * share one, as they share baload and bastore, and every reference array
+     * is Object[]: an Object[] may be a String[].
+     */
+    private static String arrayPartition(JavaKind kind) {
+        return switch (kind) {
+            case Boolean, Byte -> "byte[]";
+            case Object -> "Object[]";
+            default -> kind.getJavaName() + "[]";
+        };
     }
 
     private static void write(String path, String content) {
