@@ -11,16 +11,27 @@ src/
 ├── graal-probe/     # Measures what Graal does to the examples' memory operations
 ├── src/graal/       # Load the Graal export
 ├── src/cthu/        # Implementation of Graal dialect in Cthulhu
+├── src/effects/     # Heap partitions and method signatures: which partitions each method may touch
 ├── src/graal2ct/    # Graal IR -> Cthulhu compilation pipeline
 ├── test/            # Examples and test suite
 ```
+
+## Setup
+
+The Python side is a [uv](https://docs.astral.sh/uv/) project with no runtime dependencies:
+`uv sync` creates `.venv/` with the packages under `src/` and pytest, and `uv run` works from anywhere in the repository.
 
 ## Running Examples
 
 ```bash
 cd graal-export && ./build.sh examples/Examples.java && \
     DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
-PYTHONPATH=src python3 -m graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
-PYTHONPATH=src python3 test/export_check/check_graal2ct.py
+uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
+uv run graal2ct graal-export/out/examples.json --partition field
+uv run pytest
 ./graal-probe/run.sh
 ```
+
+The Makefile chains these: `make` re-exports `Examples` and `Signatures` when their source or the exporter changed, copies them to `test/data/` and runs the checks.
+`make export` exports every example to `graal-export/out/<name>.json`, with the analysis report in `<name>.txt`.
+After rebuilding the graal tree, force the exports with `make -B`.

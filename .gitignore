@@ -3,6 +3,7 @@
 *.class
 __pycache__/
 *.pyc
+.venv/
 graal-probe/classes/
 graal-export/classes/
 graal-export/out/
