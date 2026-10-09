@@ -5,6 +5,7 @@ Usage:
         DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
     uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
     uv run graal2ct graal-export/out/examples.json --partition field
+    uv run graal2ct graal-export/out/examples.json --partition field --rules
 
 """
 
@@ -17,6 +18,7 @@ from cthu.ir import to_text
 from cthu.ssu import check
 from effects.signatures import analyse, by_field, no_analysis
 from graal.graal_import import load
+from rules import memory
 
 from .translate import Translation
 
@@ -28,6 +30,8 @@ def main() -> int:
     parser.add_argument("-o", "--out", type=Path, help="write the .ct text here instead of printing it")
     parser.add_argument("--partition", choices=["none", "field"], default="none",
                         help="none: one heap token in every method; field: a token per field and array kind, from the facts")
+    parser.add_argument("--rules", action="store_true",
+                        help="then forward loads and remove dead stores, and list what they did")
     args = parser.parse_args()
 
     facts, graphs = load(args.dump)
@@ -35,6 +39,7 @@ def main() -> int:
     effects = no_analysis() if args.partition == "none" else analyse(facts, by_field)
     translation = Translation(graphs, effects)
     program = translation.translate(keys)
+    rewrites = memory.apply(program) if args.rules else None
     text = to_text(program)
     if args.out:
         args.out.write_text(text + "\n")
@@ -45,6 +50,11 @@ def main() -> int:
     print(f"translated {len(program.structures)} of {len(keys)} method(s)", file=sys.stderr)
     for key, reason in translation.refused.items():
         print(f"  refused {key}: {reason}", file=sys.stderr)
+    if rewrites:
+        print(f"forwarded {len(rewrites.forwarded)} load(s), removed {len(rewrites.removed)} dead store(s)", file=sys.stderr)
+        for what, done in (("forwarded", rewrites.forwarded), ("removed", rewrites.removed)):
+            for line in done:
+                print(f"  {what} {line}", file=sys.stderr)
     print(f"{'ok' if not errors else f'{len(errors)} error(s)'}", file=sys.stderr)
     for error in errors:
         print(f"    {error}", file=sys.stderr)

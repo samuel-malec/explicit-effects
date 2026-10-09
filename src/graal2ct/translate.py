@@ -3,7 +3,7 @@
 import re
 from itertools import count
 
-from cthu.ir import Instr, Lambda, Program, Structure, function_type
+from cthu.ir import Instr, Lambda, Program, Structure, frame_type, function_type
 from cthu.ssu import linearize
 from effects.signatures import REST, Effects, no_analysis
 from graal.graal_ir import Block, Edge, Graph, Node
@@ -462,7 +462,7 @@ class MethodTranslation:
         c = self.ref(cond)
         self._emit(self.name, self._lambda_name(true), [], ["kt"], [ftype])
         self._emit(self.name, self._lambda_name(false), [], ["kf"], [ftype])
-        self._emit(self.name, frame.name, [], ["frame"], ["frame"])
+        self._emit(self.name, frame.name, [], ["frame"], [frame_type(ftype)])
         self._emit("bool", "not", [c], ["cn"], ["bool"])
         self._emit(ftype, "opt", [c, "kt"], ["at"], [ftype])
         self._emit(ftype, "opt", ["cn", "kf"], ["af"], [ftype])
