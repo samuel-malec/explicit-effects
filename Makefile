@@ -3,6 +3,7 @@
 #
 #   make              refresh test/data, then run the checks
 #   make export       export every example to graal-export/out/<name>.json
+#   make translate    translate every export to graal-export/out/<name>.ct
 #   make test-data    refresh test/data/examples.json and signatures.json
 #   make check        run the checks (uv run pytest)
 #
@@ -10,23 +11,33 @@
 # rebuilding the graal tree, force it with make -B. GRAAL_HOME is passed on to
 # graal-export/env.sh. Each export's analysis report is saved next to it, in
 # graal-export/out/<name>.txt.
+#
+# A translation has one heap token; make translate PARTITION=field writes
+# <name>.field.ct, with a token per field and array kind.
 
 EXPORT := graal-export
 OUT := $(EXPORT)/out
 EXPORTER := $(addprefix $(EXPORT)/,ReadWriteExport.java GraphExport.java build.sh run-dump.sh env.sh exports.args)
+TRANSLATOR := $(wildcard src/*/*.py) src/cthu/graal.ct
 EXAMPLES := $(basename $(notdir $(wildcard $(EXPORT)/examples/*.java)))
 FIXTURES := examples signatures
 
 lower = $(shell echo '$(1)' | tr '[:upper:]' '[:lower:]')
+EXPORTS := $(foreach e,$(EXAMPLES),$(OUT)/$(call lower,$(e)).json)
 
-.PHONY: all export test-data check
+PARTITION ?= none
+CT := $(if $(filter none,$(PARTITION)),,.$(PARTITION)).ct
+
+.PHONY: all export translate test-data check
 # build.sh recompiles the one classes/ directory that every export analyses.
 .NOTPARALLEL:
 .DELETE_ON_ERROR:
 
 all: test-data check
 
-export: $(foreach e,$(EXAMPLES),$(OUT)/$(call lower,$(e)).json)
+export: $(EXPORTS)
+
+translate: $(EXPORTS:.json=$(CT))
 
 test-data: $(FIXTURES:%=test/data/%.json)
 
@@ -35,6 +46,9 @@ check:
 
 test/data/%.json: $(OUT)/%.json
 	cp $< $@
+
+$(OUT)/%$(CT): $(OUT)/%.json $(TRANSLATOR)
+	uv run graal2ct $< --partition $(PARTITION) -o $@
 
 # out/examples.json from examples/Examples.java, analysed from its main.
 define export_rule

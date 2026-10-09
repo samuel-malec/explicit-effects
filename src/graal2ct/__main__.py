@@ -3,8 +3,8 @@
 Usage:
     cd graal-export && ./build.sh examples/Examples.java && \\
         DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
-    PYTHONPATH=src python3 -m graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
-    PYTHONPATH=src python3 -m graal2ct graal-export/out/examples.json --partition field
+    uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
+    uv run graal2ct graal-export/out/examples.json --partition field
 
 """
 

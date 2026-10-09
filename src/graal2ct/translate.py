@@ -1,7 +1,4 @@
-"""Graal IR → Cthulhu transformation
-
-( TODO: how to model exceptions ? -> Right now create a phony cthu instruction which acts as an expcetion,
-"""
+"""Graal IR → Cthulhu transformation."""
 
 import re
 from itertools import count
@@ -48,12 +45,15 @@ def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
     names = {p: "h" if p == "heap" else "h_rest" for p in partitions if p in ("heap", REST)}
     names |= {p: "h_" + p[:-2] + "_arr" for p in partitions if p.endswith("[]")}
     parts = {p: re.split(r"[.$]", p) for p in partitions if p not in names}
+    
     for depth in range(1, max((len(s) for s in parts.values()), default=0) + 1):
         candidates = {p: "h_" + "_".join(s[-depth:]) for p, s in parts.items()}
         if len(set(candidates.values()) | set(names.values())) == len(candidates) + len(names):
             break
+    
     for p, s in parts.items():
         names[p] = "".join(c if c.isalnum() else "_" for c in "h_" + "_".join(s[-depth:]))
+    
     return names
 
 
@@ -83,7 +83,7 @@ def return_type(descriptor: str) -> str | None:
 
 
 class Translation:
-    
+
     def __init__(self, graphs: dict[str, Graph], effects: Effects | None = None):
         self.graphs = graphs
         self.effects = effects or no_analysis()

@@ -79,6 +79,7 @@ signature reference[ R, S, B, I ] : simple[ R, S, B ]
     length ∷ R → I
 )
 
+; TODO: we will have to refactor this using control flow
 signature memory[ H, S, B ] : linear[ H, S, B ]
 (
     trap ∷ H → ∅        ; for now, this is how we model a Java exception

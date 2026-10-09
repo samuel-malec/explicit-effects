@@ -158,10 +158,12 @@ class _Parser:
         name = self.expect(Category.IDENT)
         if name.text in self.parsed.signatures:
             self.fail(f"signature {name.text} is defined twice", name)
+
         params = self.arguments()
         parents = self.references() if self.accept(Category.PUNCT, ":") else []
         operations = {}
         self.open()
+
         while not self.closed():
             op = self.expect(Category.IDENT)
             if op.text in operations:
@@ -170,14 +172,17 @@ class _Parser:
             ins = self.product()
             self.expect(Category.ARROW)
             operations[op.text] = (ins, self.product())
+
         self.parsed.signatures[name.text] = Signature(name.text, params, parents, operations)
 
     def structure(self) -> None:
         name = self.expect(Category.IDENT)
         if name.text in self.parsed.structures:
             self.fail(f"structure {name.text} is defined twice", name)
+
         structure = StructureDef(name.text, self.references() if self.accept(Category.PUNCT, ":") else [])
         self.open()
+
         while not self.closed():
             member = self.expect(Category.IDENT)
             if member.text in structure.builtins or member.text in structure.lambdas:

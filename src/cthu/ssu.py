@@ -7,9 +7,8 @@ from .ir import LINEAR, Instr, Lambda, Program
 class LinearityError(Exception):
     pass
 
-# Transform a sequence of Cthu instructions (e.g body of a lambda),
-# such that the new sequence of instruction adheres to the SSU format
 def linearize(lam: Lambda) -> None:
+    """Transform a sequence of Cthu instructions, such that the new sequence of instruction adheres to the SSU format"""
     types = dict(lam.params)
     for instr in lam.body:
         types.update(zip(instr.outs, instr.out_types))
@@ -60,8 +59,8 @@ def linearize(lam: Lambda) -> None:
 
     lam.body = body
 
-# Check whether given program conforms to the SSU form 
 def check(program: Program) -> list[str]:
+    """Check whether given program conforms to the SSU form""" 
     errors = []
     
     for structure in program.structures:
@@ -70,8 +69,8 @@ def check(program: Program) -> list[str]:
     
     return errors
 
-# Checke wheter a given lambda body conforms to the SSU form
 def _check_lambda(lam: Lambda) -> list[str]:
+    """Check whether a given lambda body conforms to the SSU form"""
     errors = []
     defined: dict[str, str] = {}
     uses: Counter = Counter()

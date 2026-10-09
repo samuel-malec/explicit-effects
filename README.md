@@ -34,4 +34,5 @@ uv run pytest
 
 The Makefile chains these: `make` re-exports `Examples` and `Signatures` when their source or the exporter changed, copies them to `test/data/` and runs the checks.
 `make export` exports every example to `graal-export/out/<name>.json`, with the analysis report in `<name>.txt`.
+`make translate` translates every export to `<name>.ct` with one heap token, and `make translate PARTITION=field` to `<name>.field.ct` with a token per field.
 After rebuilding the graal tree, force the exports with `make -B`.

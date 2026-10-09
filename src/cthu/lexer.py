@@ -44,6 +44,7 @@ def is_ident_char(ch: str) -> bool:
 def tokenize(text: str) -> list[Token]:
     tokens = []
     i, line, line_start = 0, 1, 0
+
     while i < len(text):
         ch, column = text[i], i - line_start + 1
         if ch == "\n":
@@ -78,4 +79,5 @@ def tokenize(text: str) -> list[Token]:
             i = end
         else:
             raise ParseError(line, column, f"unexpected character {ch!r}")
+
     return tokens
