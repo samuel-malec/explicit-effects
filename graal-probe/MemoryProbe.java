@@ -79,7 +79,8 @@ public class MemoryProbe extends GraalCompilerTest {
 
     private static List<Method> methods(Class<?> example) {
         return Arrays.stream(example.getDeclaredMethods())
-                        .filter(m -> Modifier.isStatic(m.getModifiers()) && !m.isSynthetic() && !m.getName().equals("main"))
+                        .filter(m -> Modifier.isStatic(m.getModifiers()) && !Modifier.isNative(m.getModifiers())
+                                        && !m.isSynthetic() && !m.getName().equals("main"))
                         .sorted(Comparator.comparing(Method::getName).thenComparing(Method::getParameterCount))
                         .collect(Collectors.toList());
     }

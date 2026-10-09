@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Prototype of a side-effect analysis using explicit values in a Static Single Use IR"
 readme = "README.md"
 authors = [
-    { name = "Samuel Malec", email = "malec293@gmail.com" }
+    { name = "Samuel Malec" }
 ]
 requires-python = ">=3.12"
 dependencies = []
@@ -17,7 +17,7 @@ requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = ["cthu", "effects", "graal", "graal2ct"]
+module-name = ["cthu", "effects", "graal", "graal2ct", "rules"]
 
 [dependency-groups]
 dev = [

@@ -4,6 +4,7 @@
 #   make              refresh test/data, then run the checks
 #   make export       export every example to graal-export/out/<name>.json
 #   make translate    translate every export to graal-export/out/<name>.ct
+#   make compare      the stores and loads the rules leave next to what Graal leaves
 #   make test-data    refresh test/data/examples.json and signatures.json
 #   make check        run the checks (uv run pytest)
 #
@@ -28,7 +29,7 @@ EXPORTS := $(foreach e,$(EXAMPLES),$(OUT)/$(call lower,$(e)).json)
 PARTITION ?= none
 CT := $(if $(filter none,$(PARTITION)),,.$(PARTITION)).ct
 
-.PHONY: all export translate test-data check
+.PHONY: all export translate compare test-data check
 # build.sh recompiles the one classes/ directory that every export analyses.
 .NOTPARALLEL:
 .DELETE_ON_ERROR:
@@ -38,6 +39,13 @@ all: test-data check
 export: $(EXPORTS)
 
 translate: $(EXPORTS:.json=$(CT))
+
+compare: $(OUT)/probe.txt $(OUT)/examples.json $(OUT)/signatures.json
+	uv run python -m rules.compare $(OUT)/examples.json $(OUT)/signatures.json --probe $<
+
+# What Graal leaves of each method's field accesses, from its own test harness.
+$(OUT)/probe.txt: graal-probe/MemoryProbe.java graal-probe/run.sh $(EXPORT)/examples/Examples.java $(EXPORT)/examples/Signatures.java
+	./graal-probe/run.sh Examples Signatures > $@
 
 test-data: $(FIXTURES:%=test/data/%.json)
 

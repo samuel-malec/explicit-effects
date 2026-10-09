@@ -13,6 +13,7 @@ src/
 ├── src/cthu/        # Implementation of Graal dialect in Cthulhu
 ├── src/effects/     # Heap partitions and method signatures: which partitions each method may touch
 ├── src/graal2ct/    # Graal IR -> Cthulhu compilation pipeline
+├── src/rules/       # Rules on the token form: load forwarding, dead stores, and the comparison with Graal (see its README)
 ├── test/            # Examples and test suite
 ```
 
@@ -28,6 +29,7 @@ cd graal-export && ./build.sh examples/Examples.java && \
     DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
 uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
 uv run graal2ct graal-export/out/examples.json --partition field
+uv run graal2ct graal-export/out/examples.json --partition field --rules
 uv run pytest
 ./graal-probe/run.sh
 ```
@@ -35,4 +37,5 @@ uv run pytest
 The Makefile chains these: `make` re-exports `Examples` and `Signatures` when their source or the exporter changed, copies them to `test/data/` and runs the checks.
 `make export` exports every example to `graal-export/out/<name>.json`, with the analysis report in `<name>.txt`.
 `make translate` translates every export to `<name>.ct` with one heap token, and `make translate PARTITION=field` to `<name>.field.ct` with a token per field.
+`make compare` prints, per method of `Examples` and `Signatures`, the field stores and loads Graal leaves (from `graal-probe`) next to those the rules leave.
 After rebuilding the graal tree, force the exports with `make -B`.
