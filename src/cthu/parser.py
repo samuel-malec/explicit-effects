@@ -200,8 +200,10 @@ class _Parser:
         self.expect(Category.ARROW)
         lam = LambdaDef(params, self.names(), [])
         self.open()
+        
         while not self.closed():
             structure, op = self.name(), self.name()
             ins = self.names()
             lam.body.append(Instruction(structure, op, ins, self.names() if self.accept(Category.ARROW) else []))
+        
         return lam

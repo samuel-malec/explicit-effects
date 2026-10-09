@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import parser
-from .ir import Instr, Lambda, Program, parse_function_type
+from .ir import Instr, Lambda, Program, frame_type, parse_function_type
 from .parser import OpType, Signature
 
 GRAAL = Path(__file__).with_name("graal.ct")
 
-FUNCTION = ("function", "stck", "bool", "frame") # operations a function supports
+FUNCTION = ("function", "stck", "bool") # operations a function supports
 CONSTANTS = {"int", "long"}  # the structures with cons_<n>
 MEMORY = "heap"  # the structure with the field and allocation operations
 
@@ -154,8 +154,12 @@ def _expected(instr: Instr, program: Program, prelude: Prelude,
 
     if (t, op) in lambdas:
         lam = lambdas[(t, op)]
-        frame = any(parse_function_type(pt) for _, pt in lam.params)
-        return [], ["frame" if frame else lam.function_type]
+        arms = [pt for _, pt in lam.params if parse_function_type(pt)]
+        if not arms:
+            return [], [lam.function_type]
+        if len(arms) != 2 or arms[0] != arms[1]:
+            return f"frame {op} takes arms {' and '.join(arms)}, not two of one type"
+        return [], [frame_type(arms[0])]
 
     if op == "run" and t in externals:
         return [], list(instr.out_types)  # an external is typed by the calls to it
@@ -170,9 +174,10 @@ def _expected(instr: Instr, program: Program, prelude: Prelude,
 
 
 def _function_arguments(t: str, ins: list[str], outs: list[str]) -> list:
-    """What the function type `t` ∷ ins → outs gives the function signature: F S B I O G."""
-    _, stck, bool_, frame = FUNCTION
-    return [t, stck, bool_, ins, outs, frame]
+    """What the function type `t` ∷ ins → outs gives the function signature: F S B I O G,
+    where G is the frame for arms of type `t`."""
+    _, stck, bool_ = FUNCTION
+    return [t, stck, bool_, ins, outs, frame_type(t)]
 
 
 def _memory(kind: str, k: int, program: Program) -> OpType | str:

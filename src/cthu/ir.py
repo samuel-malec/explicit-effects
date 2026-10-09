@@ -10,6 +10,12 @@ def function_type(params: list[str], outs: list[str]) -> str:
     return "f_" + "".join(_TYPE_CODES[t] for t in params) + "_" + "".join(_TYPE_CODES[t] for t in outs)
 
 
+def frame_type(function: str) -> str:
+    """The type of a frame for arms of a function type: what a join of two
+    closures of that type takes."""
+    return f"frame[{function}]"
+
+
 def parse_function_type(name: str) -> tuple[list[str], list[str]] | None:
     types = {code: t for t, code in _TYPE_CODES.items()}
     parts = name[2:].split("_")

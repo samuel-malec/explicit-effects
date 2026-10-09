@@ -83,6 +83,7 @@ signature reference[ R, S, B, I ] : simple[ R, S, B ]
 signature memory[ H, S, B ] : linear[ H, S, B ]
 (
     trap ∷ H → ∅        ; for now, this is how we model a Java exception
+    guard ∷ H × B → H   ; traps when B holds, as a branch to an arm that traps
 )
 
 signature function[ F, S, B, I, O, G ] : simple[ F, S, B ]
@@ -241,4 +242,5 @@ structure heap : memory[ heap, stck, bool ]
     pop  = graal_heap_pop
 
     trap = graal_heap_trap   ; memory
+    guard = graal_heap_guard
 )
