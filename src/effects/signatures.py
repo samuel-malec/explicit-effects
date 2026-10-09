@@ -1,24 +1,10 @@
 """Which partitions of memory each method may read and write.
 
-A partitioning is sound when it is disjoint, every location in exactly one
-partition, and the signatures are complete, every operation carrying the token
-of every partition it may touch.
+    Currently, each field gets a separate heap partition.
+    The soundness of this approach is guaranteed by the Java type system.
 
-Partitions: one per field of the program, named by its declaring class, which
-two different fields never share whatever the objects; one per array element
-kind, from the export; and the rest of memory, which holds the platform's
-fields and whatever no field names. `heap` puts all of them in one.
-
-A method's signature is the partitions its own accesses touch, plus whatever
-its callees touch, to a fixpoint over the points-to call graph. Effects only
-grow and there are finitely many partitions, so the iteration ends; it needs
-more than one pass because of recursion. An allocation touches the rest of
-memory.
-
-A method touches everything, every partition, when it or anything it calls
-has a callee without facts (a native, a lambda), a call the analysis did not
-resolve, or a memory effect the facts can't name (a monitor, a volatile
-access, a fence, an unsafe access). Unknown effects are never assumed absent.
+    Hopefully, in the future a partitioning based on the points-to information
+    obtained from the Graal compiler will be implemented.
 """
 
 from dataclasses import dataclass
@@ -109,10 +95,12 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
             why[m] = f"{m}: unresolved call to {e['unresolved'][0]}"
         elif e.get("unknown"):
             why[m] = f"{m}: {e['unknown'][0]}"
+
     callers: dict[str, set[str]] = {}
     for m, cs in callees.items():
         for callee in cs:
             callers.setdefault(callee, set()).add(m)
+
     work = list(why)
     while work:
         callee = work.pop()

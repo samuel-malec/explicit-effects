@@ -68,10 +68,76 @@ public class Examples {
         }
     }
 
+    // Control: alias may be another object, so its store doesn't overwrite the
+    // first. Checking alias for null first keeps both stores in one block.
+    static void deadStoreMaybeAliasStoreControl(Counter counter, Counter alias) {
+        alias.other = 0;
+        counter.value = 1;
+        alias.value = 2;
+    }
+
+    // On the flag path the load reads the 1, which the last store overwrites:
+    // Graal duplicates the merge, forwards the load on that path and drops the
+    // first store. Without forwarding across a merge, the load still reads it.
+    static int deadStoreReadAfterMerge(Counter counter, boolean flag) {
+        if (flag) {
+            counter.value = 1;
+        }
+        int seen = counter.value;
+        counter.value = 2;
+        return seen;
+    }
+
+    // The load in the arm reads the 1 stored before the branch: it takes the 1
+    // instead, and the store is dead. The call keeps Graal from forwarding the
+    // load before the analysis.
+    static int deadStoreReadInArm(Counter counter, Link list, boolean flag) {
+        counter.value = 1;
+        int n = length(list);
+        if (flag) {
+            n += counter.value;
+        }
+        counter.value = 2;
+        return n;
+    }
+
+    // Each iteration reads the first store. The rules don't carry a value into
+    // a loop, so for them the load still reads it.
+    static int deadStoreReadInLoop(Counter counter, Link list, int times) {
+        counter.value = 1;
+        int sum = 0;
+        for (int i = 0; i < times; i++) {
+            sum += counter.value + length(list);
+        }
+        counter.value = 2;
+        return sum;
+    }
+
     static int forwardAcrossCall(Counter counter, Link list) {
         counter.value = 5;
         int n = length(list); // length(list) doesn't touch Counter.value, yet
         return counter.value + n;  // Graal produces redundant load here
+    }
+
+    // Control: alias may be another object, so the load in the arm can't take
+    // the value stored through counter; with one heap token, the store to
+    // alias.other comes between them.
+    static int forwardIntoArmAliasControl(Counter counter, Counter alias, boolean flag) {
+        counter.value = 1;
+        alias.other = 2;
+        int n = 0;
+        if (flag) {
+            n = alias.value;
+        }
+        return n;
+    }
+
+    // Control: alias may be another object, so its load can't take the value
+    // stored through counter. Checking alias for null first keeps them in one block.
+    static int forwardMaybeAliasControl(Counter counter, Counter alias) {
+        alias.other = 0;
+        counter.value = 1;
+        return alias.value;
     }
 
     // Control: countInto writes Counter.value.
@@ -85,6 +151,36 @@ public class Examples {
         counter.value = 5;
         countInto(logger, list); // countInto(logger, list) doesn't write into counter.value
         return counter.value; // therefore this is a redundant load
+    }
+
+    // Both arms store, and the call in one leaves Counter.value alone: after
+    // the merge the load takes whichever value its arm stored.
+    static int forwardAcrossMerge(Counter counter, Link list, boolean flag) {
+        int n = 0;
+        if (flag) {
+            counter.value = 1;
+            n = length(list);
+        } else {
+            counter.value = 2;
+        }
+        return counter.value + n;
+    }
+
+    // Control: the second arm stores through alias, which may be another
+    // object, and then to another field, so only the first arm's value
+    // reaches the load.
+    static int forwardAcrossMergeAliasControl(Counter counter, Counter alias, Link list, boolean flag) {
+        alias.other = 0;
+        counter.other = 0;
+        int n = 0;
+        if (flag) {
+            counter.value = 1;
+            n = length(list);
+        } else {
+            alias.value = 2;
+            counter.other = 3;
+        }
+        return counter.value + n;
     }
 
     static int repeatedLoadAcrossCall(Counter counter, Link list) {
@@ -165,9 +261,17 @@ public class Examples {
         deadStoreOtherObject(counter, logger);
         deadStoreBothArms(counter, flag);
         deadStoreOneArm(counter, flag);
-        int sum = forwardAcrossCall(counter, list);
+        deadStoreMaybeAliasStoreControl(counter, new Counter());
+        int sum = deadStoreReadAfterMerge(counter, flag);
+        sum += deadStoreReadInArm(counter, list, flag);
+        sum += deadStoreReadInLoop(counter, list, 3);
+        sum += forwardIntoArmAliasControl(counter, new Counter(), flag);
+        sum += forwardMaybeAliasControl(counter, new Counter());
+        sum += forwardAcrossCall(counter, list);
         sum += forwardAcrossCallControl(counter, list);
         sum += forwardAcrossWritingCall(counter, logger, list);
+        sum += forwardAcrossMerge(counter, list, flag);
+        sum += forwardAcrossMergeAliasControl(counter, new Counter(), list, flag);
         sum += repeatedLoadAcrossCall(counter, list);
         sum += repeatedLoadAcrossCallControl(counter, list);
         sum += hoistLoadOutOfLoop(counter, list, 3);
