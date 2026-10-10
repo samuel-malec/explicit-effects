@@ -1,25 +1,25 @@
 {
   "methods": {
     "Signatures$Box.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures$Box.add(I)V": {"reads": ["Signatures$Box.v"], "writes": ["Signatures$Box.v"], "callees": [], "allocates": false, "unknown": ["MonitorEnterNode at bci 0", "MonitorExitNode at bci -3"], "unresolved": []},
+    "Signatures$Box.add(I)V": {"reads": ["Signatures$Box.v"], "writes": ["Signatures$Box.v"], "callees": [], "allocates": false, "unknown": ["MonitorEnterNode at bci 0", "MonitorExitNode at bci -3"], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Box.v", "receivers": ["Signatures$Box"], "at": "Signatures$Box.add(I)V:2"}, {"kind": "write", "field": "Signatures$Box.v", "receivers": ["Signatures$Box"], "at": "Signatures$Box.add(I)V:7"}]},
     "Signatures$Counter.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
     "Signatures$Flag.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures$Item.<init>(I)V": {"reads": [], "writes": ["Signatures$Item.id"], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "Signatures$Item.<init>(I)V": {"reads": [], "writes": ["Signatures$Item.id"], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "write", "field": "Signatures$Item.id", "receivers": ["Signatures$Item"], "at": "Signatures$Item.<init>(I)V:6"}]},
     "Signatures$Logger.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.acrossAllocation(LSignatures$Counter;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.make()LSignatures$Box;"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.acrossArray(LSignatures$Counter;[I)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.fill([I)V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.log(LSignatures$Logger;)V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.acrossFinalField(LSignatures$Counter;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.item(I)LSignatures$Item;"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures$Box.add(I)V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.acrossNative(LSignatures$Counter;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.fromOutside()I"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": ["Signatures$Sink.take(I)V at bci 7 (disabled)"]},
-    "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.raise(LSignatures$Flag;)V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.fill([I)V": {"reads": [], "writes": ["int[]"], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "Signatures.acrossAllocation(LSignatures$Counter;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.make()LSignatures$Box;"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossAllocation(LSignatures$Counter;)I:10"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossAllocation(LSignatures$Counter;)I:2"}]},
+    "Signatures.acrossArray(LSignatures$Counter;[I)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.fill([I)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossArray(LSignatures$Counter;[I)I:10"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossArray(LSignatures$Counter;[I)I:2"}]},
+    "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.log(LSignatures$Logger;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I:10"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I:2"}]},
+    "Signatures.acrossFinalField(LSignatures$Counter;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.item(I)LSignatures$Item;"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossFinalField(LSignatures$Counter;)I:11"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossFinalField(LSignatures$Counter;)I:2"}]},
+    "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures$Box.add(I)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I:11"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I:2"}]},
+    "Signatures.acrossNative(LSignatures$Counter;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.fromOutside()I"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossNative(LSignatures$Counter;)I:10"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossNative(LSignatures$Counter;)I:2"}]},
+    "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": ["Signatures$Sink.take(I)V at bci 7 (disabled)"], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I:13"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I:2"}]},
+    "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I": {"reads": ["Signatures$Counter.value"], "writes": ["Signatures$Counter.value"], "callees": ["Signatures.raise(LSignatures$Flag;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I:10"}, {"kind": "write", "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I:2"}]},
+    "Signatures.fill([I)V": {"reads": [], "writes": ["int[]"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "write", "field": "int[]", "receivers": ["int[]"], "at": "Signatures.fill([I)V:3"}]},
     "Signatures.item(I)LSignatures$Item;": {"reads": [], "writes": [], "callees": ["Signatures$Item.<init>(I)V"], "allocates": true, "unknown": [], "unresolved": []},
-    "Signatures.log(LSignatures$Logger;)V": {"reads": ["Signatures$Logger.count"], "writes": ["Signatures$Logger.count"], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "Signatures.main([Ljava/lang/String;)V": {"reads": ["java.lang.System.out"], "writes": [], "callees": ["Signatures$Box.<init>()V", "Signatures$Counter.<init>()V", "Signatures$Flag.<init>()V", "Signatures$Logger.<init>()V", "Signatures.acrossAllocation(LSignatures$Counter;)I", "Signatures.acrossArray(LSignatures$Counter;[I)I", "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I", "Signatures.acrossFinalField(LSignatures$Counter;)I", "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I", "Signatures.acrossNative(LSignatures$Counter;)I", "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I", "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I"], "allocates": true, "unknown": [], "unresolved": ["java.io.PrintStream.println(I)V at bci 105 (disabled)"]},
+    "Signatures.log(LSignatures$Logger;)V": {"reads": ["Signatures$Logger.count"], "writes": ["Signatures$Logger.count"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Signatures$Logger.count", "receivers": ["Signatures$Logger"], "at": "Signatures.log(LSignatures$Logger;)V:2"}, {"kind": "write", "field": "Signatures$Logger.count", "receivers": ["Signatures$Logger"], "at": "Signatures.log(LSignatures$Logger;)V:7"}]},
+    "Signatures.main([Ljava/lang/String;)V": {"reads": ["java.lang.System.out"], "writes": [], "callees": ["Signatures$Box.<init>()V", "Signatures$Counter.<init>()V", "Signatures$Flag.<init>()V", "Signatures$Logger.<init>()V", "Signatures.acrossAllocation(LSignatures$Counter;)I", "Signatures.acrossArray(LSignatures$Counter;[I)I", "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I", "Signatures.acrossFinalField(LSignatures$Counter;)I", "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I", "Signatures.acrossNative(LSignatures$Counter;)I", "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I", "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I"], "allocates": true, "unknown": [], "unresolved": ["java.io.PrintStream.println(I)V at bci 105 (disabled)"], "accesses": [{"kind": "read", "field": "java.lang.System.out", "receivers": ["java.lang.System.<statics>"], "at": "Signatures.main([Ljava/lang/String;)V:101"}]},
     "Signatures.make()LSignatures$Box;": {"reads": [], "writes": [], "callees": ["Signatures$Box.<init>()V"], "allocates": true, "unknown": [], "unresolved": []},
-    "Signatures.raise(LSignatures$Flag;)V": {"reads": [], "writes": ["Signatures$Flag.raised"], "callees": [], "allocates": false, "unknown": ["volatile access to Signatures$Flag.raised at bci 2"], "unresolved": []},
+    "Signatures.raise(LSignatures$Flag;)V": {"reads": [], "writes": ["Signatures$Flag.raised"], "callees": [], "allocates": false, "unknown": ["volatile access to Signatures$Flag.raised at bci 2"], "unresolved": [], "accesses": [{"kind": "write", "field": "Signatures$Flag.raised", "receivers": ["Signatures$Flag"], "at": "Signatures.raise(LSignatures$Flag;)V:2"}]},
     "java.lang.Boolean.booleanValue()Z": {"reads": ["java.lang.Boolean.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
     "java.lang.Boolean.valueOf(Z)Ljava/lang/Boolean;": {"reads": [], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
     "java.lang.Byte.byteValue()B": {"reads": ["java.lang.Byte.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
@@ -118,9 +118,9 @@
             {"id": 2, "op": "Parameter", "type": "int", "in": [], "index": 1, "bci": -1},
             {"id": 5, "op": "MonitorId", "type": "void", "in": [], "bci": 0},
             {"id": 4, "op": "MonitorEnter", "type": "void", "in": [1], "bci": 0},
-            {"id": 7, "op": "LoadField", "type": "int", "in": [1], "field": "Signatures$Box.v", "bci": 2},
+            {"id": 7, "op": "LoadField", "type": "int", "in": [1], "field": "Signatures$Box.v", "receivers": ["Signatures$Box"], "at": "Signatures$Box.add(I)V:2", "bci": 2},
             {"id": 9, "op": "Add", "type": "int", "in": [2, 7], "bci": 6},
-            {"id": 8, "op": "StoreField", "type": "void", "in": [1, 9], "field": "Signatures$Box.v", "bci": 7},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [1, 9], "field": "Signatures$Box.v", "receivers": ["Signatures$Box"], "at": "Signatures$Box.add(I)V:7", "bci": 7},
             {"id": 11, "op": "MonitorExit", "type": "void", "in": [1], "bci": -3},
             {"id": 13, "op": "Return", "type": "void", "in": [], "bci": 10}
           ],
@@ -264,7 +264,7 @@
           "id": 1,
           "preds": [0],
           "nodes": [
-            {"id": 11, "op": "StoreField", "type": "void", "in": [1, 2], "field": "Signatures$Item.id", "bci": 6},
+            {"id": 11, "op": "StoreField", "type": "void", "in": [1, 2], "field": "Signatures$Item.id", "receivers": ["Signatures$Item"], "at": "Signatures$Item.<init>(I)V:6", "bci": 6},
             {"id": 13, "op": "FinalFieldBarrier", "type": "void", "in": [1], "bci": 9},
             {"id": 14, "op": "Return", "type": "void", "in": [], "bci": 9}
           ],
@@ -383,7 +383,7 @@
           "nodes": [
             {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 9, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossAllocation(LSignatures$Counter;)I:2", "bci": 2},
             {"id": 11, "op": "InvokeWithException", "type": "ref", "in": [], "args": [], "target": "Signatures.make()LSignatures$Box;", "callees": ["Signatures.make()LSignatures$Box;"], "flow": "ok", "exception_edge": true, "bci": 5}
           ],
           "ops": [
@@ -401,7 +401,7 @@
           "id": 3,
           "preds": [2],
           "nodes": [
-            {"id": 22, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Counter.value", "bci": 10},
+            {"id": 22, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossAllocation(LSignatures$Counter;)I:10", "bci": 10},
             {"id": 24, "op": "Return", "type": "void", "in": [22], "bci": 13}
           ],
           "ops": [
@@ -490,7 +490,7 @@
           "nodes": [
             {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossArray(LSignatures$Counter;[I)I:2", "bci": 2},
             {"id": 12, "op": "InvokeWithException", "type": "void", "in": [], "args": [2], "target": "Signatures.fill([I)V", "callees": ["Signatures.fill([I)V"], "flow": "ok", "exception_edge": true, "bci": 6}
           ],
           "ops": [
@@ -508,7 +508,7 @@
           "id": 3,
           "preds": [2],
           "nodes": [
-            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "bci": 10},
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossArray(LSignatures$Counter;[I)I:10", "bci": 10},
             {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 13}
           ],
           "ops": [
@@ -597,7 +597,7 @@
           "nodes": [
             {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I:2", "bci": 2},
             {"id": 12, "op": "InvokeWithException", "type": "void", "in": [], "args": [2], "target": "Signatures.log(LSignatures$Logger;)V", "callees": ["Signatures.log(LSignatures$Logger;)V"], "flow": "ok", "exception_edge": true, "bci": 6}
           ],
           "ops": [
@@ -615,7 +615,7 @@
           "id": 3,
           "preds": [2],
           "nodes": [
-            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "bci": 10},
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossField(LSignatures$Counter;LSignatures$Logger;)I:10", "bci": 10},
             {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 13}
           ],
           "ops": [
@@ -703,7 +703,7 @@
           "nodes": [
             {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 9, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossFinalField(LSignatures$Counter;)I:2", "bci": 2},
             {"id": 12, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 5},
             {"id": 11, "op": "InvokeWithException", "type": "ref", "in": [], "args": [12], "target": "Signatures.item(I)LSignatures$Item;", "callees": ["Signatures.item(I)LSignatures$Item;"], "flow": "ok", "exception_edge": true, "bci": 6}
           ],
@@ -722,7 +722,7 @@
           "id": 3,
           "preds": [2],
           "nodes": [
-            {"id": 23, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Counter.value", "bci": 11},
+            {"id": 23, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossFinalField(LSignatures$Counter;)I:11", "bci": 11},
             {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 14}
           ],
           "ops": [
@@ -811,7 +811,7 @@
           "nodes": [
             {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I:2", "bci": 2},
             {"id": 13, "op": "IsNull", "type": "cond", "in": [2], "bci": 7},
             {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 7}
           ],
@@ -860,7 +860,7 @@
           "id": 5,
           "preds": [4],
           "nodes": [
-            {"id": 29, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "bci": 11},
+            {"id": 29, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossMonitor(LSignatures$Counter;LSignatures$Box;)I:11", "bci": 11},
             {"id": 31, "op": "Return", "type": "void", "in": [29], "bci": 14}
           ],
           "ops": [
@@ -949,7 +949,7 @@
           "nodes": [
             {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 9, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossNative(LSignatures$Counter;)I:2", "bci": 2},
             {"id": 11, "op": "InvokeWithException", "type": "int", "in": [], "args": [], "target": "Signatures.fromOutside()I", "callees": ["Signatures.fromOutside()I"], "flow": "ok", "exception_edge": true, "bci": 5}
           ],
           "ops": [
@@ -967,7 +967,7 @@
           "id": 3,
           "preds": [2],
           "nodes": [
-            {"id": 22, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Counter.value", "bci": 10},
+            {"id": 22, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossNative(LSignatures$Counter;)I:10", "bci": 10},
             {"id": 25, "op": "Add", "type": "int", "in": [11, 22], "bci": 14},
             {"id": 24, "op": "Return", "type": "void", "in": [25], "bci": 15}
           ],
@@ -1057,7 +1057,7 @@
           "nodes": [
             {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I:2", "bci": 2},
             {"id": 13, "op": "IsNull", "type": "cond", "in": [2], "bci": 7},
             {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 7}
           ],
@@ -1106,7 +1106,7 @@
           "id": 5,
           "preds": [4],
           "nodes": [
-            {"id": 29, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "bci": 13},
+            {"id": 29, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossUnresolved(LSignatures$Counter;LSignatures$Sink;)I:13", "bci": 13},
             {"id": 31, "op": "Return", "type": "void", "in": [29], "bci": 16}
           ],
           "ops": [
@@ -1196,7 +1196,7 @@
           "nodes": [
             {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "bci": 2},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I:2", "bci": 2},
             {"id": 12, "op": "InvokeWithException", "type": "void", "in": [], "args": [2], "target": "Signatures.raise(LSignatures$Flag;)V", "callees": ["Signatures.raise(LSignatures$Flag;)V"], "flow": "ok", "exception_edge": true, "bci": 6}
           ],
           "ops": [
@@ -1214,7 +1214,7 @@
           "id": 3,
           "preds": [2],
           "nodes": [
-            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "bci": 10},
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Signatures$Counter.value", "receivers": ["Signatures$Counter"], "at": "Signatures.acrossVolatile(LSignatures$Counter;LSignatures$Flag;)I:10", "bci": 10},
             {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 13}
           ],
           "ops": [
@@ -1352,7 +1352,7 @@
           "preds": [2],
           "nodes": [
             {"id": 20, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 2},
-            {"id": 19, "op": "StoreIndexed", "type": "void", "in": [8, 10, 20], "bci": 3},
+            {"id": 19, "op": "StoreIndexed", "type": "void", "in": [8, 10, 20], "receivers": ["int[]"], "at": "Signatures.fill([I)V:3", "bci": 3},
             {"id": 22, "op": "Return", "type": "void", "in": [], "bci": 4}
           ],
           "ops": [],
@@ -1458,10 +1458,10 @@
           "preds": [0],
           "nodes": [
             {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
-            {"id": 7, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Logger.count", "bci": 2},
+            {"id": 7, "op": "LoadField", "type": "int", "in": [8], "field": "Signatures$Logger.count", "receivers": ["Signatures$Logger"], "at": "Signatures.log(LSignatures$Logger;)V:2", "bci": 2},
             {"id": 14, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 5},
             {"id": 15, "op": "Add", "type": "int", "in": [7, 14], "bci": 6},
-            {"id": 12, "op": "StoreField", "type": "void", "in": [8, 15], "field": "Signatures$Logger.count", "bci": 7},
+            {"id": 12, "op": "StoreField", "type": "void", "in": [8, 15], "field": "Signatures$Logger.count", "receivers": ["Signatures$Logger"], "at": "Signatures.log(LSignatures$Logger;)V:7", "bci": 7},
             {"id": 17, "op": "Return", "type": "void", "in": [], "bci": 10}
           ],
           "ops": [
@@ -1824,7 +1824,7 @@
                 {"block": 16, "value": 123}
               ]
             },
-            {"id": 132, "op": "LoadField", "type": "ref", "in": [], "field": "java.lang.System.out", "bci": 101},
+            {"id": 132, "op": "LoadField", "type": "ref", "in": [], "field": "java.lang.System.out", "receivers": ["java.lang.System.<statics>"], "at": "Signatures.main([Ljava/lang/String;)V:101", "bci": 101},
             {"id": 134, "op": "IsNull", "type": "cond", "in": [132], "bci": 105},
             {"id": 133, "op": "If", "type": "void", "in": [134], "bci": 105}
           ],
@@ -2166,7 +2166,7 @@
           "nodes": [
             {"id": 8, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
             {"id": 9, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
-            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Flag.raised", "bci": 2},
+            {"id": 7, "op": "StoreField", "type": "void", "in": [8, 9], "field": "Signatures$Flag.raised", "receivers": ["Signatures$Flag"], "at": "Signatures.raise(LSignatures$Flag;)V:2", "bci": 2},
             {"id": 11, "op": "Return", "type": "void", "in": [], "bci": 5}
           ],
           "ops": [],

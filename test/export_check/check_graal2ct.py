@@ -1,5 +1,6 @@
 import copy
 import dataclasses
+import itertools
 import re
 from pathlib import Path
 
@@ -8,18 +9,20 @@ from cthu.ir import Instr, Program, to_text
 from cthu.lexer import ParseError
 from cthu.ssu import LinearityError, check, linearize
 from cthu.ir import Lambda
-from effects.signatures import PARTITIONERS, REST, analyse, by_field, no_analysis, one_heap
+from effects.signatures import (PARTITIONERS, REST, accesses, analyse, by_field, by_object, by_object_field, no_analysis,
+                                one_heap)
 from graal.graal_import import load
 from graal2ct.translate import Translation
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 EXAMPLES = DATA / "examples.json"
 SIGNATURES = DATA / "signatures.json"
+ALIASING = DATA / "aliasing.json"  # exported with allocation sites
 
 
 def translate(partition: str = "none") -> tuple[Program, Translation]:
     facts, graphs = load(EXAMPLES)
-    effects = no_analysis() if partition == "none" else analyse(facts, PARTITIONERS[partition])
+    effects = no_analysis() if partition == "none" else analyse(facts, PARTITIONERS[partition](facts))
     translation = Translation(graphs, effects)
     return translation.translate(sorted(graphs)), translation
 
@@ -203,7 +206,9 @@ def check_programs_type_check() -> None:
     applies an operation it declares to values of the types it takes. Broken
     preludes are caught, and reported first by check: an unbound operation, a
     missing parent signature, a cycle of signatures, a wrong number of
-    arguments to a signature. So are a copied heap and a mistyped value."""
+    arguments to a signature. So are a copied heap, a mistyped value, and a
+    branch whose frame is for arms of another type: each function type has
+    its own frame type, which a join of its closures takes."""
     graal = prelude.load()
     assert not graal.errors, graal.errors
     program, _ = translate()
@@ -230,10 +235,14 @@ def check_programs_type_check() -> None:
     b2.body.insert(0, Instr("heap", "dup", ["h"], ["hx", "hy"], ["heap", "heap"]))
     constant = next(i for i in b2.body if i.op.startswith("cons_"))
     constant.out_types = ["long"]
+    frame = next(i for i in lam(program, "Examples_deadStoreBothArms", "b2").body if i.op == "frame_1")
+    frame.op = "frame_0"  # the frame of run's branch, whose arms take an int more
     errors = prelude.check(program, graal)
     assert any("heap has no dup" in e for e in errors), errors
     assert any(constant.text() in e and "given" in e for e in errors), errors
-    print("ok   every instruction type-checks against graal.ct; a broken prelude, a copied heap and a mistyped value don't")
+    assert any(frame.text() in e and "frame[f_rih_h]" in e for e in errors), errors
+    print("ok   every instruction type-checks against graal.ct; a broken prelude, a copied heap, a mistyped value"
+          " and a frame for other arms don't")
 
 
 def check_signatures() -> None:
@@ -333,6 +342,51 @@ def check_signature_rules() -> None:
           " a native and an unresolved call touch everything; a constructor returns the object it initialized")
 
 
+def check_kills_for_graal() -> None:
+    """What the round trip tells Graal about each method: the fields and array
+    kinds it, or anything it calls, may write, which a call to it then kills.
+    length writes nothing; countInto for a Logger writes Logger.count; fill
+    writes int[]. A method that allocates, as item and make do, or reaches a
+    monitor, a volatile store, a native or an unresolved call, may write
+    anything, and so may main. With objects told apart, in Aliasing, countInto
+    writes Counter.value only of the counters passed to it, which is not the
+    partition of forwardAcrossCallOnOtherObject's own counter; each access has
+    its partition, two in forwardPastOtherObject and one in its control."""
+    from effects.kills import ANY, kills
+    facts, _ = load(EXAMPLES)
+    written = kills(facts)
+    e = "Examples"
+    assert written[f"{e}.length(L{e}$Link;)I"] == ()
+    assert written[f"{e}.countInto(L{e}$Logger;L{e}$Link;)V"] == (f"{e}$Logger.count",)
+    assert written[f"{e}.main([Ljava/lang/String;)V"] == ANY
+    facts, _ = load(SIGNATURES)
+    written = kills(facts)
+    s = "Signatures"
+    assert written[f"{s}.fill([I)V"] == ("int[]",)
+    assert written[f"{s}.log(L{s}$Logger;)V"] == (f"{s}$Logger.count",)
+    for method in ("item(I)L{0}$Item;", "make()L{0}$Box;", "acrossMonitor(L{0}$Counter;L{0}$Box;)I",
+                   "acrossVolatile(L{0}$Counter;L{0}$Flag;)I", "acrossNative(L{0}$Counter;)I",
+                   "acrossUnresolved(L{0}$Counter;L{0}$Sink;)I"):
+        assert written[f"{s}.{method.format(s)}"] == ANY, method
+
+    # With objects told apart, a kill is a field of a set of objects, and each access has its set.
+    from effects.kills import partitioned
+    facts, _ = load(ALIASING)
+    written, located = kills(facts, "object-field"), partitioned(facts, "object-field")
+    a = "Aliasing"
+    value = f"{a}$Counter.value"
+
+    def partitions(method: str) -> set[str]:
+        return {p for (at, field), p in located.items() if at.startswith(f"{a}.{method}(") and field == value}
+
+    on_other = written[f"{a}.countInto(L{a}$Counter;L{a}$Link;)V"]
+    assert len(on_other) == 1 and on_other[0].startswith(value + "@"), on_other
+    assert on_other[0] not in partitions("forwardAcrossCallOnOtherObject"), (on_other, partitions("forwardAcrossCallOnOtherObject"))
+    assert len(partitions("forwardPastOtherObject")) == 2 and len(partitions("forwardPastAliasControl")) == 1
+    print("ok   kills: a call kills only what its callees may write; allocation and the opaque kill everything;"
+          " with objects told apart, a field of the objects it writes")
+
+
 def check_partitions_separate_effects() -> None:
     """With a token per field, the call in forwardAcrossWritingCall takes only
     the Link.next and Logger.count tokens, so the Counter.value token goes from
@@ -361,6 +415,59 @@ def check_partitions_separate_effects() -> None:
     tokens, _, _ = writing_call("none")
     assert tokens == ["h"], tokens
     print("ok   per field, the writing call takes h_next and h_count, and h_value goes from the store to the load")
+
+
+def check_object_partitions() -> None:
+    """With allocation sites, objects main allocates apart get partitions of
+    their own: in forwardPastOtherObject, counter.value and other.value are
+    two partitions, and in forwardPastAliasControl, also called with one
+    counter twice, one. Any two accesses whose objects may meet share a
+    partition, per field or with all of the objects' fields. Through a call
+    too: countInto writes Counter.value of other only, so of
+    forwardAcrossCallOnOtherObject's two Counter.value partitions it writes
+    one. An access whose objects the analysis can't name may touch any object
+    with the field, so it joins them all. Named by type, as the analysis
+    does by default, Examples has one object per class: object-field
+    partitions are the field partitions, object partitions one per class."""
+    facts, _ = load(ALIASING)
+    per_field, per_object = by_object_field(facts), by_object(facts)
+    listed = [(f, r) for e in facts.methods.values() for _, f, r in accesses(e) if r is not None and f in facts.fields]
+    assert len(listed) > 20, listed
+    for (f, r), (g, q) in itertools.combinations(listed, 2):
+        if r & q:
+            assert per_object(f, r) == per_object(g, q), (f, r, g, q)
+            assert f != g or per_field(f, r) == per_field(g, q), (f, r, q)
+
+    a = "Aliasing"
+    value = f"{a}$Counter.value"
+
+    def values(method: str, partition=per_field) -> set[str]:
+        return {partition(f, r) for _, f, r in accesses(facts.methods[f"{a}.{method}"]) if f == value}
+
+    assert len(values("forwardPastOtherObject(L{0}$Counter;L{0}$Counter;)I".format(a))) == 2
+    assert len(values("forwardPastOtherObject(L{0}$Counter;L{0}$Counter;)I".format(a), per_object)) == 2
+    assert len(values("forwardPastAliasControl(L{0}$Counter;L{0}$Counter;)I".format(a))) == 1
+    effects = analyse(facts, per_field)
+    call = f"{a}.forwardAcrossCallOnOtherObject(L{a}$Counter;L{a}$Counter;L{a}$Link;)I"
+    count = f"{a}.countInto(L{a}$Counter;L{a}$Link;)V"
+    own = {per_field(f, r) for _, f, r in accesses(facts.methods[call]) if f == value}
+    tokens = {t for t in effects.tokens(call) if t.startswith(value)}
+    written = effects.signatures[count].writes
+    assert len(own) == 1 and len(tokens) == 2 and not own & written and tokens - own <= written, (own, tokens, written)
+
+    blind = copy.deepcopy(facts)
+    for access in blind.methods[f"{a}.forwardPastOtherObject(L{a}$Counter;L{a}$Counter;)I"]["accesses"]:
+        access["receivers"] = None
+    joined = by_object_field(blind)
+    assert {joined(f, r) for _, f, r in accesses(blind.methods[count]) if f == value} == \
+           {joined(f, r) for _, f, r in accesses(blind.methods[call]) if f == value}
+
+    facts, _ = load(EXAMPLES)
+    assert analyse(facts, by_object_field(facts)).partitions == analyse(facts, by_field).partitions
+    classes = analyse(facts, by_object(facts)).partitions
+    assert {"Examples$Counter", "Examples$Link", "Examples$Logger"} <= set(classes), classes
+    print("ok   object partitions: objects allocated apart get partitions of their own, objects that may meet share one;"
+          " by type they are the field partitions")
 
 
 def check_the_parser_reads_the_output_back() -> None:
@@ -444,7 +551,9 @@ if __name__ == "__main__":
     check_signatures()
     check_facts_cover_every_kind_of_field()
     check_signature_rules()
+    check_kills_for_graal()
     check_partitions_separate_effects()
+    check_object_partitions()
     check_the_parser_reads_the_output_back()
     check_the_checker_can_fail()
     print("all checks passed")

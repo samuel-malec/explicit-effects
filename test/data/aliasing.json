@@ -1,0 +1,2757 @@
+{
+  "methods": {
+    "Aliasing$Counter.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "Aliasing$Link.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V": {"reads": ["Aliasing$Counter.value", "Aliasing$Link.next"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:6"}, {"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:16"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:11"}]},
+    "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V": {"reads": ["Aliasing$Counter.value", "Aliasing$Link.next"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:6"}, {"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:16"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:11"}]},
+    "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.other", "Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:1"}, {"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:12"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:19"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.other", "Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:1"}, {"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:12"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:19"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2"}]},
+    "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2"}]},
+    "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:170", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34"}]},
+    "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:146"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34"}]},
+    "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:60"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:39"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.length(LAliasing$Link;)I": {"reads": ["Aliasing$Link.next"], "writes": [], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.length(LAliasing$Link;)I:10"}]},
+    "Aliasing.main([Ljava/lang/String;)V": {"reads": [], "writes": ["Aliasing$Link.next", "Aliasing.result"], "callees": ["Aliasing$Counter.<init>()V", "Aliasing$Link.<init>()V", "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I"], "allocates": true, "unknown": [], "unresolved": [], "accesses": [{"kind": "write", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0"], "at": "Aliasing.main([Ljava/lang/String;)V:16"}, {"kind": "write", "field": "Aliasing.result", "receivers": ["Aliasing.<statics>"], "at": "Aliasing.main([Ljava/lang/String;)V:256"}]},
+    "java.lang.Boolean.booleanValue()Z": {"reads": ["java.lang.Boolean.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Boolean.valueOf(Z)Ljava/lang/Boolean;": {"reads": [], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Byte.byteValue()B": {"reads": ["java.lang.Byte.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Byte.valueOf(B)Ljava/lang/Byte;": {"reads": ["Object[]"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Character.<init>(C)V": {"reads": [], "writes": ["java.lang.Character.value"], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Character.charValue()C": {"reads": ["java.lang.Character.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Character.valueOf(C)Ljava/lang/Character;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Character.<init>(C)V"], "allocates": true, "unknown": [], "unresolved": []},
+    "java.lang.Double.<init>(D)V": {"reads": [], "writes": ["java.lang.Double.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Double.doubleValue()D": {"reads": ["java.lang.Double.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Double.valueOf(D)Ljava/lang/Double;": {"reads": [], "writes": [], "callees": ["java.lang.Double.<init>(D)V"], "allocates": true, "unknown": [], "unresolved": []},
+    "java.lang.Float.<init>(F)V": {"reads": [], "writes": ["java.lang.Float.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Float.floatValue()F": {"reads": ["java.lang.Float.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Float.valueOf(F)Ljava/lang/Float;": {"reads": [], "writes": [], "callees": ["java.lang.Float.<init>(F)V"], "allocates": true, "unknown": [], "unresolved": []},
+    "java.lang.Integer.<init>(I)V": {"reads": [], "writes": ["java.lang.Integer.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Integer.intValue()I": {"reads": ["java.lang.Integer.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Integer.valueOf(I)Ljava/lang/Integer;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Integer.<init>(I)V"], "allocates": true, "unknown": [], "unresolved": []},
+    "java.lang.Long.<init>(J)V": {"reads": [], "writes": ["java.lang.Long.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Long.longValue()J": {"reads": ["java.lang.Long.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Long.valueOf(J)Ljava/lang/Long;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Long.<init>(J)V"], "allocates": true, "unknown": [], "unresolved": []},
+    "java.lang.Number.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Object.<init>()V": {"reads": [], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Short.<init>(S)V": {"reads": [], "writes": ["java.lang.Short.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Short.shortValue()S": {"reads": ["java.lang.Short.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
+    "java.lang.Short.valueOf(S)Ljava/lang/Short;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Short.<init>(S)V"], "allocates": true, "unknown": [], "unresolved": []}
+  },
+  "fields": {
+    "Aliasing$Counter.other": {"read": true, "written": false},
+    "Aliasing$Counter.value": {"read": true, "written": true},
+    "Aliasing$Link.next": {"read": true, "written": true},
+    "Aliasing.result": {"read": false, "written": true}
+  },
+  "graphs": [
+    {
+      "name": "Aliasing$Counter.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Aliasing$Link.<init>",
+      "descriptor": "()V",
+      "static": false,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 3, "op": "InvokeWithException", "type": "void", "in": [], "args": [1], "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 1}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 3, "bci": 1, "target": "java.lang.Object.<init>()V", "callees": ["java.lang.Object.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 2, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 1}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Return", "type": "void", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 7, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 1},
+            {"id": 9, "op": "Unwind", "type": "void", "in": [7], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {}
+    },
+    {
+      "name": "Aliasing.countInto",
+      "descriptor": "(LAliasing$Counter;LAliasing$Link;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [2], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "IsNull", "type": "cond", "in": [1], "bci": 6},
+            {"id": 8, "op": "If", "type": "void", "in": [9], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 44, "op": "BytecodeException", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 13, "op": "Pi", "type": "ref", "in": [1], "bci": 6},
+            {"id": 12, "op": "LoadField", "type": "int", "in": [13], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:6", "bci": 6},
+            {"id": 19, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 9},
+            {"id": 20, "op": "Add", "type": "int", "in": [12, 19], "bci": 10},
+            {"id": 17, "op": "StoreField", "type": "void", "in": [13, 20], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:11", "bci": 11},
+            {"id": 26, "op": "Pi", "type": "ref", "in": [2], "bci": 16},
+            {"id": 25, "op": "LoadField", "type": "ref", "in": [26], "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:16", "bci": 16},
+            {"id": 27, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 25], "target": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 19}
+          ],
+          "ops": [
+            {"kind": "load", "node": 12, "bci": 6, "field": "Aliasing$Counter.value", "object": 1},
+            {"kind": "store", "node": 17, "bci": 11, "field": "Aliasing$Counter.value", "object": 1, "value": 20},
+            {"kind": "load", "node": 25, "bci": 16, "field": "Aliasing$Link.next", "object": 2},
+            {"kind": "invoke", "node": 27, "bci": 19, "target": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 7, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 19}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 6,
+          "preds": [5, 1],
+          "nodes": [
+            {"id": 51, "op": "Return", "type": "void", "in": [], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 22}
+        },
+        {
+          "id": 7,
+          "preds": [4],
+          "nodes": [
+            {"id": 31, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 19}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 8,
+          "preds": [7, 3],
+          "nodes": [
+            {
+              "id": 40,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 7, "value": 31},
+                {"block": 3, "value": 44}
+              ]
+            },
+            {"id": 49, "op": "Unwind", "type": "void", "in": [40], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "2": "param1", "20": "AddNode#20"}
+    },
+    {
+      "name": "Aliasing.countIntoAlias",
+      "descriptor": "(LAliasing$Counter;LAliasing$Link;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [2], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "IsNull", "type": "cond", "in": [1], "bci": 6},
+            {"id": 8, "op": "If", "type": "void", "in": [9], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 6, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 44, "op": "BytecodeException", "type": "ref", "in": [], "bci": 6}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 13, "op": "Pi", "type": "ref", "in": [1], "bci": 6},
+            {"id": 12, "op": "LoadField", "type": "int", "in": [13], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:6", "bci": 6},
+            {"id": 19, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 9},
+            {"id": 20, "op": "Add", "type": "int", "in": [12, 19], "bci": 10},
+            {"id": 17, "op": "StoreField", "type": "void", "in": [13, 20], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:11", "bci": 11},
+            {"id": 26, "op": "Pi", "type": "ref", "in": [2], "bci": 16},
+            {"id": 25, "op": "LoadField", "type": "ref", "in": [26], "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:16", "bci": 16},
+            {"id": 27, "op": "InvokeWithException", "type": "void", "in": [], "args": [1, 25], "target": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 19}
+          ],
+          "ops": [
+            {"kind": "load", "node": 12, "bci": 6, "field": "Aliasing$Counter.value", "object": 1},
+            {"kind": "store", "node": 17, "bci": 11, "field": "Aliasing$Counter.value", "object": 1, "value": 20},
+            {"kind": "load", "node": 25, "bci": 16, "field": "Aliasing$Link.next", "object": 2},
+            {"kind": "invoke", "node": 27, "bci": 19, "target": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 7, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 19}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [],
+          "ops": [],
+          "succs": [
+            {"to": 6, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 22}
+        },
+        {
+          "id": 6,
+          "preds": [5, 1],
+          "nodes": [
+            {"id": 51, "op": "Return", "type": "void", "in": [], "bci": 22}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 22}
+        },
+        {
+          "id": 7,
+          "preds": [4],
+          "nodes": [
+            {"id": 31, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 19}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 8, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 8,
+          "preds": [7, 3],
+          "nodes": [
+            {
+              "id": 40,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 7, "value": 31},
+                {"block": 3, "value": 44}
+              ]
+            },
+            {"id": 49, "op": "Unwind", "type": "void", "in": [40], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "2": "param1", "20": "AddNode#20"}
+    },
+    {
+      "name": "Aliasing.deadStorePastAliasControl",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [2], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 43, "op": "BytecodeException", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [2], "bci": 1},
+            {"id": 8, "op": "LoadField", "type": "int", "in": [9], "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:1", "bci": 1},
+            {"id": 11, "op": "IsNull", "type": "cond", "in": [1], "bci": 7},
+            {"id": 10, "op": "If", "type": "void", "in": [11], "bci": 7}
+          ],
+          "ops": [
+            {"kind": "load", "node": 8, "bci": 1, "field": "Aliasing$Counter.other", "object": 2}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 7, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 40, "op": "BytecodeException", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 39,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 3, "value": 40},
+                {"block": 1, "value": 43}
+              ]
+            },
+            {"id": 47, "op": "Unwind", "type": "void", "in": [39], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 15, "op": "Pi", "type": "ref", "in": [1], "bci": 7},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 6},
+            {"id": 14, "op": "StoreField", "type": "void", "in": [15, 16], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7", "bci": 7},
+            {"id": 21, "op": "LoadField", "type": "int", "in": [9], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:12", "bci": 12},
+            {"id": 28, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 18},
+            {"id": 29, "op": "Add", "type": "int", "in": [8, 21], "bci": 15},
+            {"id": 26, "op": "StoreField", "type": "void", "in": [15, 28], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:19", "bci": 19},
+            {"id": 31, "op": "Return", "type": "void", "in": [29], "bci": 23}
+          ],
+          "ops": [
+            {"kind": "store", "node": 14, "bci": 7, "field": "Aliasing$Counter.value", "object": 1, "value": 16},
+            {"kind": "load", "node": 21, "bci": 12, "field": "Aliasing$Counter.value", "object": 2},
+            {"kind": "store", "node": 26, "bci": 19, "field": "Aliasing$Counter.value", "object": 1, "value": 28}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 23}
+        }
+      ],
+      "values": {"1": "param0", "16": "const 1", "2": "param1", "28": "const 2"}
+    },
+    {
+      "name": "Aliasing.deadStorePastOtherObject",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [2], "bci": 1},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 43, "op": "BytecodeException", "type": "ref", "in": [], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [2], "bci": 1},
+            {"id": 8, "op": "LoadField", "type": "int", "in": [9], "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:1", "bci": 1},
+            {"id": 11, "op": "IsNull", "type": "cond", "in": [1], "bci": 7},
+            {"id": 10, "op": "If", "type": "void", "in": [11], "bci": 7}
+          ],
+          "ops": [
+            {"kind": "load", "node": 8, "bci": 1, "field": "Aliasing$Counter.other", "object": 2}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 7, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 40, "op": "BytecodeException", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 39,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 3, "value": 40},
+                {"block": 1, "value": 43}
+              ]
+            },
+            {"id": 47, "op": "Unwind", "type": "void", "in": [39], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 15, "op": "Pi", "type": "ref", "in": [1], "bci": 7},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 6},
+            {"id": 14, "op": "StoreField", "type": "void", "in": [15, 16], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7", "bci": 7},
+            {"id": 21, "op": "LoadField", "type": "int", "in": [9], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:12", "bci": 12},
+            {"id": 28, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 18},
+            {"id": 29, "op": "Add", "type": "int", "in": [8, 21], "bci": 15},
+            {"id": 26, "op": "StoreField", "type": "void", "in": [15, 28], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:19", "bci": 19},
+            {"id": 31, "op": "Return", "type": "void", "in": [29], "bci": 23}
+          ],
+          "ops": [
+            {"kind": "store", "node": 14, "bci": 7, "field": "Aliasing$Counter.value", "object": 1, "value": 16},
+            {"kind": "load", "node": 21, "bci": 12, "field": "Aliasing$Counter.value", "object": 2},
+            {"kind": "store", "node": 26, "bci": 19, "field": "Aliasing$Counter.value", "object": 1, "value": 28}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 23}
+        }
+      ],
+      "values": {"1": "param0", "16": "const 1", "2": "param1", "28": "const 2"}
+    },
+    {
+      "name": "Aliasing.forwardAcrossCallOnAliasControl",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "ref", "in": [], "index": 2, "bci": -1},
+            {"id": 6, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 5, "op": "If", "type": "void", "in": [6], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 31, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 11, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 9, "op": "StoreField", "type": "void", "in": [10, 11], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2", "bci": 2},
+            {"id": 13, "op": "InvokeWithException", "type": "void", "in": [], "args": [2, 3], "target": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 7}
+          ],
+          "ops": [
+            {"kind": "store", "node": 9, "bci": 2, "field": "Aliasing$Counter.value", "object": 1, "value": 11},
+            {"kind": "invoke", "node": 13, "bci": 7, "target": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 7}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 24, "op": "LoadField", "type": "int", "in": [10], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11", "bci": 11},
+            {"id": 26, "op": "Return", "type": "void", "in": [24], "bci": 14}
+          ],
+          "ops": [
+            {"kind": "load", "node": 24, "bci": 11, "field": "Aliasing$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 30,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 17},
+                {"block": 1, "value": 31}
+              ]
+            },
+            {"id": 35, "op": "Unwind", "type": "void", "in": [30], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "11": "const 5"}
+    },
+    {
+      "name": "Aliasing.forwardAcrossCallOnOtherObject",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "ref", "in": [], "index": 2, "bci": -1},
+            {"id": 6, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 5, "op": "If", "type": "void", "in": [6], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 31, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 10, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 11, "op": "Constant", "type": "int", "in": [], "value": "5", "bci": 1},
+            {"id": 9, "op": "StoreField", "type": "void", "in": [10, 11], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2", "bci": 2},
+            {"id": 13, "op": "InvokeWithException", "type": "void", "in": [], "args": [2, 3], "target": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true, "bci": 7}
+          ],
+          "ops": [
+            {"kind": "store", "node": 9, "bci": 2, "field": "Aliasing$Counter.value", "object": 1, "value": 11},
+            {"kind": "invoke", "node": 13, "bci": 7, "target": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V", "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 4, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 7}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 24, "op": "LoadField", "type": "int", "in": [10], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11", "bci": 11},
+            {"id": 26, "op": "Return", "type": "void", "in": [24], "bci": 14}
+          ],
+          "ops": [
+            {"kind": "load", "node": 24, "bci": 11, "field": "Aliasing$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 5, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 5,
+          "preds": [4, 1],
+          "nodes": [
+            {
+              "id": 30,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 4, "value": 17},
+                {"block": 1, "value": 31}
+              ]
+            },
+            {"id": 35, "op": "Unwind", "type": "void", "in": [30], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "11": "const 5"}
+    },
+    {
+      "name": "Aliasing.forwardIntoLoopPastAliasControl",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "ref", "in": [], "index": 2, "bci": -1},
+            {"id": 4, "op": "Parameter", "type": "int", "in": [], "index": 3, "bci": -1},
+            {"id": 7, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 6, "op": "If", "type": "void", "in": [7], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 72, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 11, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 12, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 10, "op": "StoreField", "type": "void", "in": [11, 12], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2", "bci": 2},
+            {"id": 46, "op": "IsNull", "type": "cond", "in": [2], "bci": 34},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 5}
+          ],
+          "ops": [
+            {"kind": "store", "node": 10, "bci": 2, "field": "Aliasing$Counter.value", "object": 1, "value": 12}
+          ],
+          "succs": [
+            {"to": 3, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 11}
+        },
+        {
+          "id": 3,
+          "preds": [2, 7],
+          "nodes": [
+            {
+              "id": 17,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 2, "value": 16},
+                {"block": 7, "value": 52}
+              ]
+            },
+            {
+              "id": 18,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 2, "value": 16},
+                {"block": 7, "value": 55}
+              ]
+            },
+            {"id": 21, "op": "IntegerLessThan", "type": "cond", "in": [18, 4], "bci": 14},
+            {"id": 20, "op": "If", "type": "void", "in": [21], "bci": 14}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": "true"},
+            {"to": 11, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 14, "cond": "IntegerLessThanNode"}
+        },
+        {
+          "id": 4,
+          "preds": [3],
+          "nodes": [
+            {"id": 28, "op": "InvokeWithException", "type": "int", "in": [], "args": [3], "target": "Aliasing.length(LAliasing$Link;)I", "callees": ["Aliasing.length(LAliasing$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 20}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 28, "bci": 20, "target": "Aliasing.length(LAliasing$Link;)I", "callees": ["Aliasing.length(LAliasing$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 8, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 20}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 43, "op": "LoadField", "type": "int", "in": [11], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24", "bci": 24},
+            {"id": 51, "op": "Add", "type": "int", "in": [28, 43], "bci": 27},
+            {"id": 52, "op": "Add", "type": "int", "in": [17, 51], "bci": 28},
+            {"id": 45, "op": "If", "type": "void", "in": [46], "bci": 34}
+          ],
+          "ops": [
+            {"kind": "load", "node": 43, "bci": 24, "field": "Aliasing$Counter.value", "object": 1}
+          ],
+          "succs": [
+            {"to": 6, "label": "true"},
+            {"to": 7, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 34, "cond": "IsNullNode"}
+        },
+        {
+          "id": 6,
+          "preds": [5],
+          "nodes": [
+            {"id": 56, "op": "BytecodeException", "type": "ref", "in": [], "bci": 34}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 9, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "BytecodeExceptionNode", "bci": 34}
+        },
+        {
+          "id": 7,
+          "preds": [5],
+          "nodes": [
+            {"id": 50, "op": "Pi", "type": "ref", "in": [2], "bci": 34},
+            {"id": 49, "op": "StoreField", "type": "void", "in": [50, 18], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:170", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34", "bci": 34},
+            {"id": 55, "op": "Add", "type": "int", "in": [18, 12], "bci": 37}
+          ],
+          "ops": [
+            {"kind": "store", "node": 49, "bci": 34, "field": "Aliasing$Counter.value", "object": 2, "value": 18}
+          ],
+          "succs": [
+            {"to": 3, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "LoopEndNode", "bci": 40}
+        },
+        {
+          "id": 8,
+          "preds": [4],
+          "nodes": [
+            {"id": 32, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 20}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 10, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "ExceptionObjectNode", "bci": 20}
+        },
+        {
+          "id": 9,
+          "preds": [6],
+          "nodes": [
+            {"id": 60, "op": "ValueProxy", "type": "ref", "in": [56], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 10,
+          "preds": [8],
+          "nodes": [
+            {"id": 36, "op": "ValueProxy", "type": "ref", "in": [32], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 11,
+          "preds": [3],
+          "nodes": [
+            {"id": 25, "op": "ValueProxy", "type": "int", "in": [17], "bci": 43},
+            {"id": 26, "op": "ValueProxy", "type": "int", "in": [18], "bci": 43},
+            {"id": 24, "op": "Return", "type": "void", "in": [25], "bci": 45}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 45}
+        },
+        {
+          "id": 12,
+          "preds": [1, 10, 9],
+          "nodes": [
+            {
+              "id": 76,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 1, "value": 72},
+                {"block": 10, "value": 36},
+                {"block": 9, "value": 60}
+              ]
+            },
+            {"id": 78, "op": "Unwind", "type": "void", "in": [76], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "12": "const 1", "18": "ValuePhiNode#18", "2": "param1"}
+    },
+    {
+      "name": "Aliasing.forwardIntoLoopPastOtherObject",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 3, "op": "Parameter", "type": "ref", "in": [], "index": 2, "bci": -1},
+            {"id": 4, "op": "Parameter", "type": "int", "in": [], "index": 3, "bci": -1},
+            {"id": 7, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 6, "op": "If", "type": "void", "in": [7], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 72, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 11, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 12, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 10, "op": "StoreField", "type": "void", "in": [11, 12], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2", "bci": 2},
+            {"id": 46, "op": "IsNull", "type": "cond", "in": [2], "bci": 34},
+            {"id": 16, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 5}
+          ],
+          "ops": [
+            {"kind": "store", "node": 10, "bci": 2, "field": "Aliasing$Counter.value", "object": 1, "value": 12}
+          ],
+          "succs": [
+            {"to": 3, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 11}
+        },
+        {
+          "id": 3,
+          "preds": [2, 7],
+          "nodes": [
+            {
+              "id": 17,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 2, "value": 16},
+                {"block": 7, "value": 52}
+              ]
+            },
+            {
+              "id": 18,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 2, "value": 16},
+                {"block": 7, "value": 55}
+              ]
+            },
+            {"id": 21, "op": "IntegerLessThan", "type": "cond", "in": [18, 4], "bci": 14},
+            {"id": 20, "op": "If", "type": "void", "in": [21], "bci": 14}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": "true"},
+            {"to": 11, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 14, "cond": "IntegerLessThanNode"}
+        },
+        {
+          "id": 4,
+          "preds": [3],
+          "nodes": [
+            {"id": 28, "op": "InvokeWithException", "type": "int", "in": [], "args": [3], "target": "Aliasing.length(LAliasing$Link;)I", "callees": ["Aliasing.length(LAliasing$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 20}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 28, "bci": 20, "target": "Aliasing.length(LAliasing$Link;)I", "callees": ["Aliasing.length(LAliasing$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 8, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 20}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 43, "op": "LoadField", "type": "int", "in": [11], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24", "bci": 24},
+            {"id": 51, "op": "Add", "type": "int", "in": [28, 43], "bci": 27},
+            {"id": 52, "op": "Add", "type": "int", "in": [17, 51], "bci": 28},
+            {"id": 45, "op": "If", "type": "void", "in": [46], "bci": 34}
+          ],
+          "ops": [
+            {"kind": "load", "node": 43, "bci": 24, "field": "Aliasing$Counter.value", "object": 1}
+          ],
+          "succs": [
+            {"to": 6, "label": "true"},
+            {"to": 7, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 34, "cond": "IsNullNode"}
+        },
+        {
+          "id": 6,
+          "preds": [5],
+          "nodes": [
+            {"id": 56, "op": "BytecodeException", "type": "ref", "in": [], "bci": 34}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 9, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "BytecodeExceptionNode", "bci": 34}
+        },
+        {
+          "id": 7,
+          "preds": [5],
+          "nodes": [
+            {"id": 50, "op": "Pi", "type": "ref", "in": [2], "bci": 34},
+            {"id": 49, "op": "StoreField", "type": "void", "in": [50, 18], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:146"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34", "bci": 34},
+            {"id": 55, "op": "Add", "type": "int", "in": [18, 12], "bci": 37}
+          ],
+          "ops": [
+            {"kind": "store", "node": 49, "bci": 34, "field": "Aliasing$Counter.value", "object": 2, "value": 18}
+          ],
+          "succs": [
+            {"to": 3, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "LoopEndNode", "bci": 40}
+        },
+        {
+          "id": 8,
+          "preds": [4],
+          "nodes": [
+            {"id": 32, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 20}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 10, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "ExceptionObjectNode", "bci": 20}
+        },
+        {
+          "id": 9,
+          "preds": [6],
+          "nodes": [
+            {"id": 60, "op": "ValueProxy", "type": "ref", "in": [56], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 10,
+          "preds": [8],
+          "nodes": [
+            {"id": 36, "op": "ValueProxy", "type": "ref", "in": [32], "bci": -4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 12, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 11,
+          "preds": [3],
+          "nodes": [
+            {"id": 25, "op": "ValueProxy", "type": "int", "in": [17], "bci": 43},
+            {"id": 26, "op": "ValueProxy", "type": "int", "in": [18], "bci": 43},
+            {"id": 24, "op": "Return", "type": "void", "in": [25], "bci": 45}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 45}
+        },
+        {
+          "id": 12,
+          "preds": [1, 10, 9],
+          "nodes": [
+            {
+              "id": 76,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 1, "value": 72},
+                {"block": 10, "value": 36},
+                {"block": 9, "value": 60}
+              ]
+            },
+            {"id": 78, "op": "Unwind", "type": "void", "in": [76], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0", "12": "const 1", "18": "ValuePhiNode#18", "2": "param1"}
+    },
+    {
+      "name": "Aliasing.forwardPastAliasControl",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 34, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:2", "bci": 2},
+            {"id": 13, "op": "IsNull", "type": "cond", "in": [2], "bci": 7},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 7}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Aliasing$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 7, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 30, "op": "BytecodeException", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 33,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 3, "value": 30},
+                {"block": 1, "value": 34}
+              ]
+            },
+            {"id": 38, "op": "Unwind", "type": "void", "in": [33], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "Pi", "type": "ref", "in": [2], "bci": 7},
+            {"id": 18, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 6},
+            {"id": 16, "op": "StoreField", "type": "void", "in": [17, 18], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:60"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7", "bci": 7},
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:11", "bci": 11},
+            {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 14}
+          ],
+          "ops": [
+            {"kind": "store", "node": 16, "bci": 7, "field": "Aliasing$Counter.value", "object": 2, "value": 18},
+            {"kind": "load", "node": 23, "bci": 11, "field": "Aliasing$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 1", "18": "const 2", "2": "param1"}
+    },
+    {
+      "name": "Aliasing.forwardPastOtherObject",
+      "descriptor": "(LAliasing$Counter;LAliasing$Counter;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 2, "op": "Parameter", "type": "ref", "in": [], "index": 1, "bci": -1},
+            {"id": 5, "op": "IsNull", "type": "cond", "in": [1], "bci": 2},
+            {"id": 4, "op": "If", "type": "void", "in": [5], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 34, "op": "BytecodeException", "type": "ref", "in": [], "bci": 2}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 9, "op": "Pi", "type": "ref", "in": [1], "bci": 2},
+            {"id": 10, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 1},
+            {"id": 8, "op": "StoreField", "type": "void", "in": [9, 10], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:2", "bci": 2},
+            {"id": 13, "op": "IsNull", "type": "cond", "in": [2], "bci": 7},
+            {"id": 12, "op": "If", "type": "void", "in": [13], "bci": 7}
+          ],
+          "ops": [
+            {"kind": "store", "node": 8, "bci": 2, "field": "Aliasing$Counter.value", "object": 1, "value": 10}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 5, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 7, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 30, "op": "BytecodeException", "type": "ref", "in": [], "bci": 7}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 33,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 3, "value": 30},
+                {"block": 1, "value": 34}
+              ]
+            },
+            {"id": 38, "op": "Unwind", "type": "void", "in": [33], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "Pi", "type": "ref", "in": [2], "bci": 7},
+            {"id": 18, "op": "Constant", "type": "int", "in": [], "value": "2", "bci": 6},
+            {"id": 16, "op": "StoreField", "type": "void", "in": [17, 18], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:39"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7", "bci": 7},
+            {"id": 23, "op": "LoadField", "type": "int", "in": [9], "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:11", "bci": 11},
+            {"id": 25, "op": "Return", "type": "void", "in": [23], "bci": 14}
+          ],
+          "ops": [
+            {"kind": "store", "node": 16, "bci": 7, "field": "Aliasing$Counter.value", "object": 2, "value": 18},
+            {"kind": "load", "node": 23, "bci": 11, "field": "Aliasing$Counter.value", "object": 1}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 14}
+        }
+      ],
+      "values": {"1": "param0", "10": "const 1", "18": "const 2", "2": "param1"}
+    },
+    {
+      "name": "Aliasing.length",
+      "descriptor": "(LAliasing$Link;)I",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 4, "op": "IsNull", "type": "cond", "in": [1], "bci": 1},
+            {"id": 3, "op": "If", "type": "void", "in": [4], "bci": 1}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 1, "label": "true"},
+            {"to": 2, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 1, "cond": "IsNullNode"}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 29, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": 4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 17}
+        },
+        {
+          "id": 2,
+          "preds": [0],
+          "nodes": [
+            {"id": 11, "op": "Pi", "type": "ref", "in": [1], "bci": 10},
+            {"id": 10, "op": "LoadField", "type": "ref", "in": [11], "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.length(LAliasing$Link;)I:10", "bci": 10},
+            {"id": 14, "op": "Constant", "type": "int", "in": [], "value": "1", "bci": 8},
+            {"id": 12, "op": "InvokeWithException", "type": "int", "in": [], "args": [10], "target": "Aliasing.length(LAliasing$Link;)I", "callees": ["Aliasing.length(LAliasing$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 13}
+          ],
+          "ops": [
+            {"kind": "load", "node": 10, "bci": 10, "field": "Aliasing$Link.next", "object": 1},
+            {"kind": "invoke", "node": 12, "bci": 13, "target": "Aliasing.length(LAliasing$Link;)I", "callees": ["Aliasing.length(LAliasing$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 3, "label": "normal"},
+            {"to": 5, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 13}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 23, "op": "Add", "type": "int", "in": [12, 14], "bci": 16}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 4, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": 17}
+        },
+        {
+          "id": 4,
+          "preds": [3, 1],
+          "nodes": [
+            {
+              "id": 30,
+              "op": "ValuePhi",
+              "type": "int",
+              "from": [
+                {"block": 3, "value": 23},
+                {"block": 1, "value": 29}
+              ]
+            },
+            {"id": 34, "op": "Return", "type": "void", "in": [30], "bci": 17}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 17}
+        },
+        {
+          "id": 5,
+          "preds": [2],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 13},
+            {"id": 32, "op": "Unwind", "type": "void", "in": [17], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"1": "param0"}
+    },
+    {
+      "name": "Aliasing.main",
+      "descriptor": "([Ljava/lang/String;)V",
+      "static": true,
+      "unsupported": [],
+      "entry": 0,
+      "blocks": [
+        {
+          "id": 0,
+          "preds": [],
+          "nodes": [
+            {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
+            {"id": 272, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 0},
+            {"id": 270, "op": "Constant", "type": "ref", "in": [], "value": "null", "bci": -1},
+            {"id": 273, "op": "CommitAllocation", "type": "void", "in": [272, 270], "bci": -6},
+            {"id": 274, "op": "AllocatedObject", "type": "ref", "in": [272], "bci": 0},
+            {"id": 4, "op": "InvokeWithException", "type": "void", "in": [], "args": [274], "target": "Aliasing$Link.<init>()V", "callees": ["Aliasing$Link.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 4}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 4, "bci": 4, "target": "Aliasing$Link.<init>()V", "callees": ["Aliasing$Link.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 1, "label": "normal"},
+            {"to": 64, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 4}
+        },
+        {
+          "id": 1,
+          "preds": [0],
+          "nodes": [
+            {"id": 276, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 9},
+            {"id": 277, "op": "CommitAllocation", "type": "void", "in": [276, 270], "bci": -6},
+            {"id": 278, "op": "AllocatedObject", "type": "ref", "in": [276], "bci": 9},
+            {"id": 13, "op": "InvokeWithException", "type": "void", "in": [], "args": [278], "target": "Aliasing$Link.<init>()V", "callees": ["Aliasing$Link.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 13}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 13, "bci": 13, "target": "Aliasing$Link.<init>()V", "callees": ["Aliasing$Link.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 2, "label": "normal"},
+            {"to": 63, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 13}
+        },
+        {
+          "id": 2,
+          "preds": [1],
+          "nodes": [
+            {"id": 21, "op": "StoreField", "type": "void", "in": [274, 278], "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0"], "at": "Aliasing.main([Ljava/lang/String;)V:16", "bci": 16},
+            {"id": 24, "op": "IsNull", "type": "cond", "in": [1], "bci": 20},
+            {"id": 23, "op": "If", "type": "void", "in": [24], "bci": 20}
+          ],
+          "ops": [
+            {"kind": "store", "node": 21, "bci": 16, "field": "Aliasing$Link.next", "object": 274, "value": 278}
+          ],
+          "succs": [
+            {"to": 3, "label": "true"},
+            {"to": 4, "label": "false"}
+          ],
+          "exit": null,
+          "end": {"node": "IfNode", "bci": 20, "cond": "IsNullNode"}
+        },
+        {
+          "id": 3,
+          "preds": [2],
+          "nodes": [
+            {"id": 265, "op": "BytecodeException", "type": "ref", "in": [], "bci": 20}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 4,
+          "preds": [2],
+          "nodes": [
+            {"id": 28, "op": "Pi", "type": "ref", "in": [1], "bci": 20},
+            {"id": 27, "op": "ArrayLength", "type": "int", "in": [28], "bci": 20},
+            {"id": 280, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 24},
+            {"id": 271, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": -1},
+            {"id": 281, "op": "CommitAllocation", "type": "void", "in": [280, 271, 271], "bci": -6},
+            {"id": 32, "op": "Constant", "type": "int", "in": [], "value": "3", "bci": 21},
+            {"id": 33, "op": "Add", "type": "int", "in": [27, 32], "bci": 22},
+            {"id": 282, "op": "AllocatedObject", "type": "ref", "in": [280], "bci": 24},
+            {"id": 30, "op": "InvokeWithException", "type": "void", "in": [], "args": [282], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 28}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 30, "bci": 28, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 5, "label": "normal"},
+            {"to": 62, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 28}
+        },
+        {
+          "id": 5,
+          "preds": [4],
+          "nodes": [
+            {"id": 284, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 32},
+            {"id": 285, "op": "CommitAllocation", "type": "void", "in": [284, 271, 271], "bci": -6},
+            {"id": 286, "op": "AllocatedObject", "type": "ref", "in": [284], "bci": 32},
+            {"id": 40, "op": "InvokeWithException", "type": "void", "in": [], "args": [286], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 36}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 40, "bci": 36, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 6, "label": "normal"},
+            {"to": 61, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 36}
+        },
+        {
+          "id": 6,
+          "preds": [5],
+          "nodes": [
+            {"id": 288, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 39},
+            {"id": 289, "op": "CommitAllocation", "type": "void", "in": [288, 271, 271], "bci": -6},
+            {"id": 290, "op": "AllocatedObject", "type": "ref", "in": [288], "bci": 39},
+            {"id": 48, "op": "InvokeWithException", "type": "void", "in": [], "args": [290], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 43}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 48, "bci": 43, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 7, "label": "normal"},
+            {"to": 60, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 43}
+        },
+        {
+          "id": 7,
+          "preds": [6],
+          "nodes": [
+            {"id": 55, "op": "InvokeWithException", "type": "int", "in": [], "args": [286, 290], "target": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 46}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 55, "bci": 46, "target": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 8, "label": "normal"},
+            {"to": 59, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 46}
+        },
+        {
+          "id": 8,
+          "preds": [7],
+          "nodes": [
+            {"id": 292, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 53},
+            {"id": 293, "op": "CommitAllocation", "type": "void", "in": [292, 271, 271], "bci": -6},
+            {"id": 294, "op": "AllocatedObject", "type": "ref", "in": [292], "bci": 53},
+            {"id": 63, "op": "InvokeWithException", "type": "void", "in": [], "args": [294], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 57}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 63, "bci": 57, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 9, "label": "normal"},
+            {"to": 58, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 57}
+        },
+        {
+          "id": 9,
+          "preds": [8],
+          "nodes": [
+            {"id": 296, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 60},
+            {"id": 297, "op": "CommitAllocation", "type": "void", "in": [296, 271, 271], "bci": -6},
+            {"id": 298, "op": "AllocatedObject", "type": "ref", "in": [296], "bci": 60},
+            {"id": 71, "op": "InvokeWithException", "type": "void", "in": [], "args": [298], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 64}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 71, "bci": 64, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 10, "label": "normal"},
+            {"to": 57, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 64}
+        },
+        {
+          "id": 10,
+          "preds": [9],
+          "nodes": [
+            {"id": 78, "op": "InvokeWithException", "type": "int", "in": [], "args": [294, 298], "target": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 67}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 78, "bci": 67, "target": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 11, "label": "normal"},
+            {"to": 56, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 67}
+        },
+        {
+          "id": 11,
+          "preds": [10],
+          "nodes": [
+            {"id": 87, "op": "Add", "type": "int", "in": [55, 78], "bci": 70},
+            {"id": 85, "op": "InvokeWithException", "type": "int", "in": [], "args": [282, 282], "target": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 77}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 85, "bci": 77, "target": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 12, "label": "normal"},
+            {"to": 55, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 77}
+        },
+        {
+          "id": 12,
+          "preds": [11],
+          "nodes": [
+            {"id": 300, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 85},
+            {"id": 301, "op": "CommitAllocation", "type": "void", "in": [300, 271, 271], "bci": -6},
+            {"id": 96, "op": "Add", "type": "int", "in": [85, 87], "bci": 80},
+            {"id": 302, "op": "AllocatedObject", "type": "ref", "in": [300], "bci": 85},
+            {"id": 94, "op": "InvokeWithException", "type": "void", "in": [], "args": [302], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 89}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 94, "bci": 89, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 13, "label": "normal"},
+            {"to": 54, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 89}
+        },
+        {
+          "id": 13,
+          "preds": [12],
+          "nodes": [
+            {"id": 304, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 92},
+            {"id": 305, "op": "CommitAllocation", "type": "void", "in": [304, 271, 271], "bci": -6},
+            {"id": 306, "op": "AllocatedObject", "type": "ref", "in": [304], "bci": 92},
+            {"id": 103, "op": "InvokeWithException", "type": "void", "in": [], "args": [306], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 96}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 103, "bci": 96, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 14, "label": "normal"},
+            {"to": 53, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 96}
+        },
+        {
+          "id": 14,
+          "preds": [13],
+          "nodes": [
+            {"id": 110, "op": "InvokeWithException", "type": "int", "in": [], "args": [302, 306], "target": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 99}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 110, "bci": 99, "target": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 15, "label": "normal"},
+            {"to": 52, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 99}
+        },
+        {
+          "id": 15,
+          "preds": [14],
+          "nodes": [
+            {"id": 308, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 107},
+            {"id": 309, "op": "CommitAllocation", "type": "void", "in": [308, 271, 271], "bci": -6},
+            {"id": 120, "op": "Add", "type": "int", "in": [96, 110], "bci": 102},
+            {"id": 310, "op": "AllocatedObject", "type": "ref", "in": [308], "bci": 107},
+            {"id": 118, "op": "InvokeWithException", "type": "void", "in": [], "args": [310], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 111}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 118, "bci": 111, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 16, "label": "normal"},
+            {"to": 51, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 111}
+        },
+        {
+          "id": 16,
+          "preds": [15],
+          "nodes": [
+            {"id": 312, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 114},
+            {"id": 313, "op": "CommitAllocation", "type": "void", "in": [312, 271, 271], "bci": -6},
+            {"id": 314, "op": "AllocatedObject", "type": "ref", "in": [312], "bci": 114},
+            {"id": 127, "op": "InvokeWithException", "type": "void", "in": [], "args": [314], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 118}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 127, "bci": 118, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 17, "label": "normal"},
+            {"to": 50, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 118}
+        },
+        {
+          "id": 17,
+          "preds": [16],
+          "nodes": [
+            {"id": 134, "op": "InvokeWithException", "type": "int", "in": [], "args": [310, 314], "target": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 121}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 134, "bci": 121, "target": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 18, "label": "normal"},
+            {"to": 49, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 121}
+        },
+        {
+          "id": 18,
+          "preds": [17],
+          "nodes": [
+            {"id": 143, "op": "Add", "type": "int", "in": [120, 134], "bci": 124},
+            {"id": 141, "op": "InvokeWithException", "type": "int", "in": [], "args": [282, 282], "target": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true, "bci": 131}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 141, "bci": 131, "target": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "callees": ["Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 19, "label": "normal"},
+            {"to": 48, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 131}
+        },
+        {
+          "id": 19,
+          "preds": [18],
+          "nodes": [
+            {"id": 316, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 139},
+            {"id": 317, "op": "CommitAllocation", "type": "void", "in": [316, 271, 271], "bci": -6},
+            {"id": 152, "op": "Add", "type": "int", "in": [141, 143], "bci": 134},
+            {"id": 318, "op": "AllocatedObject", "type": "ref", "in": [316], "bci": 139},
+            {"id": 150, "op": "InvokeWithException", "type": "void", "in": [], "args": [318], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 143}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 150, "bci": 143, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 20, "label": "normal"},
+            {"to": 47, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 143}
+        },
+        {
+          "id": 20,
+          "preds": [19],
+          "nodes": [
+            {"id": 320, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 146},
+            {"id": 321, "op": "CommitAllocation", "type": "void", "in": [320, 271, 271], "bci": -6},
+            {"id": 322, "op": "AllocatedObject", "type": "ref", "in": [320], "bci": 146},
+            {"id": 159, "op": "InvokeWithException", "type": "void", "in": [], "args": [322], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 150}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 159, "bci": 150, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 21, "label": "normal"},
+            {"to": 46, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 150}
+        },
+        {
+          "id": 21,
+          "preds": [20],
+          "nodes": [
+            {"id": 166, "op": "InvokeWithException", "type": "int", "in": [], "args": [318, 322, 274, 33], "target": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "callees": ["Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I"], "flow": "ok", "exception_edge": true, "bci": 155}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 166, "bci": 155, "target": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "callees": ["Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 22, "label": "normal"},
+            {"to": 45, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 155}
+        },
+        {
+          "id": 22,
+          "preds": [21],
+          "nodes": [
+            {"id": 324, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 163},
+            {"id": 325, "op": "CommitAllocation", "type": "void", "in": [324, 271, 271], "bci": -6},
+            {"id": 176, "op": "Add", "type": "int", "in": [152, 166], "bci": 158},
+            {"id": 326, "op": "AllocatedObject", "type": "ref", "in": [324], "bci": 163},
+            {"id": 174, "op": "InvokeWithException", "type": "void", "in": [], "args": [326], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 167}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 174, "bci": 167, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 23, "label": "normal"},
+            {"to": 44, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 167}
+        },
+        {
+          "id": 23,
+          "preds": [22],
+          "nodes": [
+            {"id": 328, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 170},
+            {"id": 329, "op": "CommitAllocation", "type": "void", "in": [328, 271, 271], "bci": -6},
+            {"id": 330, "op": "AllocatedObject", "type": "ref", "in": [328], "bci": 170},
+            {"id": 183, "op": "InvokeWithException", "type": "void", "in": [], "args": [330], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 174}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 183, "bci": 174, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 24, "label": "normal"},
+            {"to": 43, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 174}
+        },
+        {
+          "id": 24,
+          "preds": [23],
+          "nodes": [
+            {"id": 190, "op": "InvokeWithException", "type": "int", "in": [], "args": [326, 330, 274, 33], "target": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "callees": ["Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I"], "flow": "ok", "exception_edge": true, "bci": 179}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 190, "bci": 179, "target": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "callees": ["Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 25, "label": "normal"},
+            {"to": 42, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 179}
+        },
+        {
+          "id": 25,
+          "preds": [24],
+          "nodes": [
+            {"id": 199, "op": "Add", "type": "int", "in": [176, 190], "bci": 182},
+            {"id": 197, "op": "InvokeWithException", "type": "int", "in": [], "args": [282, 282, 274, 33], "target": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "callees": ["Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I"], "flow": "ok", "exception_edge": true, "bci": 191}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 197, "bci": 191, "target": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "callees": ["Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 26, "label": "normal"},
+            {"to": 41, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 191}
+        },
+        {
+          "id": 26,
+          "preds": [25],
+          "nodes": [
+            {"id": 332, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 199},
+            {"id": 333, "op": "CommitAllocation", "type": "void", "in": [332, 271, 271], "bci": -6},
+            {"id": 208, "op": "Add", "type": "int", "in": [197, 199], "bci": 194},
+            {"id": 334, "op": "AllocatedObject", "type": "ref", "in": [332], "bci": 199},
+            {"id": 206, "op": "InvokeWithException", "type": "void", "in": [], "args": [334], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 203}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 206, "bci": 203, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 27, "label": "normal"},
+            {"to": 40, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 203}
+        },
+        {
+          "id": 27,
+          "preds": [26],
+          "nodes": [
+            {"id": 336, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 206},
+            {"id": 337, "op": "CommitAllocation", "type": "void", "in": [336, 271, 271], "bci": -6},
+            {"id": 338, "op": "AllocatedObject", "type": "ref", "in": [336], "bci": 206},
+            {"id": 215, "op": "InvokeWithException", "type": "void", "in": [], "args": [338], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 210}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 215, "bci": 210, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 28, "label": "normal"},
+            {"to": 39, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 210}
+        },
+        {
+          "id": 28,
+          "preds": [27],
+          "nodes": [
+            {"id": 222, "op": "InvokeWithException", "type": "int", "in": [], "args": [334, 338, 274], "target": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "callees": ["Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 214}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 222, "bci": 214, "target": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "callees": ["Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 29, "label": "normal"},
+            {"to": 38, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 214}
+        },
+        {
+          "id": 29,
+          "preds": [28],
+          "nodes": [
+            {"id": 340, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 222},
+            {"id": 341, "op": "CommitAllocation", "type": "void", "in": [340, 271, 271], "bci": -6},
+            {"id": 232, "op": "Add", "type": "int", "in": [208, 222], "bci": 217},
+            {"id": 342, "op": "AllocatedObject", "type": "ref", "in": [340], "bci": 222},
+            {"id": 230, "op": "InvokeWithException", "type": "void", "in": [], "args": [342], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 226}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 230, "bci": 226, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 30, "label": "normal"},
+            {"to": 37, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 226}
+        },
+        {
+          "id": 30,
+          "preds": [29],
+          "nodes": [
+            {"id": 344, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 229},
+            {"id": 345, "op": "CommitAllocation", "type": "void", "in": [344, 271, 271], "bci": -6},
+            {"id": 346, "op": "AllocatedObject", "type": "ref", "in": [344], "bci": 229},
+            {"id": 239, "op": "InvokeWithException", "type": "void", "in": [], "args": [346], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 233}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 239, "bci": 233, "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 31, "label": "normal"},
+            {"to": 36, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 233}
+        },
+        {
+          "id": 31,
+          "preds": [30],
+          "nodes": [
+            {"id": 246, "op": "InvokeWithException", "type": "int", "in": [], "args": [342, 346, 274], "target": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "callees": ["Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 237}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 246, "bci": 237, "target": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "callees": ["Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 32, "label": "normal"},
+            {"to": 35, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 237}
+        },
+        {
+          "id": 32,
+          "preds": [31],
+          "nodes": [
+            {"id": 255, "op": "Add", "type": "int", "in": [232, 246], "bci": 240},
+            {"id": 253, "op": "InvokeWithException", "type": "int", "in": [], "args": [282, 282, 274], "target": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "callees": ["Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I"], "flow": "ok", "exception_edge": true, "bci": 248}
+          ],
+          "ops": [
+            {"kind": "invoke", "node": 253, "bci": 248, "target": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "callees": ["Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I"], "flow": "ok", "exception_edge": true}
+          ],
+          "succs": [
+            {"to": 33, "label": "normal"},
+            {"to": 34, "label": "exception"}
+          ],
+          "exit": null,
+          "end": {"node": "InvokeWithExceptionNode", "bci": 248}
+        },
+        {
+          "id": 33,
+          "preds": [32],
+          "nodes": [
+            {"id": 262, "op": "Add", "type": "int", "in": [253, 255], "bci": 251},
+            {"id": 261, "op": "StoreField", "type": "void", "in": [262], "field": "Aliasing.result", "receivers": ["Aliasing.<statics>"], "at": "Aliasing.main([Ljava/lang/String;)V:256", "bci": 256},
+            {"id": 264, "op": "Return", "type": "void", "in": [], "bci": 259}
+          ],
+          "ops": [
+            {"kind": "store", "node": 261, "bci": 256, "field": "Aliasing.result", "object": null, "value": 262}
+          ],
+          "succs": [],
+          "exit": "return",
+          "end": {"node": "ReturnNode", "bci": 259}
+        },
+        {
+          "id": 34,
+          "preds": [32],
+          "nodes": [
+            {"id": 258, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 248}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 35,
+          "preds": [31],
+          "nodes": [
+            {"id": 250, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 237}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 36,
+          "preds": [30],
+          "nodes": [
+            {"id": 243, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 233}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 37,
+          "preds": [29],
+          "nodes": [
+            {"id": 235, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 226}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 38,
+          "preds": [28],
+          "nodes": [
+            {"id": 226, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 214}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 39,
+          "preds": [27],
+          "nodes": [
+            {"id": 219, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 210}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 40,
+          "preds": [26],
+          "nodes": [
+            {"id": 211, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 203}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 41,
+          "preds": [25],
+          "nodes": [
+            {"id": 202, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 191}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 42,
+          "preds": [24],
+          "nodes": [
+            {"id": 194, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 179}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 43,
+          "preds": [23],
+          "nodes": [
+            {"id": 187, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 174}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 44,
+          "preds": [22],
+          "nodes": [
+            {"id": 179, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 167}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 45,
+          "preds": [21],
+          "nodes": [
+            {"id": 170, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 155}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 46,
+          "preds": [20],
+          "nodes": [
+            {"id": 163, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 150}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 47,
+          "preds": [19],
+          "nodes": [
+            {"id": 155, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 143}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 48,
+          "preds": [18],
+          "nodes": [
+            {"id": 146, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 131}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 49,
+          "preds": [17],
+          "nodes": [
+            {"id": 138, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 121}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 50,
+          "preds": [16],
+          "nodes": [
+            {"id": 131, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 118}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 51,
+          "preds": [15],
+          "nodes": [
+            {"id": 123, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 111}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 52,
+          "preds": [14],
+          "nodes": [
+            {"id": 114, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 99}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 53,
+          "preds": [13],
+          "nodes": [
+            {"id": 107, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 96}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 54,
+          "preds": [12],
+          "nodes": [
+            {"id": 99, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 89}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 55,
+          "preds": [11],
+          "nodes": [
+            {"id": 90, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 77}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 56,
+          "preds": [10],
+          "nodes": [
+            {"id": 82, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 67}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 57,
+          "preds": [9],
+          "nodes": [
+            {"id": 75, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 64}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 58,
+          "preds": [8],
+          "nodes": [
+            {"id": 67, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 57}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 59,
+          "preds": [7],
+          "nodes": [
+            {"id": 59, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 46}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 60,
+          "preds": [6],
+          "nodes": [
+            {"id": 52, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 43}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 61,
+          "preds": [5],
+          "nodes": [
+            {"id": 44, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 36}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 62,
+          "preds": [4],
+          "nodes": [
+            {"id": 36, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 28}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 63,
+          "preds": [1],
+          "nodes": [
+            {"id": 17, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 13}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 64,
+          "preds": [0],
+          "nodes": [
+            {"id": 8, "op": "ExceptionObject", "type": "ref", "in": [], "bci": 4}
+          ],
+          "ops": [],
+          "succs": [
+            {"to": 65, "label": null}
+          ],
+          "exit": null,
+          "end": {"node": "EndNode", "bci": -4}
+        },
+        {
+          "id": 65,
+          "preds": [64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 3],
+          "nodes": [
+            {
+              "id": 20,
+              "op": "ValuePhi",
+              "type": "ref",
+              "from": [
+                {"block": 64, "value": 8},
+                {"block": 63, "value": 17},
+                {"block": 62, "value": 36},
+                {"block": 61, "value": 44},
+                {"block": 60, "value": 52},
+                {"block": 59, "value": 59},
+                {"block": 58, "value": 67},
+                {"block": 57, "value": 75},
+                {"block": 56, "value": 82},
+                {"block": 55, "value": 90},
+                {"block": 54, "value": 99},
+                {"block": 53, "value": 107},
+                {"block": 52, "value": 114},
+                {"block": 51, "value": 123},
+                {"block": 50, "value": 131},
+                {"block": 49, "value": 138},
+                {"block": 48, "value": 146},
+                {"block": 47, "value": 155},
+                {"block": 46, "value": 163},
+                {"block": 45, "value": 170},
+                {"block": 44, "value": 179},
+                {"block": 43, "value": 187},
+                {"block": 42, "value": 194},
+                {"block": 41, "value": 202},
+                {"block": 40, "value": 211},
+                {"block": 39, "value": 219},
+                {"block": 38, "value": 226},
+                {"block": 37, "value": 235},
+                {"block": 36, "value": 243},
+                {"block": 35, "value": 250},
+                {"block": 34, "value": 258},
+                {"block": 3, "value": 265}
+              ]
+            },
+            {"id": 269, "op": "Unwind", "type": "void", "in": [20], "bci": -1}
+          ],
+          "ops": [],
+          "succs": [],
+          "exit": "unwind",
+          "end": {"node": "UnwindNode", "bci": -1}
+        }
+      ],
+      "values": {"262": "AddNode#262", "274": "AllocatedObjectNode#274", "278": "AllocatedObjectNode#278"}
+    }
+  ]
+}
