@@ -110,21 +110,28 @@ class _Parser:
 
     def module(self) -> Module:
         self.lines()
+
         while self.peek() is not None:
             keyword = self.expect(Category.KEYWORD).text
             if keyword == "type":
                 self.parsed.types.append(self.name())
+
             elif keyword == "signature":
                 self.signature()
+
             elif keyword == "structure":
                 self.structure()
+
             elif keyword == "field":
                 type_ = self.name()
                 self.parsed.fields[self.expect(Category.STRING).text] = type_
+
             else:
                 self.parsed.classes.append(self.expect(Category.STRING).text)
+
             self.end_of_line()
             self.lines()
+
         return self.parsed
 
     def arguments(self) -> list[str]:
@@ -187,11 +194,15 @@ class _Parser:
             member = self.expect(Category.IDENT)
             if member.text in structure.builtins or member.text in structure.lambdas:
                 self.fail(f"{name.text} defines {member.text} twice", member)
+
             self.expect(Category.PUNCT, "=")
+
             if self.accept(Category.LAMBDA):
                 structure.lambdas[member.text] = self.lambda_()
+
             else:
                 structure.builtins[member.text] = self.name()
+
         self.parsed.structures[name.text] = structure
 
     def lambda_(self) -> LambdaDef:

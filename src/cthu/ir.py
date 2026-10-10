@@ -32,6 +32,7 @@ class Instr:
     outs: list[str] = field(default_factory=list)
     out_types: list[str] = field(default_factory=list)
     note: str = ""
+    at: str = ""  # where in the bytecode it came from, as graal-export names a position
 
     def text(self) -> str:
         line = " ".join([self.type, self.op, *self.ins])
@@ -82,16 +83,20 @@ def to_text(program: Program) -> str:
     lines = []
     for i, (name, type_) in enumerate(program.fields.items()):
         lines.append(f'field {type_} "{name}"   ; get_{i}, set_{i}')
+    
     for i, name in enumerate(program.classes):
         lines.append(f'class "{name}"   ; new_{i}')
+    
     for name in program.externals.values():
         lines.append(f"; external: {name}")
+    
     if program.fields or program.classes or program.externals:
         lines.append("")
 
     for structure in program.structures:
         lines.append(f"structure {structure.name}" + (f"   ; {structure.note}" if structure.note else ""))
         lines.append("(")
+
         for i, lam in enumerate(structure.lambdas):
             if i:
                 lines.append("")
@@ -108,4 +113,5 @@ def to_text(program: Program) -> str:
 
         lines.append(")")
         lines.append("")
+
     return "\n".join(lines)
