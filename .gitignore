@@ -7,3 +7,6 @@ __pycache__/
 graal-probe/classes/
 graal-export/classes/
 graal-export/out/
+graal-native/classes/
+graal-native/out/
+programs/*/classes/

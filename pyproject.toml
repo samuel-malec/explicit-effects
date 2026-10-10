@@ -3,6 +3,8 @@ name = "explicit-effects"
 version = "0.1.0"
 description = "Prototype of a side-effect analysis using explicit values in a Static Single Use IR"
 readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
 authors = [
     { name = "Samuel Malec" }
 ]
