@@ -1,3 +1,5 @@
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +47,9 @@ public class ReadWriteExport {
     private static final String[] PLATFORM = {
                     "java.", "javax.", "jdk.", "sun.", "com.sun.",
                     "com.oracle.", "org.graalvm.",
+                    // the JDK's own packages outside java.*: security (GSS-API),
+                    // XML signatures, DOM and SAX
+                    "org.ietf.", "org.jcp.", "org.w3c.", "org.xml.",
     };
 
     private static boolean isUnderAnalysis(String className) {
@@ -66,17 +71,28 @@ public class ReadWriteExport {
     public static void main(String[] args) {
         PointsToAnalyzer analyzer = PointsToAnalyzer.createAnalyzer(args);
         analyzer.run();
-        AnalysisUniverse universe = analyzer.getResultUniverse();
+        // Through Object, so that verifying this class doesn't load the standalone
+        // analysis: a native-image build has none, and exports its own.
+        PointsToAnalysis bb = (PointsToAnalysis) (Object) analyzer.getResultAnalysis();
+        export(bb, analyzer.getResultUniverse(), System.getProperty("dump.json", ""), System.getProperty("dump.ir", ""), System.out);
+    }
 
+    /**
+     * Exports the facts of every reachable method, and the graphs of the program's, from an
+     * analysis that has run: the standalone analyzer's, or Native Image's own, from a feature.
+     * An empty path skips that file; the reports go to {@code report}, null for none.
+     */
+    public static void export(PointsToAnalysis bb, AnalysisUniverse universe, String jsonPath, String irPath, PrintStream report) {
+        PrintStream out = report != null ? report : new PrintStream(OutputStream.nullOutputStream());
         TreeMap<String, TreeSet<String>> reads = new TreeMap<>();
         TreeMap<String, TreeSet<String>> writes = new TreeMap<>();
         TreeMap<String, TreeSet<String>> callees = new TreeMap<>();
-        PointsToAnalysis bb = analyzer.getResultAnalysis();
         TreeSet<String> analysed = new TreeSet<>();
         TreeSet<String> program = new TreeSet<>();
         TreeSet<String> allocates = new TreeSet<>();
         TreeMap<String, TreeSet<String>> unknown = new TreeMap<>();
         TreeMap<String, TreeSet<String>> unresolved = new TreeMap<>();
+        TreeMap<String, TreeSet<String>> accesses = new TreeMap<>();
 
         for (AnalysisMethod method : universe.getMethods()) {
             if (!method.isReachable() || !(method instanceof PointsToAnalysisMethod ptm)) {
@@ -90,26 +106,50 @@ public class ReadWriteExport {
                 program.add(name);
             }
             
-            StructuredGraph body = GraphExport.analysisGraph(bb, ptm);
+            StructuredGraph body;
+            try {
+                body = GraphExport.analysisGraph(bb, ptm);
+            } catch (VirtualMachineError e) {
+                throw e;
+            } catch (Throwable t) {
+                // Decoding a graph again after the analysis fails where a plugin only runs before
+                // Native Image seals its registries: then the method may touch anything.
+                add(unknown, name, "no graph after the analysis (" + t.getClass().getSimpleName() + ")");
+                body = null;
+            }
             if (body != null) {
                 analysed.add(name);
                 Map<Integer, InvokeTypeFlow> flows = new HashMap<>();
                 for (InvokeTypeFlow flow : ptm.getTypeFlow().getMethodFlowsGraph().getInvokes()) {
                     flows.put(flow.getBci(), flow);
                 }
+                // What each access's receiver may point to, for the program's
+                // own methods: a field or array access elsewhere may touch any
+                // object with the field or of the kind.
+                GraphExport.PointsTo pointsTo = program.contains(name) ? new GraphExport.PointsTo(bb, ptm) : null;
                 for (Node n : body.getNodes()) {
                     String at = " at bci " + (n instanceof ValueNode value ? GraphExport.bci(value) : -1);
                     if (n instanceof AccessFieldNode access) {
                         String field = GraphExport.fieldName(access.field());
                         add(access instanceof LoadFieldNode ? reads : writes, name, field);
+                        if (pointsTo != null) {
+                            addAccess(accesses, name, access instanceof LoadFieldNode ? "read" : "write", field, pointsTo.receivers(access), access);
+                        }
                         if (access.ordersMemoryAccesses()) {
                             add(unknown, name, "volatile access to " + field + at);
                         }
                     } else if (n instanceof AccessIndexedNode access) {
                         add(access instanceof LoadIndexedNode ? reads : writes, name, arrayPartition(access.elementKind()));
+                        if (pointsTo != null) {
+                            addAccess(accesses, name, access instanceof LoadIndexedNode ? "read" : "write", arrayPartition(access.elementKind()), pointsTo.receivers(access), access);
+                        }
                     } else if (n instanceof BasicArrayCopyNode copy && copy.getElementKind() != null) {
                         add(reads, name, arrayPartition(copy.getElementKind()));
                         add(writes, name, arrayPartition(copy.getElementKind()));
+                        if (pointsTo != null) {
+                            addAccess(accesses, name, "read", arrayPartition(copy.getElementKind()), pointsTo.objects(copy.getSource()), copy);
+                            addAccess(accesses, name, "write", arrayPartition(copy.getElementKind()), pointsTo.objects(copy.getDestination()), copy);
+                        }
                     } else if (n instanceof AbstractNewObjectNode || n instanceof CommitAllocationNode) {
                         allocates.add(name);
                     } else if (n instanceof Invoke invoke) {
@@ -158,21 +198,21 @@ public class ReadWriteExport {
         all.addAll(writes.keySet());
         all.retainAll(program);
 
-        System.out.println();
-        System.out.println("=== local per-method field effects ===");
+        out.println();
+        out.println("=== local per-method field effects ===");
         if (all.isEmpty()) {
-            System.out.println("  (nothing reported -- wrong -Ddump.filter, or no reachable");
-            System.out.println("   field accesses in the analysed program?)");
+            out.println("  (nothing reported -- wrong -Ddump.filter, or no reachable");
+            out.println("   field accesses in the analysed program?)");
         }
         for (String m : all) {
-            System.out.printf("  %-34s reads=%-28s writes=%s%n",
+            out.printf("  %-34s reads=%-28s writes=%s%n",
                             m,
                             reads.getOrDefault(m, new TreeSet<>()),
                             writes.getOrDefault(m, new TreeSet<>()));
         }
 
-        System.out.println();
-        System.out.println("=== call graph with points-to resolved callees ===");
+        out.println();
+        out.println("=== call graph with points-to resolved callees ===");
         for (String m : new TreeSet<>(callees.keySet())) {
             if (!program.contains(m)) {
                 continue;
@@ -183,12 +223,12 @@ public class ReadWriteExport {
             }
             targets.remove("<platform>");
             if (!targets.isEmpty()) {
-                System.out.printf("  %-34s -> %s%n", m, targets);
+                out.printf("  %-34s -> %s%n", m, targets);
             }
         }
 
-        System.out.println();
-        System.out.println("=== reachable fields ===");
+        out.println();
+        out.println("=== reachable fields ===");
         TreeMap<String, boolean[]> fields = new TreeMap<>();
         for (AnalysisField f : universe.getFields()) {
             String owner = f.getDeclaringClass().toJavaName(true);
@@ -198,30 +238,28 @@ public class ReadWriteExport {
             fields.put(owner + "." + f.getName(), new boolean[]{f.isRead(), f.isWritten()});
         }
         for (var e : fields.entrySet()) {
-            System.out.printf("  %-30s read=%-6s written=%s%n",
+            out.printf("  %-30s read=%-6s written=%s%n",
                             e.getKey(), e.getValue()[0], e.getValue()[1]);
         }
 
-        System.out.println();
-        System.out.println("=== memory effects the facts can't name, and calls without a target ===");
+        out.println();
+        out.println("=== memory effects the facts can't name, and calls without a target ===");
         for (String m : program) {
             for (String what : unknown.getOrDefault(m, new TreeSet<>())) {
-                System.out.printf("  %-34s %s%n", m, what);
+                out.printf("  %-34s %s%n", m, what);
             }
             for (String what : unresolved.getOrDefault(m, new TreeSet<>())) {
-                System.out.printf("  %-34s unresolved call to %s%n", m, what);
+                out.printf("  %-34s unresolved call to %s%n", m, what);
             }
         }
 
-        String facts = factsJson(analysed, reads, writes, callees, allocates, unknown, unresolved, fields);
-        String jsonPath = System.getProperty("dump.json", "");
+        String facts = factsJson(analysed, reads, writes, callees, allocates, unknown, unresolved, accesses, fields);
         if (!jsonPath.isEmpty()) {
             write(jsonPath, "{\n" + facts + "\n}\n");
-            System.out.println();
-            System.out.println("wrote " + jsonPath);
+            out.println();
+            out.println("wrote " + jsonPath);
         }
 
-        String irPath = System.getProperty("dump.ir", "");
         if (!irPath.isEmpty()) {
             List<Map<String, Object>> graphs = new ArrayList<>();
             for (AnalysisMethod method : universe.getMethods()) {
@@ -232,8 +270,8 @@ public class ReadWriteExport {
             }
             graphs.sort((a, b) -> (a.get("name") + " " + a.get("descriptor")).compareTo(b.get("name") + " " + b.get("descriptor")));
             write(irPath, "{\n" + facts + ",\n  \"graphs\": " + GraphExport.toJson(graphs, 1) + "\n}\n");
-            System.out.println();
-            System.out.println("wrote " + graphs.size() + " graphs to " + irPath);
+            out.println();
+            out.println("wrote " + graphs.size() + " graphs to " + irPath);
         }
     }
 
@@ -244,6 +282,7 @@ public class ReadWriteExport {
                     Set<String> allocates,
                     TreeMap<String, TreeSet<String>> unknown,
                     TreeMap<String, TreeSet<String>> unresolved,
+                    TreeMap<String, TreeSet<String>> accesses,
                     TreeMap<String, boolean[]> fields) {
         Set<String> allMethods = new TreeSet<>(methods);
         allMethods.addAll(callees.keySet());
@@ -261,8 +300,11 @@ public class ReadWriteExport {
                             .append(", \"callees\": ").append(jsonArray(callees.get(m)))
                             .append(", \"allocates\": ").append(allocates.contains(m))
                             .append(", \"unknown\": ").append(jsonArray(unknown.get(m)))
-                            .append(", \"unresolved\": ").append(jsonArray(unresolved.get(m)))
-                            .append("}");
+                            .append(", \"unresolved\": ").append(jsonArray(unresolved.get(m)));
+            if (accesses.containsKey(m)) {
+                sb.append(", \"accesses\": [").append(String.join(", ", accesses.get(m))).append("]");
+            }
+            sb.append("}");
         }
         sb.append("\n  },\n  \"fields\": {\n");
         boolean firstField = true;
@@ -291,6 +333,21 @@ public class ReadWriteExport {
 
     private static void add(TreeMap<String, TreeSet<String>> facts, String method, String fact) {
         facts.computeIfAbsent(method, k -> new TreeSet<>()).add(fact);
+    }
+
+    /**
+     * A field or array access, where it is, and the objects its receiver may point
+     * to, null when the analysis can't say: {"kind": "read", "field": "Examples$Counter.value",
+     * "receivers": ["Examples$Counter@Examples.main([Ljava/lang/String;)V:9"],
+     * "at": "Examples.length(LExamples$Link;)I:5"}.
+     */
+    private static void addAccess(TreeMap<String, TreeSet<String>> accesses, String method, String kind, String field, List<String> receivers, Node node) {
+        Map<String, Object> access = new java.util.LinkedHashMap<>();
+        access.put("kind", kind);
+        access.put("field", field);
+        access.put("receivers", receivers);
+        access.put("at", GraphExport.PointsTo.site(node instanceof ValueNode value ? value.getNodeSourcePosition() : null));
+        add(accesses, method, GraphExport.toJson(access, 2));
     }
 
     /**

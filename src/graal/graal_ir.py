@@ -43,6 +43,8 @@ class Node:
     flow: str | None = None
     exception_edge: bool = False 
     phi: tuple[tuple[int, int], ...] = ()
+    receivers: tuple[str, ...] | None = None  # what a field or array access may touch, None when unknown
+    at: str | None = None  # where a field or array access is: method, bci, and the calls it was inlined through
 
 
 @dataclass(frozen=True)
@@ -114,6 +116,8 @@ def _node(raw: dict) -> Node:
         flow=raw.get("flow"),
         exception_edge=raw.get("exception_edge", False),
         phi=tuple((e["block"], e["value"]) for e in raw.get("from", ())),
+        receivers=tuple(raw["receivers"]) if raw.get("receivers") is not None else None,
+        at=raw.get("at"),
     )
 
 

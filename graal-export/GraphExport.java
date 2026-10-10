@@ -1,16 +1,33 @@
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import com.oracle.graal.pointsto.PointsToAnalysis;
 import com.oracle.graal.pointsto.flow.AnalysisParsedGraph;
+import com.oracle.graal.pointsto.flow.CallSiteSensitiveMethodTypeFlow;
+import com.oracle.graal.pointsto.flow.ConstantTypeFlow;
 import com.oracle.graal.pointsto.flow.InvokeTypeFlow;
+import com.oracle.graal.pointsto.flow.LoadFieldTypeFlow;
+import com.oracle.graal.pointsto.flow.MethodFlowsGraph;
 import com.oracle.graal.pointsto.flow.MethodTypeFlowBuilder;
+import com.oracle.graal.pointsto.flow.NewInstanceTypeFlow;
+import com.oracle.graal.pointsto.flow.OffsetLoadTypeFlow.LoadIndexedTypeFlow;
+import com.oracle.graal.pointsto.flow.TypeFlow;
+import com.oracle.graal.pointsto.flow.context.object.AllocationContextSensitiveObject;
+import com.oracle.graal.pointsto.flow.context.object.AnalysisObject;
+import com.oracle.graal.pointsto.flow.context.object.ConstantContextSensitiveObject;
 import com.oracle.graal.pointsto.meta.AnalysisMethod;
 import com.oracle.graal.pointsto.meta.PointsToAnalysisMethod;
 import com.oracle.graal.pointsto.phases.InlineBeforeAnalysis;
+import com.oracle.graal.pointsto.typestate.TypeState;
 
 import jdk.graal.compiler.core.common.type.AbstractObjectStamp;
 import jdk.graal.compiler.core.common.type.FloatStamp;
@@ -44,6 +61,7 @@ import jdk.graal.compiler.nodes.ReturnNode;
 import jdk.graal.compiler.nodes.StructuredGraph;
 import jdk.graal.compiler.nodes.UnwindNode;
 import jdk.graal.compiler.nodes.ValueNode;
+import jdk.graal.compiler.nodes.ValuePhiNode;
 import jdk.graal.compiler.nodes.WithExceptionNode;
 import jdk.graal.compiler.nodes.cfg.ControlFlowGraph;
 import jdk.graal.compiler.nodes.cfg.HIRBlock;
@@ -53,16 +71,20 @@ import jdk.graal.compiler.nodes.extended.MembarNode;
 import jdk.graal.compiler.nodes.extended.ValueAnchorNode;
 import jdk.graal.compiler.nodes.java.AbstractNewObjectNode;
 import jdk.graal.compiler.nodes.java.AccessFieldNode;
+import jdk.graal.compiler.nodes.java.AccessIndexedNode;
 import jdk.graal.compiler.nodes.java.ArrayLengthNode;
 import jdk.graal.compiler.nodes.java.ExceptionObjectNode;
 import jdk.graal.compiler.nodes.java.FinalFieldBarrierNode;
 import jdk.graal.compiler.nodes.java.LoadFieldNode;
+import jdk.graal.compiler.nodes.java.LoadIndexedNode;
 import jdk.graal.compiler.nodes.java.MethodCallTargetNode;
 import jdk.graal.compiler.nodes.java.NewInstanceNode;
 import jdk.graal.compiler.nodes.java.StoreFieldNode;
 import jdk.graal.compiler.nodes.util.GraphUtil;
 import jdk.graal.compiler.phases.schedule.SchedulePhase;
+import jdk.graal.compiler.nodes.virtual.AllocatedObjectNode;
 import jdk.graal.compiler.nodes.virtual.CommitAllocationNode;
+import jdk.vm.ci.code.BytecodePosition;
 import jdk.vm.ci.meta.ResolvedJavaField;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
 
@@ -82,7 +104,15 @@ final class GraphExport {
         List<String> unsupported = new ArrayList<>();
         out.put("unsupported", unsupported);
 
-        StructuredGraph graph = analysisGraph(bb, method);
+        StructuredGraph graph;
+        try {
+            graph = analysisGraph(bb, method);
+        } catch (VirtualMachineError e) {
+            throw e;
+        } catch (Throwable t) {
+            unsupported.add("no graph after the analysis (" + t.getClass().getSimpleName() + ")");
+            return out;
+        }
         if (graph == null) {
             unsupported.add("no graph");
             return out;
@@ -99,10 +129,11 @@ final class GraphExport {
             }
         }
 
+        PointsTo pointsTo = new PointsTo(bb, method);
         Map<String, String> values = new TreeMap<>();
         List<Object> blocks = new ArrayList<>();
         for (HIRBlock block : cfg.reversePostOrder()) {
-            blocks.add(exportBlock(block, schedule, flowsByBci, values, unsupported));
+            blocks.add(exportBlock(block, schedule, flowsByBci, pointsTo, values, unsupported));
         }
         out.put("entry", cfg.getStartBlock().getId());
         out.put("blocks", blocks);
@@ -125,8 +156,144 @@ final class GraphExport {
         return graph;
     }
 
+    /**
+     * The objects a reference may point to, as the points-to analysis names
+     * them. A parameter, an object load, an invoke's result, an allocation
+     * and a constant have a flow; a phi takes its inputs' objects, and a pi
+     * or a proxy its input's. Null when the flows can't say, for a saturated
+     * flow or a value without one: an access through it may then touch any
+     * object with the field.
+     *
+     * With a context-sensitive analysis each context has a clone of the
+     * method's flows, and a reference may point to what it does in any of them.
+     */
+    static final class PointsTo {
+        private final PointsToAnalysis bb;
+        private final PointsToAnalysisMethod method;
+        private final MethodFlowsGraph flows;
+        private final Map<BytecodePosition, List<TypeFlow<?>>> bySource = new HashMap<>();
+
+        PointsTo(PointsToAnalysis bb, PointsToAnalysisMethod method) {
+            this.bb = bb;
+            this.method = method;
+            this.flows = method.getTypeFlow().getMethodFlowsGraph();
+            for (TypeFlow<?> flow : flows.flows()) {
+                if (flow.getSource() instanceof BytecodePosition position) {
+                    bySource.computeIfAbsent(position, k -> new ArrayList<>()).add(flow);
+                }
+            }
+        }
+
+        /** What a field or array access may touch: a static field's is its class's statics. */
+        List<String> receivers(Node access) {
+            if (access instanceof AccessFieldNode field) {
+                return field.isStatic() ? List.of(field.field().getDeclaringClass().toJavaName(true) + ".<statics>") : objects(field.object());
+            }
+            return access instanceof AccessIndexedNode indexed ? objects(indexed.array()) : null;
+        }
+
+        /** The objects, sorted, or null when the flows can't say. */
+        List<String> objects(ValueNode reference) {
+            TreeSet<String> names = new TreeSet<>();
+            Deque<ValueNode> work = new ArrayDeque<>(List.of(reference));
+            Set<ValueNode> seen = new HashSet<>();
+            while (!work.isEmpty()) {
+                ValueNode value = GraphUtil.unproxify(work.pop());
+                if (!seen.add(value) || value.isNullConstant()) {
+                    continue;
+                }
+                if (value instanceof ValuePhiNode phi) {
+                    phi.values().forEach(work::push);
+                    continue;
+                }
+                List<TypeFlow<?>> sources = sources(value);
+                if (sources.isEmpty()) {
+                    return null;
+                }
+                for (TypeFlow<?> source : sources) {
+                    TypeState state = fold(source);
+                    if (state == null) {
+                        return null;
+                    }
+                    for (AnalysisObject object : state.objects(bb)) {
+                        names.add(objectName(object));
+                    }
+                }
+            }
+            return new ArrayList<>(names);
+        }
+
+        private List<TypeFlow<?>> sources(ValueNode value) {
+            List<TypeFlow<?>> found = new ArrayList<>();
+            if (value instanceof ParameterNode parameter) {
+                TypeFlow<?> flow = flows.getParameter(parameter.index());
+                if (flow != null) {
+                    found.add(flow);
+                }
+                return found;
+            }
+            NodeSourcePosition position = value.getNodeSourcePosition();
+            for (TypeFlow<?> flow : position == null ? List.<TypeFlow<?>> of() : bySource.getOrDefault(position, List.of())) {
+                boolean source = value instanceof LoadFieldNode load ? flow instanceof LoadFieldTypeFlow f && f.field().equals(load.field())
+                                : value instanceof LoadIndexedNode ? flow instanceof LoadIndexedTypeFlow
+                                : value instanceof AbstractNewObjectNode || value instanceof AllocatedObjectNode ? flow instanceof NewInstanceTypeFlow
+                                : value instanceof ConstantNode && flow instanceof ConstantTypeFlow;
+                if (source) {
+                    found.add(flow);
+                } else if (value instanceof Invoke && flow instanceof InvokeTypeFlow invoke && invoke.getActualReturn() != null) {
+                    found.add(invoke.getActualReturn());
+                }
+            }
+            return found;
+        }
+
+        /** The flow's state over every context, null if it saturated in any. */
+        private TypeState fold(TypeFlow<?> original) {
+            if (original.isSaturated()) {
+                return null;
+            }
+            if (!(method.getTypeFlow() instanceof CallSiteSensitiveMethodTypeFlow sensitive)) {
+                return original.getState();
+            }
+            TypeState state = TypeState.forEmpty();
+            for (MethodFlowsGraph clone : sensitive.getFlows()) {
+                TypeFlow<?> copy = clone.lookupCloneOf(bb, original);
+                if (copy.isSaturated()) {
+                    return null;
+                }
+                state = TypeState.forUnion(bb, state, copy.getState());
+            }
+            return state;
+        }
+
+        /**
+         * An object by its type, and with an allocation-site-sensitive heap by
+         * where it was allocated too: Examples$Counter@Examples.main([Ljava/lang/String;)V:9.
+         * Heap contexts are left out, which merges objects: sound, if coarser.
+         */
+        static String objectName(AnalysisObject object) {
+            String type = object.type().toJavaName(true);
+            if (object instanceof AllocationContextSensitiveObject allocation) {
+                return type + "@" + site(allocation.allocationLabel());
+            }
+            return object instanceof ConstantContextSensitiveObject ? type + "@constant" : type;
+        }
+
+        /**
+         * Where a node or an allocation is, with the calls it was inlined through:
+         * Examples.main([Ljava/lang/String;)V:9, null for nowhere.
+         */
+        static String site(BytecodePosition position) {
+            if (position == null) {
+                return null;
+            }
+            String at = methodKey(position.getMethod()) + ":" + position.getBCI();
+            return position.getCaller() == null ? at : at + " in " + site(position.getCaller());
+        }
+    }
+
     private static Map<String, Object> exportBlock(HIRBlock block, StructuredGraph.ScheduleResult schedule,
-                    Map<Integer, InvokeTypeFlow> flowsByBci, Map<String, String> values, List<String> unsupported) {
+                    Map<Integer, InvokeTypeFlow> flowsByBci, PointsTo pointsTo, Map<String, String> values, List<String> unsupported) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", block.getId());
 
@@ -141,17 +308,17 @@ final class GraphExport {
         List<Object> nodes = new ArrayList<>();
         if (block.getBeginNode() instanceof AbstractMergeNode merge) {
             for (PhiNode phi : merge.phis()) {
-                nodes.add(exportScheduledNode(phi, schedule.getCFG(), flowsByBci));
+                nodes.add(exportScheduledNode(phi, schedule.getCFG(), flowsByBci, pointsTo));
             }
         }
         if (block.getBeginNode() instanceof LoopExitNode exit) {
             for (ProxyNode proxy : exit.proxies()) {
-                nodes.add(exportScheduledNode(proxy, schedule.getCFG(), flowsByBci));
+                nodes.add(exportScheduledNode(proxy, schedule.getCFG(), flowsByBci, pointsTo));
             }
         }
         for (Node node : schedule.nodesFor(block)) {
             if (!(node instanceof PhiNode) && !(node instanceof ProxyNode) && isScheduledValueOrEffect(node)) {
-                nodes.add(exportScheduledNode(node, schedule.getCFG(), flowsByBci));
+                nodes.add(exportScheduledNode(node, schedule.getCFG(), flowsByBci, pointsTo));
             }
         }
         out.put("nodes", nodes);
@@ -262,7 +429,7 @@ final class GraphExport {
                         node instanceof MethodCallTargetNode);
     }
 
-    private static Map<String, Object> exportScheduledNode(Node node, ControlFlowGraph cfg, Map<Integer, InvokeTypeFlow> flowsByBci) {
+    private static Map<String, Object> exportScheduledNode(Node node, ControlFlowGraph cfg, Map<Integer, InvokeTypeFlow> flowsByBci, PointsTo pointsTo) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", node.getId());
         out.put("op", node.getClass().getSimpleName().replaceAll("Node$", ""));
@@ -296,6 +463,11 @@ final class GraphExport {
             out.put("value", constant.getValue().toValueString());
         } else if (node instanceof AccessFieldNode access) {
             out.put("field", fieldName(access.field()));
+            out.put("receivers", pointsTo.receivers(access));
+            out.put("at", PointsTo.site(access.getNodeSourcePosition()));
+        } else if (node instanceof AccessIndexedNode access) {
+            out.put("receivers", pointsTo.receivers(access));
+            out.put("at", PointsTo.site(access.getNodeSourcePosition()));
         } else if (node instanceof NewInstanceNode allocation) {
             out.put("class", allocation.instanceClass().toJavaName(true));
         } else if (node instanceof Invoke invoke) {
@@ -408,7 +580,8 @@ final class GraphExport {
 
     /** The name and the descriptor: what tells overloads apart. */
     static String methodKey(ResolvedJavaMethod method) {
-        return methodName(method) + method.getSignature().toMethodDescriptor();
+        // An indirect call, as Native Image makes for a C function, names no method.
+        return method == null ? "<indirect>" : methodName(method) + method.getSignature().toMethodDescriptor();
     }
 
     static String fieldName(ResolvedJavaField field) {

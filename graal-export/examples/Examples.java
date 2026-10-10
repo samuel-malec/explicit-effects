@@ -101,8 +101,6 @@ public class Examples {
         return n;
     }
 
-    // Each iteration reads the first store. The rules don't carry a value into
-    // a loop, so for them the load still reads it.
     static int deadStoreReadInLoop(Counter counter, Link list, int times) {
         counter.value = 1;
         int sum = 0;
@@ -110,6 +108,71 @@ public class Examples {
             sum += counter.value + length(list);
         }
         counter.value = 2;
+        return sum;
+    }
+
+    // Each iteration reads what the iteration before stored, the first the 1:
+    // the loop carries the value as a phi, the load goes, and so do the
+    // stores, which only the next iteration read. The call before the load
+    // keeps Graal from forwarding it before the analysis.
+    static int forwardAcrossIterations(Counter counter, Link list, int times) {
+        counter.value = 1;
+        int sum = 0;
+        for (int i = 0; i < times; i++) {
+            sum += length(list) + counter.value;
+            counter.value = i;
+        }
+        counter.value = 2;
+        return sum;
+    }
+
+    // As forwardAcrossIterations with nothing stored before the loop: the
+    // first iteration is peeled, and the rest take what the iteration before
+    // stored as a phi. Every store in the loop goes, since the next
+    // iteration's store or the one after the loop overwrites it.
+    static int forwardAcrossIterationsPeeled(Counter counter, Link list, int times) {
+        int sum = 0;
+        for (int i = 0; i < times; i++) {
+            sum += length(list) + counter.value;
+            counter.value = i;
+        }
+        counter.value = 2;
+        return sum;
+    }
+
+    // Control: each iteration stores through alias, which may be another
+    // object, so the next iteration's load can't take that value, and the
+    // first iteration's load, which reads the 1, keeps that store.
+    static int forwardAcrossIterationsAliasControl(Counter counter, Counter alias, Link list, int times) {
+        counter.value = 1;
+        int sum = 0;
+        for (int i = 0; i < times; i++) {
+            sum += length(list) + counter.value;
+            alias.value = i;
+        }
+        counter.value = 2;
+        return sum;
+    }
+
+    // Control: before the first loop the store goes through alias, which may
+    // be another object, and with one heap token a store to another field
+    // follows it; in the second loop c is alias from the second iteration on.
+    // Neither loop can take the value stored before it. Both loads still leave
+    // their loops: the first loop only reads, and the second loop's object
+    // settles after its first iteration.
+    static int forwardIntoLoopAliasControl(Counter counter, Counter alias, int times) {
+        alias.value = 1;
+        counter.other = 2;
+        int sum = 0;
+        for (int i = 0; i < times; i++) {
+            sum += counter.value;
+        }
+        counter.value = 3;
+        Counter c = counter;
+        for (int i = 0; i < times; i++) {
+            sum += c.value;
+            c = alias;
+        }
         return sum;
     }
 
@@ -206,6 +269,15 @@ public class Examples {
         return sum;
     }
 
+    // Control: each iteration reads another link, so the object never settles.
+    static int hoistLoadOutOfLoopListControl(Link list) {
+        int n = 0;
+        for (Link l = list; l != null; l = l.next) {
+            n++;
+        }
+        return n;
+    }
+
     // countInto changes counter.value in every iteration.
     static int hoistLoadOutOfLoopControl(Counter counter, Link list, int times) {
         int sum = 0;
@@ -254,28 +326,45 @@ public class Examples {
         Link list = new Link();
         list.next = new Link();
         boolean flag = args.length > 0;
+        // Not a constant: Native Image's analysis would pass it into the loops,
+        // which would then unroll fully and leave no loop to look at.
+        int times = args.length + 3;
         Shape shape = flag ? new Square() : new Rect();
 
         deadStoreOtherField(counter);
+        // Each alias control also gets one counter twice: with allocation sites,
+        // the analysis would otherwise tell its two references apart.
         deadStoreMaybeAliasControl(counter, new Counter());
+        deadStoreMaybeAliasControl(counter, counter);
         deadStoreOtherObject(counter, logger);
         deadStoreBothArms(counter, flag);
         deadStoreOneArm(counter, flag);
         deadStoreMaybeAliasStoreControl(counter, new Counter());
+        deadStoreMaybeAliasStoreControl(counter, counter);
         int sum = deadStoreReadAfterMerge(counter, flag);
         sum += deadStoreReadInArm(counter, list, flag);
-        sum += deadStoreReadInLoop(counter, list, 3);
+        sum += deadStoreReadInLoop(counter, list, times);
+        sum += forwardAcrossIterations(counter, list, times);
+        sum += forwardAcrossIterationsPeeled(counter, list, times);
+        sum += forwardAcrossIterationsAliasControl(counter, new Counter(), list, times);
+        sum += forwardAcrossIterationsAliasControl(counter, counter, list, times);
+        sum += forwardIntoLoopAliasControl(counter, new Counter(), times);
+        sum += forwardIntoLoopAliasControl(counter, counter, times);
         sum += forwardIntoArmAliasControl(counter, new Counter(), flag);
+        sum += forwardIntoArmAliasControl(counter, counter, flag);
         sum += forwardMaybeAliasControl(counter, new Counter());
+        sum += forwardMaybeAliasControl(counter, counter);
         sum += forwardAcrossCall(counter, list);
         sum += forwardAcrossCallControl(counter, list);
         sum += forwardAcrossWritingCall(counter, logger, list);
         sum += forwardAcrossMerge(counter, list, flag);
         sum += forwardAcrossMergeAliasControl(counter, new Counter(), list, flag);
+        sum += forwardAcrossMergeAliasControl(counter, counter, list, flag);
         sum += repeatedLoadAcrossCall(counter, list);
         sum += repeatedLoadAcrossCallControl(counter, list);
-        sum += hoistLoadOutOfLoop(counter, list, 3);
-        sum += hoistLoadOutOfLoopControl(counter, list, 3);
+        sum += hoistLoadOutOfLoop(counter, list, times);
+        sum += hoistLoadOutOfLoopControl(counter, list, times);
+        sum += hoistLoadOutOfLoopListControl(list);
         sum += forwardAcrossVirtualCall(counter, shape);
         unusedReadOnlyCall(list);
         unusedWritingCall(counter, list);
