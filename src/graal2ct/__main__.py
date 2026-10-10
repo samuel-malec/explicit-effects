@@ -6,6 +6,7 @@ Usage:
     uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
     uv run graal2ct graal-export/out/examples.json --partition field
     uv run graal2ct graal-export/out/examples.json --partition field --rules
+    uv run graal2ct graal-export/out/objects.allocsens.json --partition object-field --rules
 
 """
 
@@ -16,7 +17,7 @@ from pathlib import Path
 from cthu import prelude
 from cthu.ir import to_text
 from cthu.ssu import check
-from effects.signatures import analyse, by_field, no_analysis
+from effects.signatures import PARTITIONERS, analyse, no_analysis
 from graal.graal_import import load
 from rules import memory
 
@@ -28,19 +29,21 @@ def main() -> int:
     parser.add_argument("dump", type=Path)
     parser.add_argument("--method", default="", help="only methods whose name contains this")
     parser.add_argument("-o", "--out", type=Path, help="write the .ct text here instead of printing it")
-    parser.add_argument("--partition", choices=["none", "field"], default="none",
-                        help="none: one heap token in every method; field: a token per field and array kind, from the facts")
+    parser.add_argument("--partition", choices=["none", "field", "object", "object-field"], default="none",
+                        help="none: one heap token in every method; field: a token per field and array kind; object: "
+                             "per set of objects the points-to facts tell apart; object-field: per field of such a set")
     parser.add_argument("--rules", action="store_true",
                         help="then forward loads and remove dead stores, and list what they did")
     args = parser.parse_args()
 
     facts, graphs = load(args.dump)
     keys = [key for key in sorted(graphs) if args.method in key]
-    effects = no_analysis() if args.partition == "none" else analyse(facts, by_field)
+    effects = no_analysis() if args.partition == "none" else analyse(facts, PARTITIONERS[args.partition](facts))
     translation = Translation(graphs, effects)
     program = translation.translate(keys)
     rewrites = memory.apply(program) if args.rules else None
     text = to_text(program)
+
     if args.out:
         args.out.write_text(text + "\n")
     else:

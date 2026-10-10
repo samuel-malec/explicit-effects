@@ -52,8 +52,9 @@ def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
             break
     
     for p, s in parts.items():
-        names[p] = "".join(c if c.isalnum() else "_" for c in "h_" + "_".join(s[-depth:]))
-    
+        names[p] = "".join(c if c.isalnum() else "_" for c in ("h_" + "_".join(s[-depth:])).replace("[]", "_arr"))
+        names[p] += "_" if names[p][-1].isdigit() else ""
+
     return names
 
 
@@ -122,6 +123,7 @@ class Translation:
         for structure, method in calls.items():
             if structure not in defined:
                 self.program.externals.setdefault(structure, method)
+        
         return self.program
 
     def callee_structure(self, method: str) -> tuple[str, bool]:
@@ -138,6 +140,7 @@ class MethodTranslation:
         self.alias = {n.id: n.inputs[0] for n in self.nodes.values() if n.op in ALIASES}
         self.params = parameter_types(graph.descriptor, graph.static)
         result = return_type(graph.descriptor)
+
         # A constructor returns its receiver, now initialized, and every later
         # use of the object takes that: nothing can publish the object before
         # the constructor, and its final fields, are done.
@@ -145,6 +148,7 @@ class MethodTranslation:
         self.receiver = next((n.id for n in self.nodes.values() if n.op == "Parameter" and n.index == 0), None)
         if self.constructor:
             result = "ref"
+
         self.renamed: dict[int, str] = {}  # objects a constructor call has initialized, in the current λ
         self.token = {p: translation.token_names[p] for p in translation.effects.tokens(graph.name + graph.descriptor)}
         self.tokens = list(self.token.values())
@@ -328,8 +332,8 @@ class MethodTranslation:
         self._end(block)
         return lam
 
-    def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "") -> None:
-        self.body.append(Instr(type_, op, ins, outs, out_types, note))
+    def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "", at: str = "") -> None:
+        self.body.append(Instr(type_, op, ins, outs, out_types, note, at))
 
     def _advance(self, token: str) -> tuple[str, str]:
         """The token's current version, and its next, which becomes current."""
@@ -354,57 +358,76 @@ class MethodTranslation:
                 self._emit("ref", "null", [], [v], ["ref"])
             else:
                 raise Unsupported(f"constant {n.value}")
+
         elif op in ARITHMETIC:
             self._emit(t, ARITHMETIC[op], [self.ref(i) for i in n.inputs], [v], [t])
+
         elif op in UNARY:
             self._emit(t, UNARY[op], [self.ref(n.inputs[0])], [v], [t])
+
         elif op in COMPARISON:
             self._emit(self.type_of(n.inputs[0]), COMPARISON[op], [self.ref(i) for i in n.inputs], [v], ["bool"])
+
         elif op == "IsNull":
             self._emit("ref", "nil?", [self.ref(n.inputs[0])], [v], ["bool"])
+
         elif op == "LogicNegation":
             self._emit("bool", "not", [self.ref(n.inputs[0])], [v], ["bool"])
+
         elif op == "Conditional":
             cond, yes, no = (self.ref(i) for i in n.inputs)
             self._emit("bool", "not", [cond], [f"{v}_not"], ["bool"])
             self._emit(t, "opt", [cond, yes], [f"{v}_yes"], [t])
             self._emit(t, "opt", [f"{v}_not", no], [f"{v}_no"], [t])
             self._emit(t, "join", [f"{v}_yes", f"{v}_no"], [v], [t])
+
         elif op == "ArrayLength":
             self._emit("ref", "length", [self.ref(n.inputs[0])], [v], ["int"])
+
         elif op in ("LoadField", "StoreField"):
             self._field(n)
+
         elif op == "NewInstance":
             # An allocation takes the rest of memory.
             before, after = self._advance(self._token_for(self.t.effects.partition(REST), f"allocating {n.cls}"))
             k = self.t.program.class_index(n.cls)
             self._emit("heap", f"new_{k}", [before], [v, after], ["ref", "heap"], note=n.cls)
+
         elif op in CALLS:
             self._call(n)
+
         elif op in ("BytecodeException", "ExceptionObject"):
             raise Unsupported(f"exception handler (a caught exception) for bci {n.bci}")
+
         elif op in ("CommitAllocation", "VirtualInstance", "AllocatedObject"):
             raise Unsupported("allocation after escape analysis")
+
         elif op == "FinalFieldBarrier" and self.constructor:
             pass  # ordered by the receiver the constructor returns
+
         else:
             raise Unsupported(op)
 
     def _field(self, n: Node) -> None:
         value = _type(n) if n.op == "LoadField" else self.type_of(n.inputs[-1])
         k = self.t.program.field_index(n.field, value)
-        before, after = self._advance(self._token_for(self.t.effects.partition(n.field), n.field))
+        try:
+            partition = self.t.effects.partition(n.field, None if n.receivers is None else frozenset(n.receivers))
+        except ValueError as e:  # objects the facts don't list together
+            raise Unsupported(str(e)) from e
+        before, after = self._advance(self._token_for(partition, n.field))
         static = "static" if (n.op == "LoadField" and not n.inputs) or (n.op == "StoreField" and len(n.inputs) == 1) else ""
         ins = [before, *(self.ref(i) for i in n.inputs)]
 
         if n.op == "LoadField":
-            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.field)
+            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.field, at=n.at or "")
         else:
-            self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], note=n.field)
+            self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], note=n.field, at=n.at or "")
 
     def _call(self, n: Node) -> None:
         if len(n.callees) > 1:
             raise Unsupported(f"call to {n.target} with {len(n.callees)} targets")
+        
         callee = n.callees[0] if n.callees else n.target
         structure, _ = self.t.callee_structure(callee)
         self.calls[structure] = callee
