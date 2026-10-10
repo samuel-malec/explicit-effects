@@ -22,9 +22,11 @@ when that block joined the λ. Every example is a method of
 ## In what order
 
 1. A branch to a trap becomes a guard.
-2. A block that only one jump reaches joins the λ that jumps.
-3. Loads are forwarded: within a λ, into branch arms and across merges, until
-   nothing changes.
+2. A block that only one jump reaches joins the λ that jumps, and two
+   parameters of a λ that every caller passes the same value for become one.
+3. Loads are forwarded: within a λ, into branch arms, into loops and across
+   merges. A load in a loop whose value no entry knows leaves the loop, by
+   peeling. This repeats until nothing changes.
 4. Dead stores go.
 5. What nothing uses any more goes, and every λ is put back into single-use
    form.
@@ -76,6 +78,12 @@ loop header, which its back edge jumps to again.
 In `forwardAcrossWritingCall`, `b2` (the store and the call) joins `run`
 after step 1, and `b3` (the load after the call) joins it too. The whole
 method is one λ, shown in the next listing.
+
+Two parameters of a λ that every caller passes the same value for are one:
+in the λ's body, the later is replaced by the earlier. The rules compare
+objects by name, so this lets them see that two names are one object. It
+runs in every round, because peeling can make two of a loop header's
+parameters equal (see "An object that settles").
 
 ## 3. Forwarding a load
 
@@ -192,6 +200,240 @@ takes `h_next` only. With one heap token it takes `h`, and the load stays.
 
 Control:
 - **`forwardIntoArmAliasControl`:** the load in the arm goes through another reference. With one heap token, a store to another field also comes between them.
+
+### Into a loop
+
+A load in a loop, before anything in the body writes the field, takes the
+value known on entry to the loop when the back edge brings the field's value
+too and the next iteration's object is the same one. The back edge brings it
+in one of two ways:
+- **unchanged:** nothing on the way from the header back to the load writes the field, so the value lasts. Loads write nothing, so they may be on the way.
+- **from the body:** the body's last access to the field, before it jumps back, is a store or a load of the same object. The next iteration reads that value.
+
+The header gets the value as a new parameter:
+- each entry passes the value it knows;
+- the header's branch passes it to both arms;
+- the body passes back what the next iteration reads: the value it got, or the value of its last access. In the second case the parameter is a loop-carried phi.
+
+Only a loop whose body is one arm of the header's branch, jumping straight
+back, and whose every entry knows the value, is handled.
+
+#### The value lasts: `deadStoreReadInLoop`
+
+```java
+counter.value = 1;
+int sum = 0;
+for (int i = 0; i < times; i++) {
+    sum += counter.value + length(list);
+}
+counter.value = 2;
+return sum;
+```
+
+```
+  run = λ p0 p1 p2 h_value h_next → r h_valueout h_nextout
+      …
+      int cons_1 → v11_b2
+      heap set_3 h_value_g p0 v11_b2 → h_value1_b2           ; counter.value = 1, dead in step 4
+      …
+      f_iirriiihh_ihh call k3_b2 v15_b2 v15_b2 p0 p1 p2 v11_b2 v11_b2 h_value1_b2 h_next_g → r h_valueout h_nextout
+  b3 = λ v16 v17 p0 p1 p2 v11 v30_in h_value h_next → r h_valueout h_nextout    ; the header
+      int lt? v17 p2 → v20
+      …
+      f_rriiiiihh_ihh call k p0 p1 p2 v11 v16 v17 v30_in h_value h_next → r h_valueout h_nextout
+  b4 = λ p0 p1 p2 v11 v16 v17 v30_in h_value h_next → r h_valueout h_nextout   ; the body
+      int move v30_in → v30   ; forwarded Examples$Counter.value
+      heap move h_value → h_value1
+      f_rh_ih call k32 p1 h_next → v32 h_next1                 ; length(list)
+      …
+      f_iirriiihh_ihh call k3_b5 v46_b5 v47_b5 p0 p1 p2 v11 v30_in h_value1 h_next1 → r h_valueout h_nextout
+```
+
+Here is how the 1 gets to the load and stays there:
+- **The entry** passes the stored `v11_b2` for `v30_in`. It also passes it for `v11`, because the 1 the loop adds to `i` is the same constant node.
+- **The body** passes back `h_value1`, which comes from its `h_value` through nothing but the forwarded load. It also passes `p0` back as `p0`. So every iteration sees the 1.
+
+With one heap token, the call takes `h`, so the token doesn't come around
+unchanged.
+
+#### A loop-carried phi: `forwardAcrossIterations`
+
+```java
+counter.value = 1;
+int sum = 0;
+for (int i = 0; i < times; i++) {
+    sum += length(list) + counter.value;
+    counter.value = i;
+}
+counter.value = 2;
+return sum;
+```
+
+```
+  run = λ p0 p1 p2 h_value h_next → r h_valueout h_nextout
+      …
+      heap set_3 h_value_g p0 v11_b2 → h_value1_b2           ; counter.value = 1, dead in step 4
+      …
+      f_iirriiihh_ihh call k3_b2 v15_b2 v15_b2 p0 p1 p2 v11_b2 v11_b2 h_value1_b2 h_next_g → r h_valueout h_nextout
+  b3 = λ v16 v17 p0 p1 p2 v11 v42_b5_in h_value h_next → r h_valueout h_nextout    ; the header
+      int lt? v17 p2 → v20
+      …
+  b4 = λ p0 p1 p2 v11 v16 v17 v42_b5_in h_value h_next → r h_valueout h_nextout   ; the body
+      f_rh_ih call k27 p1 h_next → v27 h_next1                 ; length(list)
+      int move v42_b5_in → v42_b5   ; forwarded Examples$Counter.value
+      heap move h_value → h_value1_b5
+      …
+      heap set_3 h_value1_b5 p0 v17 → h_value2_b5             ; counter.value = i, dead in step 4
+      int add v17 v11 → v53_b5                                 ; i + 1
+      f_iirriiihh_ihh call k3_b5 v50_b5 v53_b5 p0 p1 p2 v11 v17 h_value2_b5 h_next1 → r h_valueout h_nextout
+```
+
+The header's `v42_b5_in` is the phi:
+- the entry passes the 1 (`v11_b2`);
+- the back edge passes `v17`, the `i` that the body stored.
+
+Nothing else reads the field during the loop, so both stores are dead (step
+4). The field lives in the phi, and only the store of 2 after the loop is
+left.
+
+Controls:
+- **`forwardAcrossIterationsAliasControl`:** each iteration stores through another reference, so the back edge brings no value for `counter`.
+- **`forwardIntoLoopAliasControl`:** before its first loop the store goes through another reference, and with one heap token a store to another field follows it. In its second loop, the object is a different one from the second iteration on.
+
+### Out of a loop
+
+A load in a loop whose back edge brings the field's value, but whose value
+no entry knows, leaves the loop. The first iteration is peeled:
+- every entry jumps to a copy of the header, whose branch goes to a copy of the body or a copy of the exit;
+- the body's copy runs the first iteration, load included, and then jumps into the loop with what it leaves for the next iteration;
+- the loop takes that value, as in "Into a loop";
+- both exits jump to a new λ with the exit's code, so that code isn't copied.
+
+What the first iteration leaves depends on the back edge:
+- **unchanged:** nothing in the loop writes the field, so it leaves the value its copy of the load read, and that value lasts;
+- **from the body:** it leaves the value of its copy of the body's last store or load of the field, and the loop takes it as the first value of a loop-carried phi.
+
+Only a loop whose header and body are short is peeled (at most `PEEL`
+instructions together), since the copy repeats them.
+
+This needs no change to the read model: loads still thread the token. The
+loop's load is replaced only because the value the first iteration read
+reaches it, unchanged, through the token's data flow.
+
+#### The value lasts: `hoistLoadOutOfLoop`
+
+```java
+int sum = 0;
+for (int i = 0; i < times; i++) {
+    sum += counter.value + length(list);
+}
+return sum;
+```
+
+```
+  run = λ p0 p1 p2 h_value h_next → r h_valueout h_nextout
+      …
+      int lt? v7 p2 → v12_b1_first                          ; the peeled header: 0 < times
+      Examples_hoistLoadOutOfLoop b2_first → kt_b1_first    ; the peeled body
+      Examples_hoistLoadOutOfLoop b9_first → kf_b1_first    ; the peeled exit
+      …
+  b2_first = λ p0 p1 p2 v8 v9 v20 v40 h_value h_next → r h_valueout h_nextout
+      heap guard h_value v20 → h_value_g
+      heap guard h_next v20 → h_next_g
+      heap get_3 h_value_g p0 → v23_b4 h_value1_b4             ; the one load left
+      f_rh_ih call k25_b4 p1 h_next_g → v25_b4 h_next1_b4      ; length(list)
+      …
+      f_iirribiihh_ihh call k1_b5 v39_b5 v41_b5 p0 p1 p2 v20 v40 v23_b4 h_value1_b4 h_next1_b4 → r h_valueout h_nextout
+  b1 = λ v8 v9 p0 p1 p2 v20 v40 v23_b4_in h_value h_next → r h_valueout h_nextout     ; the loop's header
+      …
+  b2 = λ p0 p1 p2 v8 v9 v20 v40 v23_b4_in h_value h_next → r h_valueout h_nextout     ; the loop's body
+      heap guard h_value v20 → h_value_g
+      heap guard h_next v20 → h_next_g
+      int move v23_b4_in → v23_b4   ; forwarded Examples$Counter.value
+      heap move h_value_g → h_value1_b4
+      f_rh_ih call k25_b4 p1 h_next_g → v25_b4 h_next1_b4
+      …
+  b9, b9_first: jump to b9_after, the exit's code
+```
+
+The peeled body jumps into the loop, passing `v23_b4`, the value it loaded,
+for the header's new `v23_b4_in`. The loop still checks `counter` for null in
+every iteration: a guard writes nothing, so it stays, and nothing removes a
+check that an earlier one makes redundant. With one heap token, the call
+takes `h`, so the token doesn't come around unchanged and the load stays in
+the loop.
+
+#### A peeled phi: `forwardAcrossIterationsPeeled`
+
+```java
+int sum = 0;
+for (int i = 0; i < times; i++) {
+    sum += length(list) + counter.value;
+    counter.value = i;
+}
+counter.value = 2;
+return sum;
+```
+
+This is `forwardAcrossIterations` with nothing stored before the loop, so no
+entry knows the value:
+- **The peeled iteration** loads `counter.value`, stores its `i`, and jumps into the loop passing that `i` as the phi's first value.
+- **The loop's body** takes the phi instead of loading, and passes back its own `i`.
+
+```
+  b2_first = λ p0 p1 p2 v8 v9 v32 v46 h_value h_next → r h_valueout h_nextout   ; the peeled body
+      …
+      heap get_3 h_value_g_b3 p0 → v35_b5 h_value1_b5             ; the one load left
+      …
+      heap set_3 h_value1_b5 p0 v9 → h_value2_b5                  ; counter.value = i, dead in step 4
+      …
+      f_iirribiihh_ihh call k1_b5 v43_b5 v47_b5 p0 p1 p2 v32 v46 v9 h_value2_b5 h_next_g_b3 → r h_valueout h_nextout
+  b2 = λ p0 p1 p2 v8 v9 v32 v46 v35_b5_in h_value h_next → r h_valueout h_nextout   ; the loop's body
+      …
+      int move v35_b5_in → v35_b5   ; forwarded Examples$Counter.value
+      …
+      heap set_3 h_value1_b5 p0 v9 → h_value2_b5                  ; counter.value = i, dead in step 4
+      …
+      f_iirribiihh_ihh call k1_b5 v43_b5 v47_b5 p0 p1 p2 v32 v46 v9 h_value2_b5 h_next_g_b3 → r h_valueout h_nextout
+```
+
+Each store in the loop, the peeled one included, is overwritten by the next
+iteration's or by the one after the loop. So all of them are dead, and only
+the store of 2 is left, with one load, outside the loop.
+
+#### An object that settles: the second loop of `forwardIntoLoopAliasControl`
+
+```java
+counter.value = 3;
+Counter c = counter;
+for (int i = 0; i < times; i++) {
+    sum += c.value;
+    c = alias;
+}
+```
+
+The load's object changes once: `c` is `counter` in the first iteration and
+`alias` in every later one. In the token form:
+- The loop's header takes `c` as `v68` and `alias` as `p1`.
+- The entry passes `p0` (`counter`) for `v68`.
+- The back edge passes `p1` for both, so from the second iteration on, `v68` and `p1` are the same object.
+
+When the back edge passes, for the object, what it also passes back
+unchanged for another parameter, the object settles. The rules then peel
+two iterations:
+1. **The first iteration is peeled.** The loop's callers are now the peeled iteration and the back edge, and both pass `p1` for `v68` and for `p1`. Parameter merging (step 2) makes them one in the header, and then in the body. The load now reads the same object in every iteration.
+2. **The second iteration is peeled** for that load, as for `hoistLoadOutOfLoop`, and the loop takes the value it read.
+
+The first iteration's load reads `counter`, which was just given 3, so it
+takes the 3 by forwarding into a branch arm. The second iteration's load,
+of `alias.value`, is the one load left. This is how Graal handles this loop
+as well: it peels the first iteration, and its read of `alias.value` then
+floats out of the loop.
+
+Controls:
+- **`hoistLoadOutOfLoopControl`:** `countInto` writes `Counter.value` in every iteration.
+- **`forwardAcrossIterationsAliasControl`:** the loop stores through another reference.
+- **`hoistLoadOutOfLoopListControl`:** each iteration reads another link of a list, so its object never settles.
 
 ### Across a merge
 
@@ -367,13 +609,16 @@ so a single heap token is enough.
 A store whose reader was forwarded can be dead too:
 - **`deadStoreReadAfterMerge`:** once the load takes the 1 on that path, the store in the arm goes. Its token then goes, through a guard, to the last store.
 - **`deadStoreReadInArm`:** once the load in the arm takes the 1, the first store goes.
+- **`deadStoreReadInLoop`:** once every iteration's load takes the 1, the store before the loop goes. Its token goes around the loop unread, and the exit overwrites it.
+- **`forwardAcrossIterations`:** once the loop carries the value as a phi, both the store before the loop and the one in it go. The next iteration's store, or the one after the loop, overwrites each, and nothing reads them any more.
+- **`forwardAcrossIterationsPeeled`:** the same for the peeled iteration's store and the loop's.
 
 ### Controls
 
 - **`deadStoreMaybeAliasControl`:** a load through another reference may read it.
 - **`deadStoreMaybeAliasStoreControl`:** a store through another reference may not overwrite it.
 - **`deadStoreOneArm`:** one arm leaves it to the caller.
-- **`deadStoreReadInLoop`:** each iteration loads it, and nothing carries a value into a loop.
+- **`forwardAcrossIterationsAliasControl`:** the first iteration's load reads it, and the loop stores through another reference, so that load can't take the value.
 
 ### The trap model
 
@@ -382,13 +627,28 @@ so nothing reads the store on that path. In Java a handler up the stack
 could. So a store removed across a call or a guard is legal in Java only if
 neither can throw.
 
-Of the five stores removed in `Examples`, four are legal in Java as well:
+Of the ten stores removed in `Examples`, four are legal in Java as well:
 - In `deadStoreOtherField`, `deadStoreOtherObject` and `deadStoreBothArms`, nothing between the two stores can throw.
 - In `deadStoreReadAfterMerge`, the guard in between checks a reference already checked on that path.
 
-The fifth, in `deadStoreReadInArm`, is not: `length(list)` comes between the
-stores and may throw `StackOverflowError`. Forwarding a load never depends on
+The other six, in `deadStoreReadInArm`, `deadStoreReadInLoop` and the two
+each in `forwardAcrossIterations` and `forwardAcrossIterationsPeeled`, are
+not: `length(list)` comes between the stores and may throw
+`StackOverflowError`. Forwarding a load never depends on
 the trap model.
+
+`memory.apply(program, java=True)` removes only what is dead in Java.
+- **What counts as a read:** a trap or a guard on the store's token. So does
+  anything that may throw between the store and the overwrite, on any token:
+  a call to a method, an allocation, a division.
+- **What it finds:** three of the four above. It misses
+  `deadStoreReadAfterMerge`, because it doesn't know that a guard repeats a
+  check already made.
+- **Without forwarding** (`forward=False`), the same three are dead. So none
+  of them needs a load the rules took away.
+
+[`decisions.py`](decisions.py) runs it that way, and the round trip removes
+those stores in Graal: see [`graal-native`](../../graal-native/README.md).
 
 ## 5. Clean-up
 
@@ -401,9 +661,13 @@ the single-use and type checks, and a second pass changes nothing.
 
 ## Next to Graal
 
-`make compare` runs `graal-probe` on `Examples` and `Signatures`. Each cell
-is the field stores/loads left; "Graal" is the full suite with calls kept as
-calls.
+`make compare` runs `graal-probe` on `Examples`, `Signatures` and `Aliasing`.
+Each cell is the field stores/loads left; "Graal" is the full suite with calls
+kept as calls. The tables below are `Examples` and `Signatures` with one heap
+and per field. Object partitions, and `Aliasing`, which needs them, are in
+[`../effects/README.md`](../effects/README.md#results). Native Image compiling
+with the kills our tool computes is in
+[`../../graal-native/README.md`](../../graal-native/README.md).
 
 | Method | Bytecode | Graal | Graal + inlining | One heap | Per field |
 |---|---|---|---|---|---|
@@ -411,18 +675,42 @@ calls.
 | `deadStoreBothArms` | 3/0 | 3/0 | 3/0 | **2/0** | **2/0** |
 | `deadStoreReadAfterMerge` | 2/1 | 1/1 | 1/1 | 1/1 | 1/1 |
 | `deadStoreReadInArm` | 2/1 | 2/1 | 3/1 | 2/1 | **1/0** |
+| `deadStoreReadInLoop` | 2/1 | 2/1 | 2/1 | 2/1 | **1/0** |
+| `forwardAcrossIterations` | 3/1 | 4/2 | 4/2 | 3/1 | **1/0** |
+| `forwardAcrossIterationsPeeled` | 2/1 | 4/2 | 4/3 | 2/1 | **1/1** |
 | `forwardAcrossWritingCall` | 1/1 | 1/1 | 1/1 | 1/1 | **1/0** |
 | `forwardAcrossMerge` | 2/1 | 2/1 | 2/1 | 2/1 | **2/0** |
 | `Signatures.acrossField` | 1/1 | 1/1 | 1/0 | 1/1 | **1/0** |
-| **Total, 33 methods** | 49/32 | 48/35 | 59/40 | 47/32 | 44/23 |
+| **Total, 38 methods** | 60/38 | 64/45 | 75/51 | 58/38 | 51/27 |
 
 How to read it:
 - **Inlining column:** inlined callees add accesses to the same fields, so its totals overstate what is left of each method's own accesses.
 - **Graal's loads above the bytecode:** loop peeling and merge duplication copy loads.
 
+`make compare` also prints the accesses left inside loops. Graal's come
+from the probe, which marks an access in a loop. Ours are the accesses in λs
+that jump, through others, back to themselves.
+
+| Method | Bytecode | Graal | Graal + inlining | One heap | Per field |
+|---|---|---|---|---|---|
+| `hoistLoadOutOfLoop` | 0/1 | 0/1 | 0/1 | 0/1 | **0/0** |
+| `deadStoreReadInLoop` | 0/1 | 0/1 | 0/1 | 0/1 | **0/0** |
+| `forwardAcrossIterations` | 1/1 | 1/1 | 1/1 | 1/1 | **0/0** |
+| `forwardAcrossIterationsPeeled` | 1/1 | 1/1 | 1/1 | 1/1 | **0/0** |
+| `forwardIntoLoopAliasControl` | 0/2 | 0/0 | 0/0 | **0/0** | **0/0** |
+| `hoistLoadOutOfLoopListControl` | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 |
+| **Total, 8 methods** | 3/9 | 3/7 | 3/7 | 3/7 | 1/3 |
+
+- **`hoistLoadOutOfLoop`:** Graal keeps the load in the loop, since in its model `length` may write any memory.
+- **`forwardAcrossIterations`, `forwardAcrossIterationsPeeled`:** Graal keeps the load and the store in the loop, for the same reason.
+- **`forwardIntoLoopAliasControl`:** both Graal and the rules move both loads out of their loops. For the second loop, Graal peels one iteration and its read floats out, while the rules peel two.
+
 ## What they don't do yet
 
-- **Loops:** nothing carries a value into a loop. A loop header isn't split, and a load in a loop isn't forwarded (`deadStoreReadInLoop`, `hoistLoadOutOfLoop`).
+- **Loops:** only a loop whose body is one arm of the header's branch that jumps straight back. A loop header isn't split as a merge, and peeling copies at most `PEEL` instructions.
+  - A loop whose back edge brings no known value keeps its load: a call writes the field (`hoistLoadOutOfLoopControl`), or a store goes through another reference (`forwardAcrossIterationsAliasControl`).
+  - An object that keeps changing (`hoistLoadOutOfLoopListControl`) keeps its load in the loop. Only one that settles after the first iteration is handled.
+  - Guards stay in the loop: nothing removes a null check that an earlier one makes redundant.
 - **A load forwarded into an arm** doesn't tell a merge below it that the value is known.
 - **Splitting a merge** only happens for a load with nothing before it but guards and operations that can't throw.
 - **Refused methods:** the translation refuses calls with two targets and allocations that went through escape analysis, so the rules never see those methods.
@@ -430,12 +718,14 @@ How to read it:
 ## How the checks keep them honest
 
 `test/export_check/check_rules.py` has one check per rule, each with its
-controls. A further check makes sure every rewritten program, under both
-partitionings:
+controls, and one for what object partitions add (`Aliasing`). A further check
+makes sure every rewritten program, under all four partitionings:
 - still passes the single-use and type checks;
 - parses back;
 - is unchanged by a second pass.
 
-Every control was confirmed by breaking a rule on purpose, in 22 different
-ways, from ignoring the object to a guard trapping on the wrong arm. Each
-break makes a check fail.
+Every control was confirmed by breaking a rule on purpose, in 32 different
+ways. They range from ignoring the object to a guard trapping on the wrong
+arm, a loop ignoring what its back edge brings, a peeled phi starting from
+the load instead of the store, and parameters merging when only some callers
+agree. Each break makes a check fail.
