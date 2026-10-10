@@ -52,7 +52,7 @@ public class ReadWriteExport {
                     "org.ietf.", "org.jcp.", "org.w3c.", "org.xml.",
     };
 
-    private static boolean isUnderAnalysis(String className) {
+    static boolean isUnderAnalysis(String className) {
         String filter = System.getProperty("dump.filter", "");
         if (filter.equals("*")) {
             return true;   // report everything, platform code included

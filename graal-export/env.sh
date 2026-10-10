@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-# Override the graal checkout location with GRAAL_HOME.
+# The graal tree: GRAAL_HOME, else the graal submodule once it is built, else
+# the checkout these scripts were first written against.
 set -u
-G=${GRAAL_HOME:-/home/xmalec/graal}
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SUBMODULE="$(dirname "$HERE")/graal"
+if [[ -n "${GRAAL_HOME:-}" ]]; then
+    G=$GRAAL_HOME
+elif [[ -f "$SUBMODULE/substratevm/mxbuild/dists/standalone-pointsto.jar" ]]; then
+    G=$SUBMODULE
+else
+    G=/home/xmalec/graal
+fi
 
 if [[ ! -d "$G" ]]; then
     echo "error: graal checkout not found at '$G' (set GRAAL_HOME)" >&2
