@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.9.27)  10 OCT 2026 17:58
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.9.27)  10 OCT 2026 18:37
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1444,36 +1444,46 @@ LaTeX Font Info:    Font shape `T1/EBGaramond-OsF/m/it' will be
 chapter 1.
 LaTeX Font Info:    Font shape `T1/EBGaramond-OsF/m/sc' will be
 (Font)              scaled to size 50.0pt on input line 1.
-) (./chapters/analysis.tex [1
+) (./chapters/background.tex [1
 
 
 
 ]
 chapter 2.
-) (./chapters/implementation.tex [2
+) (./chapters/explicit-effects.tex [2
 
 
 ]
 chapter 3.
-) (./chapters/evaluation.tex [3
+) (./chapters/analysis.tex [3
 
 
 ]
 chapter 4.
-) (./chapters/conclusion.tex [4
+) (./chapters/conversion.tex [4
 
 
 ]
 chapter 5.
-) [5
+) (./chapters/evaluation.tex [5
+
+
+]
+chapter 6.
+) (./chapters/conclusion.tex [6
+
+
+]
+chapter 7.
+) [7
 
 
 ]
 chapter without number
 
-LaTeX Warning: Empty bibliography on input line 15.
+LaTeX Warning: Empty bibliography on input line 17.
 
-[6
+[8
 
 
 
@@ -1494,20 +1504,20 @@ Package logreq Info: Writing requests to 'thesis.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 33991 strings out of 475277
- 696272 string characters out of 5768622
- 1931975 words of memory out of 5000000
- 55592 multiletter control sequences out of 15000+600000
+ 34013 strings out of 475277
+ 696759 string characters out of 5768622
+ 1932975 words of memory out of 5000000
+ 55604 multiletter control sequences out of 15000+600000
  634520 words of font info for 74 fonts, out of 8000000 for 9000
  473 hyphenation exceptions out of 8191
  127i,19n,124p,10922b,1991s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/ebgaramond/EBGaramond-Regul
 ar.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/ebgaramond/EBGaramond-
 SemiBold.pfb>
-Output written on thesis.pdf (12 pages, 56545 bytes).
+Output written on thesis.pdf (14 pages, 59238 bytes).
 PDF statistics:
- 129 PDF objects out of 1000 (max. 8388607)
- 107 compressed objects within 2 object streams
- 26 named destinations out of 1000 (max. 500000)
- 70 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 148 PDF objects out of 1000 (max. 8388607)
+ 124 compressed objects within 2 object streams
+ 30 named destinations out of 1000 (max. 500000)
+ 86 words of extra memory for PDF output out of 10000 (max. 10000000)
 
