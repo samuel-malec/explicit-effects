@@ -9,8 +9,9 @@ from .graal_ir import Graph, _graph
 
 @dataclass
 class PointsToFacts:
-    methods: dict[str, dict] = field(default_factory=dict) # What fields does a method read/write, keyed by name + descriptor
-    fields: dict[str, dict] = field(default_factory=dict) # what fields are reachable (read/written)
+    methods: dict[str, dict] = field(
+        default_factory=dict)  # What fields does a method read/write, keyed by name + descriptor
+    fields: dict[str, dict] = field(default_factory=dict)  # what fields are reachable (read/written)
 
 
 def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:

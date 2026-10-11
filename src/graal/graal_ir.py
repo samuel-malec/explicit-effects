@@ -29,8 +29,8 @@ class Op:
 @dataclass(frozen=True)
 class Node:
     id: int
-    op: str 
-    type: str 
+    op: str
+    type: str
     inputs: tuple[int, ...] = ()
     bci: int = -1
     index: int | None = None
@@ -41,16 +41,25 @@ class Node:
     target: str | None = None
     callees: tuple[str, ...] = ()
     flow: str | None = None
-    exception_edge: bool = False 
+    exception_edge: bool = False
     phi: tuple[tuple[int, int], ...] = ()
     receivers: tuple[str, ...] | None = None  # what a field or array access may touch, None when unknown
     at: str | None = None  # where a field or array access is: method, bci, and the calls it was inlined through
+    kind: str | None = None  # an array access's or allocation's element kind: int[], Object[]
+    fields: tuple[str, ...] = ()  # an object escape analysis made virtual: its fields, in order
+    length: int | None = None  # an array escape analysis made virtual: its length
+    objects: tuple[int, ...] = ()  # the virtual objects a CommitAllocation makes
+    entries: tuple[int | None, ...] = ()  # their fields' or elements' values, object by object
+    locked: bool = False  # whether any of them is locked as it is made
+    virtual: int | None = None  # the virtual object an AllocatedObject is
+    constant: str | None = None  # an object constant, told apart from others of its type
+    negated: tuple[bool, ...] = ()  # which inputs a ShortCircuitOr negates
 
 
 @dataclass(frozen=True)
 class Edge:
     to: int
-    label: str | None # true/false, normal/exception edge
+    label: str | None  # true/false, normal/exception edge
 
 
 @dataclass(frozen=True)
@@ -60,7 +69,7 @@ class Block:
     ops: tuple[Op, ...]
     succs: tuple[Edge, ...]
     exit: str | None  # "return", "unwind", "deopt", ...
-    end: dict  # how the block ends: {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+    end: dict  # how the block ends, {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
     nodes: tuple[Node, ...] = ()
 
 
@@ -118,6 +127,15 @@ def _node(raw: dict) -> Node:
         phi=tuple((e["block"], e["value"]) for e in raw.get("from", ())),
         receivers=tuple(raw["receivers"]) if raw.get("receivers") is not None else None,
         at=raw.get("at"),
+        kind=raw.get("kind"),
+        fields=tuple(raw.get("fields", ())),
+        length=raw.get("length"),
+        objects=tuple(raw.get("objects", ())),
+        entries=tuple(raw.get("values", ())),
+        locked=raw.get("locked", False),
+        virtual=raw.get("object") if isinstance(raw.get("object"), int) else None,
+        constant=raw.get("object") if isinstance(raw.get("object"), str) else None,
+        negated=tuple(raw.get("negated", ())),
     )
 
 
