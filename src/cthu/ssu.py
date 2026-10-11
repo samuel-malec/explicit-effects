@@ -7,6 +7,7 @@ from .ir import LINEAR, Instr, Lambda, Program
 class LinearityError(Exception):
     pass
 
+
 def linearize(lam: Lambda) -> None:
     """Transform a sequence of Cthu instructions, such that the new sequence of instruction adheres to the SSU format"""
     types = dict(lam.params)
@@ -17,7 +18,7 @@ def linearize(lam: Lambda) -> None:
     remaining.update(name for name, _ in lam.outs)
 
     fresh = count(1)
-    current: dict[str, str] = {} 
+    current: dict[str, str] = {}
     body: list[Instr] = []
 
     def unused(name: str) -> None:
@@ -31,7 +32,7 @@ def linearize(lam: Lambda) -> None:
 
     for instr in lam.body:
         ins = []
-        for name in instr.ins:    
+        for name in instr.ins:
             remaining[name] -= 1
             now = current.get(name, name)
 
@@ -59,15 +60,17 @@ def linearize(lam: Lambda) -> None:
 
     lam.body = body
 
+
 def check(program: Program) -> list[str]:
-    """Check whether given program conforms to the SSU form""" 
+    """Check whether given program conforms to the SSU form"""
     errors = []
-    
+
     for structure in program.structures:
         for lam in structure.lambdas:
             errors += [f"{structure.name}.{lam.name}: {e}" for e in _check_lambda(lam)]
-    
+
     return errors
+
 
 def _check_lambda(lam: Lambda) -> list[str]:
     """Check whether a given lambda body conforms to the SSU form"""
@@ -92,14 +95,14 @@ def _check_lambda(lam: Lambda) -> list[str]:
             uses[name] += 1
         for name, type_ in zip(instr.outs, instr.out_types):
             define(name, type_)
-    
+
     for name, _ in lam.outs:
         if name not in defined:
             errors.append(f"output {name} is never defined")
         uses[name] += 1
-    
+
     for name in defined:
         if uses[name] != 1:
             errors.append(f"{name} used {uses[name]} times")
-    
+
     return errors

@@ -73,7 +73,7 @@ def tokenize(text: str) -> list[Token]:
 
         elif ch in _PUNCT or ch in "[]()λ":
             category = (Category.PUNCT if ch in _PUNCT else Category.BRACKET if ch in "[]"
-                        else Category.PAREN if ch in "()" else Category.LAMBDA)
+            else Category.PAREN if ch in "()" else Category.LAMBDA)
             tokens.append(Token(category, ch, line, column))
             i += 1
 

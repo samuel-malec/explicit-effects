@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
- 
 
 LINEAR = frozenset({"heap"})
 
@@ -67,7 +66,7 @@ class Program:
     fields: dict[str, str] = field(default_factory=dict)  # `field T "name"` declarations, in order: get_i / set_i
     classes: list[str] = field(default_factory=list)  # `class` declarations: new_i, instanceof_i
     constants: list[tuple[str, str]] = field(default_factory=list)  # `constant T "what"` declarations: const_i
-    externals: dict[str, str] = field(default_factory=dict)  # external functions called from the analyzed code: structure → method
+    externals: dict[str, str] = field(default_factory=dict)  # external functions called from the analyzed code
 
     def field_index(self, name: str, type_: str) -> int:
         if self.fields.setdefault(name, type_) != type_:
@@ -91,16 +90,16 @@ def to_text(program: Program) -> str:
     lines = []
     for i, (name, type_) in enumerate(program.fields.items()):
         lines.append(f'field {type_} "{name}"   ; get_{i}, set_{i}')
-    
+
     for i, name in enumerate(program.classes):
         lines.append(f'class "{name}"   ; new_{i}')
 
     for i, (type_, what) in enumerate(program.constants):
         lines.append(f'constant {type_} "{what}"   ; const_{i}')
-    
+
     for name in program.externals.values():
         lines.append(f"; external: {name}")
-    
+
     if program.fields or program.classes or program.constants or program.externals:
         lines.append("")
 

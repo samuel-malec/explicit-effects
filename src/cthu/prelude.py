@@ -11,11 +11,12 @@ from .parser import OpType, Signature
 
 GRAAL = Path(__file__).with_name("graal.ct")
 
-FUNCTION = ("function", "stck", "bool") # operations a function supports
+FUNCTION = ("function", "stck", "bool")  # operations a function supports
 CONSTANTS = {"int", "long"}  # the structures with cons_<n>
 MEMORY = "heap"  # the structure with the field and allocation operations
 #: An array kind, as the operations on it name it, and the type of its elements.
-ARRAYS = {"byte": "int", "char": "int", "short": "int", "int": "int", "long": "long", "float": "float", "double": "double", "Object": "ref"}
+ARRAYS = {"byte": "int", "char": "int", "short": "int", "int": "int", "long": "long", "float": "float",
+          "double": "double", "Object": "ref"}
 
 
 @dataclass
@@ -120,7 +121,7 @@ def check(program: Program, prelude: Prelude) -> list[str]:
     errors = [f"prelude: {e}" for e in prelude.errors]
     lambdas = {(s.name, lam.name): lam for s in program.structures for lam in s.lambdas}
     externals = set(program.externals)
-    
+
     for s in program.structures:
         for lam in s.lambdas:
             types = dict(lam.params)
@@ -172,8 +173,9 @@ def _expected(instr: Instr, program: Program, prelude: Prelude,
         array = re.fullmatch(r"(aget|aset|newarray)_(\w+)", op)
         if t == MEMORY and array and array.group(2) in ARRAYS:
             element = ARRAYS[array.group(2)]
-            return {"aget": ([MEMORY, "ref", "int"], [element, MEMORY]), "aset": ([MEMORY, "ref", "int", element], [MEMORY]),
-                    "newarray": ([MEMORY, "int"], ["ref", MEMORY])}[array.group(1)]
+            return \
+            {"aget": ([MEMORY, "ref", "int"], [element, MEMORY]), "aset": ([MEMORY, "ref", "int", element], [MEMORY]),
+             "newarray": ([MEMORY, "int"], ["ref", MEMORY])}[array.group(1)]
 
         return f"{t} has no {op}"
 
@@ -208,14 +210,15 @@ def _function_arguments(t: str, ins: list[str], outs: list[str]) -> list:
 def _memory(kind: str, k: int, program: Program) -> OpType | str:
     if kind == "new":
         return ([MEMORY], ["ref", MEMORY]) if k < len(program.classes) else f"no class {k}"
-    
+
     fields = list(program.fields.values())
     if k >= len(fields):
         return f"no field {k}"
-    
+
     v = fields[k]
-    
-    return {"get": ([MEMORY, "ref"], [v, MEMORY]), "set": ([MEMORY, "ref", v], [MEMORY]), "init": ([MEMORY, "ref", v], [MEMORY]),
+
+    return {"get": ([MEMORY, "ref"], [v, MEMORY]), "set": ([MEMORY, "ref", v], [MEMORY]),
+            "init": ([MEMORY, "ref", v], [MEMORY]),
             "getstatic": ([MEMORY], [v, MEMORY]), "setstatic": ([MEMORY, v], [MEMORY])}[kind]
 
 
