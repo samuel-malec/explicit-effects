@@ -25,7 +25,7 @@ done
 JVMCI_EXPORTS=("${EXPORTS[@]}")
 # What the feature and the exporter use of the builder, for the image's class path.
 BUILDER_EXPORTS=()
-for package in com.oracle.svm.core.feature com.oracle.svm.hosted com.oracle.svm.hosted.meta; do
+for package in com.oracle.svm.core.feature com.oracle.svm.core.graal.snippets com.oracle.svm.core.thread com.oracle.svm.hosted com.oracle.svm.hosted.meta; do
     BUILDER_EXPORTS+=("--add-exports=org.graalvm.nativeimage.builder/$package=ALL-UNNAMED")
 done
 for package in com.oracle.graal.pointsto com.oracle.graal.pointsto.flow com.oracle.graal.pointsto.flow.context.object \

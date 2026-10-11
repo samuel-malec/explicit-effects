@@ -192,7 +192,7 @@ rules:
 | `forwardAcrossIterations` | 4/2 | **4/0** | 1/0 |
 | `forwardAcrossIterationsPeeled` | 4/2 | **4/1** | 1/1 |
 | `hoistLoadOutOfLoop` | 0/2 | **0/1**, none in the loop | 0/1 |
-| `forwardAcrossVirtualCall` | 1/1 | **1/0** | refused |
+| `forwardAcrossVirtualCall` | 1/1 | **1/0** | 1/0 since step 8 |
 | `Signatures.acrossArray` | 1/1 | **1/0** | 1/0 |
 | `Signatures.acrossField` | 1/1 | **1/0** | 1/0 |
 
@@ -205,8 +205,10 @@ rules:
     iteration, which reads the 1 stored before the loop, or the load on the
     path whose arm stored the value.
   - The loop's load and the other path's load stay, as with our rules.
-- **`forwardAcrossVirtualCall`, which our translation refuses**, is forwarded.
-  Both `Shape.area()` implementations write nothing, so the call kills nothing.
+- **`forwardAcrossVirtualCall`, which our translation refused until step 8**, is
+  forwarded. Both `Shape.area()` implementations write nothing, so the call
+  kills nothing. Since step 8 the rules forward it too, through a dispatch that
+  takes both targets' tokens.
 - **Dead stores stay.** The image keeps 82 stores, counting the copies its
   peeling makes; our rules leave 67 of the export's 76.
   - The dead store Graal does remove in finding 2 goes through a rule in
@@ -295,14 +297,13 @@ multi-kill path ran in real compilations.
   `acrossFinalField` keep their loads in the image while our rules forward
   them. The rules see allocation touch only the rest of memory, which a
   `Counter.value` load isn't in. Mapping allocation to Graal's
-  `INIT_LOCATION` would narrow those too.
+  `INIT_LOCATION` would narrow those too, and step 7 does (below).
 - **Calls outside the program's methods** keep killing everything. The facts
   cover the JDK too, and Native Image's run-time class initialization, a kill
   of `any()`, makes a method touch everything. But narrowing only the
   program's calls keeps a mistake in the facts out of the JDK's code.
 - **Arrays** keep a location per element kind. The tool partitions them too,
   but the image's kills map a partition of an array kind back to the kind.
-which fields it reads and which it writes
 
 ### 5. Correctness
 
@@ -382,3 +383,84 @@ the call goes without any kills.
 - **Only dead stores go back as decisions.** Loads the rules forward are left
   to Graal, which forwards them itself given the facts (finding 1). The
   decisions also leave out stores in methods the translation refuses.
+
+## Precise kill sets (step 7)
+
+On a real program most calls still killed everything
+([`programs/README.md`](../programs/README.md)). Step 7 makes the kill sets as
+precise as the facts allow, while keeping them sound in Native Image's own
+model of memory.
+
+### What changed in the facts
+
+- **Calls the export misread.** Native Image gives the flow of an invoke inlined
+  before its analysis the position of the outermost call site, and several
+  invokes can share it. The exporter looked flows up by the invoke's own
+  bytecode index, so in Are We Fast Yet's image it took 2,257 calls for
+  unresolved, and every method that reaches one touched everything. It now
+  matches by the outermost call site and the target: 182 remain.
+- **Calls the image never makes.** A call that the image's own analysis finds
+  unreachable, or without a target, is one Native Image compiles away: 570 in
+  Are We Fast Yet. Exported from a build, these go to `dead` and add nothing.
+  The standalone analyzer's reasons can be wrong, so there they stay
+  unresolved.
+- **Effects by what Graal says.** A memory node the facts don't model one by one
+  used to make its method touch everything. Now the exporter asks the node.
+  A kill of named locations writes those: a field, an array kind, or one of the
+  VM's own, `vm:identityHashCode`. A kill of `init` allocates. A read of any
+  location only reads, which matters to the tokens but not to a kill set. A
+  kill of any location, a lock, an atomic update and an ordered access still
+  touch everything.
+- **Two nodes Graal says too little about.** An array copy whose element kind
+  Graal can't tell kills any location, but `System.arraycopy` writes array
+  elements only, so it writes every array kind and no field. A `clone` writes
+  only the object it makes, which no caller can have read: it allocates.
+
+### What a narrowed call kills
+
+1. **What its callees may write:** the program's partitions; the platform's
+   fields, by name, which used to be the rest of memory and so `any`; and the
+   VM's own locations they write.
+2. **`init` and what a safepoint may change, whatever the callees:** the three
+   pointers of the thread's allocation buffer, the salt of identity hash
+   codes, the safepoint counter, and the state field of foreign memory
+   sessions. That is the list Native Image kills at its own safepoints
+   (`GC_LOCATIONS` in `SubstrateAllocationSnippets`, and `SafepointSnippets`).
+
+The second part is new, and soundness needs it. Native Image lowers an
+allocation in the mid tier, after the floating reads are built. So the
+allocation code's read of the buffer's top gets the last write of `TLAB.top`
+before it as its memory input. A callee that allocates changes that pointer,
+and a collection at a safepoint in any callee resets it. Steps 2–5 were safe
+for allocating callees only because those killed everything. A callee that
+doesn't allocate, but reaches a safepoint while another thread collects, was a
+gap.
+
+### Controls
+
+- **The controls of steps 2–4 still fail as they must:** LIE prints 167, SPLIT
+  47 and DEAD 183. Every other image prints what the JVM prints.
+- **Leaving out the VM's state** (`-J-Deffects.vm=false`) changes no instruction
+  of `Allocation.across` ([`Allocation.java`](../graal-export/examples/Allocation.java)),
+  which allocates on both sides of a call that collects, and no output of Are
+  We Fast Yet. The allocation code merges its fast and slow paths before any
+  later read, so today's phases read the buffer pointer again after the call
+  anyway. The locations stay: Graal's model requires them, and Native Image
+  declares them at its own safepoints. But this control can't fail today.
+- **Leaving out the platform's fields** (`-J-Deffects.jdk=false`) can't change
+  anything here either. With `-H:-AOTTrivialInline`, no program method reads a
+  platform field itself, and only the program's calls are narrowed. The fields
+  matter once a getter is inlined into its caller.
+
+### Results
+
+| All 49 methods | Native Image | with our kills | with objects told apart | with our dead stores too | Our rules, objects |
+|---|---|---|---|---|---|
+| step 5 | 82/59 | 82/43 | 81/42 | 78/42 | 66/39 |
+| step 7 | 82/59 | **82/41** | **81/40** | **78/40** | 66/39 |
+
+The two loads are in `Signatures.acrossAllocation` and `acrossFinalField`,
+behind calls to callees that allocate. One load is left between the best image
+and our rules: Graal's peeling copies two, and the closed world removes one the
+rules keep. Are We Fast Yet, and what still makes a call kill everything, are
+in [`programs/README.md`](../programs/README.md#precise-kill-sets-step-7).

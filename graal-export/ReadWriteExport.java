@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 
+import com.oracle.graal.pointsto.AbstractAnalysisEngine;
 import com.oracle.graal.pointsto.PointsToAnalysis;
 import com.oracle.graal.pointsto.flow.AccessFieldTypeFlow;
 import com.oracle.graal.pointsto.flow.InvokeTypeFlow;
@@ -22,7 +24,9 @@ import com.oracle.graal.pointsto.meta.PointsToAnalysisMethod;
 import com.oracle.graal.pointsto.standalone.PointsToAnalyzer;
 
 import jdk.graal.compiler.graph.Node;
+import jdk.graal.compiler.nodes.FieldLocationIdentity;
 import jdk.graal.compiler.nodes.Invoke;
+import jdk.graal.compiler.nodes.NamedLocationIdentity;
 import jdk.graal.compiler.nodes.StartNode;
 import jdk.graal.compiler.nodes.StructuredGraph;
 import jdk.graal.compiler.nodes.ValueNode;
@@ -37,11 +41,21 @@ import jdk.graal.compiler.nodes.java.LoadFieldNode;
 import jdk.graal.compiler.nodes.java.LoadIndexedNode;
 import jdk.graal.compiler.nodes.memory.MemoryAccess;
 import jdk.graal.compiler.nodes.memory.MemoryKill;
+import jdk.graal.compiler.nodes.memory.OrderedMemoryAccess;
 import jdk.graal.compiler.nodes.virtual.CommitAllocationNode;
 import jdk.graal.compiler.replacements.nodes.BasicArrayCopyNode;
+import jdk.graal.compiler.replacements.nodes.ObjectClone;
+import jdk.vm.ci.code.BytecodePosition;
 import jdk.vm.ci.meta.JavaKind;
+import org.graalvm.word.LocationIdentity;
 
 public class ReadWriteExport {
+
+    /**
+     * The VM's own locations the facts name, vm:TLAB.top, by name: a feature in the same build
+     * gives them back to Graal.
+     */
+    public static final Map<String, LocationIdentity> VM_LOCATIONS = new ConcurrentHashMap<>();
 
     /** Packages treated as "not the program under analysis" by default. */
     private static final String[] PLATFORM = {
@@ -83,6 +97,16 @@ public class ReadWriteExport {
      * An empty path skips that file; the reports go to {@code report}, null for none.
      */
     public static void export(PointsToAnalysis bb, AnalysisUniverse universe, String jsonPath, String irPath, PrintStream report) {
+        export(bb, universe, jsonPath, irPath, report, false);
+    }
+
+    /**
+     * With {@code compiled}, the analysis is the one the image is compiled from: a call it finds
+     * unreachable, or without a target, is one the image doesn't make, and goes to "dead". The
+     * standalone analyzer's reasons can be wrong (a field a native writes looks always null), so
+     * there such a call may touch anything.
+     */
+    public static void export(PointsToAnalysis bb, AnalysisUniverse universe, String jsonPath, String irPath, PrintStream report, boolean compiled) {
         PrintStream out = report != null ? report : new PrintStream(OutputStream.nullOutputStream());
         TreeMap<String, TreeSet<String>> reads = new TreeMap<>();
         TreeMap<String, TreeSet<String>> writes = new TreeMap<>();
@@ -93,6 +117,9 @@ public class ReadWriteExport {
         TreeMap<String, TreeSet<String>> unknown = new TreeMap<>();
         TreeMap<String, TreeSet<String>> unresolved = new TreeMap<>();
         TreeMap<String, TreeSet<String>> accesses = new TreeMap<>();
+        TreeMap<String, TreeSet<String>> vmWrites = new TreeMap<>();
+        TreeMap<String, TreeSet<String>> unknownReads = new TreeMap<>();
+        TreeMap<String, TreeSet<String>> dead = new TreeMap<>();
 
         for (AnalysisMethod method : universe.getMethods()) {
             if (!method.isReachable() || !(method instanceof PointsToAnalysisMethod ptm)) {
@@ -119,10 +146,9 @@ public class ReadWriteExport {
             }
             if (body != null) {
                 analysed.add(name);
-                Map<Integer, InvokeTypeFlow> flows = new HashMap<>();
-                for (InvokeTypeFlow flow : ptm.getTypeFlow().getMethodFlowsGraph().getInvokes()) {
-                    flows.put(flow.getBci(), flow);
-                }
+                // An invoke inlined before the analysis has its flow at the outermost call
+                // site, which more than one invoke may share: they are told apart by target.
+                Map<String, List<InvokeTypeFlow>> flows = GraphExport.flows(ptm);
                 // What each access's receiver may point to, for the program's
                 // own methods: a field or array access elsewhere may touch any
                 // object with the field or of the kind.
@@ -139,33 +165,47 @@ public class ReadWriteExport {
                             add(unknown, name, "volatile access to " + field + at);
                         }
                     } else if (n instanceof AccessIndexedNode access) {
-                        add(access instanceof LoadIndexedNode ? reads : writes, name, arrayPartition(access.elementKind()));
+                        add(access instanceof LoadIndexedNode ? reads : writes, name, GraphExport.arrayPartition(access.elementKind()));
                         if (pointsTo != null) {
-                            addAccess(accesses, name, access instanceof LoadIndexedNode ? "read" : "write", arrayPartition(access.elementKind()), pointsTo.receivers(access), access);
+                            addAccess(accesses, name, access instanceof LoadIndexedNode ? "read" : "write", GraphExport.arrayPartition(access.elementKind()), pointsTo.receivers(access), access);
                         }
                     } else if (n instanceof BasicArrayCopyNode copy && copy.getElementKind() != null) {
-                        add(reads, name, arrayPartition(copy.getElementKind()));
-                        add(writes, name, arrayPartition(copy.getElementKind()));
+                        add(reads, name, GraphExport.arrayPartition(copy.getElementKind()));
+                        add(writes, name, GraphExport.arrayPartition(copy.getElementKind()));
                         if (pointsTo != null) {
-                            addAccess(accesses, name, "read", arrayPartition(copy.getElementKind()), pointsTo.objects(copy.getSource()), copy);
-                            addAccess(accesses, name, "write", arrayPartition(copy.getElementKind()), pointsTo.objects(copy.getDestination()), copy);
+                            addAccess(accesses, name, "read", GraphExport.arrayPartition(copy.getElementKind()), pointsTo.objects(copy.getSource()), copy);
+                            addAccess(accesses, name, "write", GraphExport.arrayPartition(copy.getElementKind()), pointsTo.objects(copy.getDestination()), copy);
+                        }
+                    } else if (n instanceof BasicArrayCopyNode) {
+                        // An element kind Graal can't tell, so it says the copy kills anything.
+                        // System.arraycopy writes the elements of an array, of some kind, and
+                        // never a field.
+                        for (JavaKind kind : List.of(JavaKind.Byte, JavaKind.Char, JavaKind.Short, JavaKind.Int, JavaKind.Long, JavaKind.Float, JavaKind.Double, JavaKind.Object)) {
+                            add(reads, name, GraphExport.arrayPartition(kind));
+                            add(writes, name, GraphExport.arrayPartition(kind));
                         }
                     } else if (n instanceof AbstractNewObjectNode || n instanceof CommitAllocationNode) {
                         allocates.add(name);
+                    } else if (n instanceof ObjectClone) {
+                        // Graal says a clone kills anything; it writes the object it makes, which
+                        // no caller can have read, and reads all of the one it copies.
+                        allocates.add(name);
+                        add(unknownReads, name, n.getClass().getSimpleName() + at);
                     } else if (n instanceof Invoke invoke) {
                         // No flow, a disabled one or one without callees: the analysis
-                        // found no target. Its reasons can be wrong (a field a native
-                        // writes looks always null), so the call may touch anything.
-                        InvokeTypeFlow flow = flows.get(invoke.bci());
-                        String why = flow == null ? "no flow" : !flow.isFlowEnabled() ? "disabled" : flow.getOriginalCallees().isEmpty() ? "no callees" : null;
+                        // found no target.
+                        List<InvokeTypeFlow> found = flows.get(GraphExport.flowKey(invoke));
+                        String why = found == null ? "no flow"
+                                        : found.stream().noneMatch(InvokeTypeFlow::isFlowEnabled) ? "disabled"
+                                                        : found.stream().allMatch(flow -> flow.getOriginalCallees().isEmpty()) ? "no callees" : null;
                         if (why != null) {
-                            add(unresolved, name, GraphExport.methodKey(invoke.getTargetMethod()) + at + " (" + why + ")");
+                            add(compiled && found != null ? dead : unresolved, name, GraphExport.methodKey(invoke.getTargetMethod()) + at + " (" + why + ")");
                         }
                     } else if (n instanceof FinalFieldBarrierNode && ptm.isConstructor()) {
                         // Ordered by the reference: the translation has a constructor
                         // return its receiver, and every later use take that.
                     } else if ((MemoryKill.isMemoryKill(n) || n instanceof MemoryAccess) && !isBookkeeping(n)) {
-                        add(unknown, name, n.getClass().getSimpleName() + at);
+                        effects(n, name, n.getClass().getSimpleName() + at, reads, writes, allocates, vmWrites, unknown, unknownReads);
                     }
                 }
             }
@@ -253,7 +293,7 @@ public class ReadWriteExport {
             }
         }
 
-        String facts = factsJson(analysed, reads, writes, callees, allocates, unknown, unresolved, accesses, fields);
+        String facts = factsJson(analysed, reads, writes, callees, allocates, unknown, unresolved, accesses, fields, vmWrites, unknownReads, dead);
         if (!jsonPath.isEmpty()) {
             write(jsonPath, "{\n" + facts + "\n}\n");
             out.println();
@@ -283,7 +323,10 @@ public class ReadWriteExport {
                     TreeMap<String, TreeSet<String>> unknown,
                     TreeMap<String, TreeSet<String>> unresolved,
                     TreeMap<String, TreeSet<String>> accesses,
-                    TreeMap<String, boolean[]> fields) {
+                    TreeMap<String, boolean[]> fields,
+                    TreeMap<String, TreeSet<String>> vmWrites,
+                    TreeMap<String, TreeSet<String>> unknownReads,
+                    TreeMap<String, TreeSet<String>> dead) {
         Set<String> allMethods = new TreeSet<>(methods);
         allMethods.addAll(callees.keySet());
         StringBuilder sb = new StringBuilder();
@@ -300,7 +343,10 @@ public class ReadWriteExport {
                             .append(", \"callees\": ").append(jsonArray(callees.get(m)))
                             .append(", \"allocates\": ").append(allocates.contains(m))
                             .append(", \"unknown\": ").append(jsonArray(unknown.get(m)))
-                            .append(", \"unresolved\": ").append(jsonArray(unresolved.get(m)));
+                            .append(", \"unresolved\": ").append(jsonArray(unresolved.get(m)))
+                            .append(", \"vmWrites\": ").append(jsonArray(vmWrites.get(m)))
+                            .append(", \"unknownReads\": ").append(jsonArray(unknownReads.get(m)))
+                            .append(", \"dead\": ").append(jsonArray(dead.get(m)));
             if (accesses.containsKey(m)) {
                 sb.append(", \"accesses\": [").append(String.join(", ", accesses.get(m))).append("]");
             }
@@ -331,6 +377,76 @@ public class ReadWriteExport {
         return n instanceof StartNode || n instanceof ExceptionObjectNode || n instanceof BytecodeExceptionNode || n instanceof ArrayLengthNode;
     }
 
+    /**
+     * A memory node the facts don't model one by one, by what Graal says it does: the locations
+     * it kills, and the one it reads. Synchronization (an ordered access, a lock, a fence, an
+     * atomic update) and a kill of any location may touch anything; a read of any location may
+     * read anything, which matters to the tokens but not to what a call may write.
+     */
+    private static void effects(Node n, String method, String what, TreeMap<String, TreeSet<String>> reads, TreeMap<String, TreeSet<String>> writes,
+                    Set<String> allocates, TreeMap<String, TreeSet<String>> vmWrites, TreeMap<String, TreeSet<String>> unknown,
+                    TreeMap<String, TreeSet<String>> unknownReads) {
+        if (synchronizes(n)) {
+            add(unknown, method, what);
+            return;
+        }
+        if (MemoryKill.isMemoryKill(n)) {
+            LocationIdentity[] killed = MemoryKill.isMultiMemoryKill(n) ? MemoryKill.asMultiMemoryKill(n).getKilledLocationIdentities()
+                            : new LocationIdentity[]{MemoryKill.asSingleMemoryKill(n).getKilledLocationIdentity()};
+            if (java.util.Arrays.stream(killed).anyMatch(LocationIdentity::isAny)) {
+                add(unknown, method, what);
+                return;
+            }
+            for (LocationIdentity killedLocation : killed) {
+                if (killedLocation.isInit()) {
+                    allocates.add(method);
+                } else if (location(killedLocation) instanceof String written) {
+                    add(written.startsWith("vm:") ? vmWrites : writes, method, written);
+                }
+            }
+        }
+        if (n instanceof MemoryAccess access) {
+            LocationIdentity read = access.getLocationIdentity();
+            if (read.isAny()) {
+                add(unknownReads, method, what);
+            } else if (!read.isInit() && location(read) instanceof String location && !location.startsWith("vm:")) {
+                add(reads, method, location);
+            }
+        }
+    }
+
+    private static boolean synchronizes(Node n) {
+        if (n instanceof OrderedMemoryAccess ordered && ordered.ordersMemoryAccesses()) {
+            return true;
+        }
+        String kind = n.getClass().getSimpleName();
+        return kind.contains("Monitor") || kind.contains("CompareAndSwap") || kind.contains("CompareAndExchange") || kind.contains("Atomic") ||
+                        kind.contains("Membar") || kind.contains("Fence");
+    }
+
+    /**
+     * A location as the facts name it: a field, an array kind, or vm: and the name of one of the
+     * VM's own, such as vm:TLAB.top. Null for one that never changes.
+     */
+    private static String location(LocationIdentity location) {
+        if (location.isImmutable()) {
+            return null;
+        }
+        if (location instanceof FieldLocationIdentity field) {
+            return GraphExport.fieldName(field.getField());
+        }
+        if (NamedLocationIdentity.isArrayLocation(location)) {
+            for (JavaKind kind : JavaKind.values()) {
+                if (NamedLocationIdentity.getArrayLocation(kind) == location) {
+                    return GraphExport.arrayPartition(kind);
+                }
+            }
+        }
+        String name = "vm:" + location;
+        VM_LOCATIONS.put(name, location);
+        return name;
+    }
+
     private static void add(TreeMap<String, TreeSet<String>> facts, String method, String fact) {
         facts.computeIfAbsent(method, k -> new TreeSet<>()).add(fact);
     }
@@ -348,19 +464,6 @@ public class ReadWriteExport {
         access.put("receivers", receivers);
         access.put("at", GraphExport.PointsTo.site(node instanceof ValueNode value ? value.getNodeSourcePosition() : null));
         add(accesses, method, GraphExport.toJson(access, 2));
-    }
-
-    /**
-     * An array element's partition, by element kind. boolean[] and byte[]
-     * share one, as they share baload and bastore, and every reference array
-     * is Object[]: an Object[] may be a String[].
-     */
-    private static String arrayPartition(JavaKind kind) {
-        return switch (kind) {
-            case Boolean, Byte -> "byte[]";
-            case Object -> "Object[]";
-            default -> kind.getJavaName() + "[]";
-        };
     }
 
     private static void write(String path, String content) {

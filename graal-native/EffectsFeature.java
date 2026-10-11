@@ -69,8 +69,18 @@ import jdk.vm.ci.meta.ResolvedJavaMethod;
  * as an unsound points-to analysis would, so that a wrong partition shows in the output;</li>
  * <li>{@code effects.decisions}: {@code true} to also remove the stores our rules find dead, in
  * Java (rules.decisions), before Graal compiles;</li>
- * <li>{@code effects.dead}: a position whose stores to claim are dead, the same for decisions.</li>
+ * <li>{@code effects.dead}: a position whose stores to claim are dead, the same for decisions;</li>
+ * <li>{@code effects.only}, {@code effects.skip}: comma-separated prefixes of methods, as the
+ * exporter names them, to narrow the calls of only those methods, or of all but those, so that
+ * what the narrowing does to one method can be measured on its own;</li>
+ * <li>{@code effects.vm}, {@code effects.jdk}: {@code false} to leave the VM's own state, or the
+ * platform's fields, out of what a narrowed call kills: controls, which must break the image.</li>
  * </ul>
+ *
+ * Every narrowed call also kills what a safepoint in its callees may change, as Native Image's
+ * own safepoints do (the thread's allocation buffer, which a collection resets), and the
+ * initialization of what they allocate: Native Image lowers an allocation after the memory graph
+ * is built, so its read of the buffer would otherwise come from before the call.
  */
 public final class EffectsFeature implements InternalFeature {
 
@@ -79,6 +89,10 @@ public final class EffectsFeature implements InternalFeature {
     private final boolean narrow = !System.getProperty("effects.narrow", "true").equals("false");
     private final String partition = System.getProperty("effects.partition", "field");
     private final boolean decisions = System.getProperty("effects.decisions", "false").equals("true");
+    private final boolean vm = !System.getProperty("effects.vm", "true").equals("false");
+    private final boolean platform = !System.getProperty("effects.jdk", "true").equals("false");
+    private final List<String> only = prefixes("effects.only");
+    private final List<String> skip = prefixes("effects.skip");
     private final String label = System.getProperty("effects.label",
                     !narrow ? "graal" : decisions ? "decisions" : partition.equals("field") ? "kills" : "objects");
 
@@ -90,6 +104,8 @@ public final class EffectsFeature implements InternalFeature {
     private final Set<String> dead = new HashSet<>();
     /** The image's fields by name, to give Graal's locations for the partitions. */
     private final Map<String, HostedField> fields = new HashMap<>();
+    /** The VM's state every narrowed call kills: see the class comment. */
+    private final List<LocationIdentity> vmState = new ArrayList<>();
     /** What the low tier leaves of each of the program's methods, and the calls narrowed in it. */
     private final Map<String, String> counts = new ConcurrentHashMap<>();
     private final Map<String, List<String>> narrowed = new ConcurrentHashMap<>();
@@ -105,7 +121,7 @@ public final class EffectsFeature implements InternalFeature {
         Path partitions = out.resolve("accesses.txt");
         try {
             Files.createDirectories(out);
-            ReadWriteExport.export((PointsToAnalysis) impl.getBigBang(), impl.getUniverse(), "", export.toString(), null);
+            ReadWriteExport.export((PointsToAnalysis) impl.getBigBang(), impl.getUniverse(), "", export.toString(), null, true);
             List<String> command = new ArrayList<>(List.of(System.getProperty("effects.uv", "uv"), "run", "--project", System.getProperty("effects.tool", "."),
                             "python", "-m", "effects.kills", export.toString(), "-o", answer.toString(), "--partition", partition));
             if (!partition.equals("field")) {
@@ -152,6 +168,14 @@ public final class EffectsFeature implements InternalFeature {
         for (HostedField field : ((FeatureImpl.BeforeCompilationAccessImpl) access).getUniverse().getFields()) {
             fields.put(name(field), field);
         }
+        // What Native Image's safepoint kills (SafepointSnippets), and initialization.
+        vmState.addAll(List.of(com.oracle.svm.core.graal.snippets.SubstrateAllocationSnippets.GC_LOCATIONS));
+        vmState.add(com.oracle.svm.core.thread.SafepointCheckCounter.getLocationIdentity());
+        HostedField sessionState = fields.get("jdk.internal.foreign.MemorySessionImpl.state");
+        if (sessionState != null) {
+            vmState.add(new FieldLocationIdentity(sessionState));
+        }
+        vmState.add(LocationIdentity.init());
     }
 
     private static String name(jdk.vm.ci.meta.ResolvedJavaField field) {
@@ -165,13 +189,20 @@ public final class EffectsFeature implements InternalFeature {
      * field accesses by the field alone, such as read elimination; any other is killed whole.
      */
     private List<LocationIdentity> locations(String written, Set<String> partitioned) {
+        if (written.equals("init")) {
+            return vm ? List.of(LocationIdentity.init()) : List.of();
+        }
+        if (written.startsWith("vm:")) {
+            LocationIdentity location = ReadWriteExport.VM_LOCATIONS.get(written);
+            return !vm ? List.of() : location != null ? List.of(location) : null; // null: unnamed here, so anything
+        }
         String whole = written.contains("@") ? written.substring(0, written.indexOf('@')) : written;
         if (whole.endsWith("[]")) {
             return arrayKinds(whole).stream().map(NamedLocationIdentity::getArrayLocation).toList();
         }
         HostedField field = fields.get(whole);
-        if (field == null) {
-            return List.of(); // the image never accesses it, so there is nothing to kill
+        if (field == null || (!platform && !ReadWriteExport.isUnderAnalysis(field.getDeclaringClass().toJavaName(true)))) {
+            return List.of(); // the image never accesses it, so there is nothing to kill; or the control
         }
         return partitioned.contains(whole) ? List.of(new FieldLocationIdentity(field), new FieldLocationIdentity(field, false, written))
                         : List.of(new FieldLocationIdentity(field));
@@ -236,6 +267,16 @@ public final class EffectsFeature implements InternalFeature {
         return program.stream().anyMatch(prefix -> !prefix.isEmpty() && holder.startsWith(prefix));
     }
 
+    private static List<String> prefixes(String property) {
+        return java.util.Arrays.stream(System.getProperty(property, "").split(",")).filter(prefix -> !prefix.isEmpty()).toList();
+    }
+
+    /** Whether the calls in a method are narrowed: effects.only and effects.skip limit it. */
+    private boolean narrowsIn(ResolvedJavaMethod method) {
+        String name = key(method);
+        return (only.isEmpty() || only.stream().anyMatch(name::startsWith)) && skip.stream().noneMatch(name::startsWith);
+    }
+
     /** As the exporter names a method: Examples.length(LExamples$Link;)I. */
     private static String key(ResolvedJavaMethod method) {
         return method.getDeclaringClass().toJavaName(true) + "." + method.getName() + method.getSignature().toMethodDescriptor();
@@ -267,7 +308,11 @@ public final class EffectsFeature implements InternalFeature {
                 return null;
             }
             for (String partitionWritten : partitions) {
-                all.addAll(locations(partitionWritten, partitioned));
+                List<LocationIdentity> locations = locations(partitionWritten, partitioned);
+                if (locations == null) {
+                    return null;
+                }
+                all.addAll(locations);
             }
         }
         return all.toArray(new LocationIdentity[0]);
@@ -343,12 +388,17 @@ public final class EffectsFeature implements InternalFeature {
             List<String> calls = new ArrayList<>();
             removeDeadStores(graph, calls);
             Set<String> partitioned = located.isEmpty() ? Set.of() : partition(graph, calls);
+            boolean narrows = narrowsIn(graph.method());
             for (Node node : graph.getNodes()) {
-                if (node instanceof Invoke invoke && invoke.callTarget() instanceof MethodCallTargetNode target) {
+                if (narrows && node instanceof Invoke invoke && invoke.callTarget() instanceof MethodCallTargetNode target) {
                     LocationIdentity[] locations = killsOf(target, partitioned);
                     if (locations != null) {
-                        invoke.setKilledLocationIdentities(locations);
-                        LocationIdentity[] set = Invoke.killSet(locations);
+                        List<LocationIdentity> killed = new ArrayList<>(List.of(locations));
+                        if (vm) {
+                            killed.addAll(vmState);
+                        }
+                        invoke.setKilledLocationIdentities(killed.toArray(new LocationIdentity[0]));
+                        LocationIdentity[] set = Invoke.killSet(java.util.Arrays.stream(locations).filter(l -> !l.isInit() && !vmState.contains(l)).toArray(LocationIdentity[]::new));
                         calls.add(String.format("%s kills %s", probeName(target.targetMethod()), set.length == 0 ? "nothing"
                                         : java.util.Arrays.stream(set).map(l -> simple(l.toString())).collect(Collectors.joining(" "))));
                     }

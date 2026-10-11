@@ -31,3 +31,11 @@ DUMP_IR=out/examples.allocsens.json ./run-dump.sh Examples -H:AnalysisContextSen
 That also switches off the analysis's primitive tracking and predicates, which
 makes far more of the JDK reachable from a program that prints; see
 [`src/effects/README.md`](../src/effects/README.md).
+
+Each method's facts also say what it does to memory beyond its field and array
+accesses, by what Graal says each node does: `allocates`; `vmWrites`, the VM's
+own locations it writes, such as `vm:identityHashCode`; `unknownReads`, nodes
+that may read any location; `unknown`, nodes that may write anything (no
+location, or synchronization); `unresolved`, calls without a target; and,
+exported from a native-image build, `dead`, calls the image's own analysis
+proves it never makes.

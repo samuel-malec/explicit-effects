@@ -17,13 +17,16 @@
 #                              # the same for decisions: a store that is read claimed dead
 #   ALLOCSENS=1 ./run.sh Awfy  # every image with allocation sites, so that the analysis is
 #                              # the same in all four: out/awfy-allocsens/
+#   ONLY="graal kills" TAG=sym EXTRA="-H:-DeleteLocalSymbols" ./run.sh Awfy
+#                              # only some of the images, into out/awfy-sym/, with more
+#                              # native-image options: here, the symbols perf needs
 #
 # A fourth image (decisions) also removes the stores our rules find dead in Java.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 EXAMPLE=${1:?usage: run.sh <a class of graal-export/examples, or a program of programs/>}
 PROGRAM="$REPO/programs/$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')"
-NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${SPLIT:+-split}${DEAD:+-dead}${ALLOCSENS:+-allocsens}
+NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${SPLIT:+-split}${DEAD:+-dead}${ALLOCSENS:+-allocsens}${TAG:+-$TAG}
 OUT="$HERE/out/$NAME"
 MAIN=$EXAMPLE
 SOURCES=("$EXPORTER/examples/$EXAMPLE.java")
@@ -45,6 +48,10 @@ elif [[ -n "${SPLIT:-}" ]]; then
 elif [[ -n "${DEAD:-}" ]]; then
     MODES=(decisions)
 fi
+if [[ -n "${ONLY:-}" ]]; then
+    read -r -a MODES <<< "$ONLY"
+fi
+read -r -a EXTRA_OPTIONS <<< "${EXTRA:-}"
 
 rm -rf "$OUT"
 mkdir -p "$OUT/classes"
@@ -90,7 +97,7 @@ for mode in "${MODES[@]}"; do
             -cp "$OUT/classes:$HERE/classes" --features=EffectsFeature -EHOME -EPATH \
             -J-Deffects.out="$OUT/$mode" -J-Deffects.program="$SCOPE" -J-Deffects.narrow=$narrow \
             -J-Deffects.tool="$REPO" -J-Deffects.uv="$(command -v uv)" ${LIE:+"-J-Deffects.lie=$LIE"} "${OBJECTS[@]}" \
-            -H:+UnlockExperimentalVMOptions -H:-AOTTrivialInline \
+            -H:+UnlockExperimentalVMOptions -H:-AOTTrivialInline "${EXTRA_OPTIONS[@]}" \
             "$MAIN" -o "$OUT/$mode/$NAME" > "$OUT/$mode.log" 2>&1; then
         tail -40 "$OUT/$mode.log"
         exit 1

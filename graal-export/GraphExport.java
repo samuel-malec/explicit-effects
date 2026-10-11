@@ -82,8 +82,13 @@ import jdk.graal.compiler.nodes.java.NewInstanceNode;
 import jdk.graal.compiler.nodes.java.StoreFieldNode;
 import jdk.graal.compiler.nodes.util.GraphUtil;
 import jdk.graal.compiler.phases.schedule.SchedulePhase;
+import jdk.graal.compiler.nodes.java.InstanceOfNode;
+import jdk.graal.compiler.nodes.java.NewArrayNode;
 import jdk.graal.compiler.nodes.virtual.AllocatedObjectNode;
 import jdk.graal.compiler.nodes.virtual.CommitAllocationNode;
+import jdk.graal.compiler.nodes.virtual.VirtualArrayNode;
+import jdk.graal.compiler.nodes.virtual.VirtualInstanceNode;
+import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.code.BytecodePosition;
 import jdk.vm.ci.meta.ResolvedJavaField;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
@@ -122,12 +127,7 @@ final class GraphExport {
         StructuredGraph.ScheduleResult schedule = graph.getLastSchedule();
         ControlFlowGraph cfg = schedule.getCFG();
 
-        Map<Integer, InvokeTypeFlow> flowsByBci = new TreeMap<>();
-        for (InvokeTypeFlow flow : method.getTypeFlow().getMethodFlowsGraph().getInvokes()) {
-            if (flowsByBci.put(flow.getBci(), flow) != null) {
-                unsupported.add("two invoke flows at bci " + flow.getBci());
-            }
-        }
+        Map<String, List<InvokeTypeFlow>> flowsByBci = flows(method);
 
         PointsTo pointsTo = new PointsTo(bb, method);
         Map<String, String> values = new TreeMap<>();
@@ -293,7 +293,7 @@ final class GraphExport {
     }
 
     private static Map<String, Object> exportBlock(HIRBlock block, StructuredGraph.ScheduleResult schedule,
-                    Map<Integer, InvokeTypeFlow> flowsByBci, PointsTo pointsTo, Map<String, String> values, List<String> unsupported) {
+                    Map<String, List<InvokeTypeFlow>> flowsByBci, PointsTo pointsTo, Map<String, String> values, List<String> unsupported) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", block.getId());
 
@@ -358,7 +358,7 @@ final class GraphExport {
      * An op for a node that touches memory, null for one that provably does
      * not. Anything else is recorded in {@code unsupported}.
      */
-    private static Map<String, Object> exportNode(FixedNode node, Map<Integer, InvokeTypeFlow> flowsByBci,
+    private static Map<String, Object> exportNode(FixedNode node, Map<String, List<InvokeTypeFlow>> flowsByBci,
                     Map<String, String> values, List<String> unsupported) {
         if (node instanceof Invoke invoke) {
             return exportInvoke(invoke, flowsByBci);
@@ -387,14 +387,11 @@ final class GraphExport {
             op.put("bci", bci(node));
             return op;
         }
-        if (isControl(node) || isFreshOrImmutable(node)) {
-            return null;
-        }
-        unsupported.add(node.getClass().getSimpleName() + " at bci " + bci(node));
+        // Anything else the translation takes from the scheduled nodes, or refuses itself.
         return null;
     }
 
-    private static Map<String, Object> exportInvoke(Invoke invoke, Map<Integer, InvokeTypeFlow> flowsByBci) {
+    private static Map<String, Object> exportInvoke(Invoke invoke, Map<String, List<InvokeTypeFlow>> flowsByBci) {
         Map<String, Object> op = new LinkedHashMap<>();
         op.put("kind", "invoke");
         op.put("node", invoke.asFixedNode().getId());
@@ -402,15 +399,19 @@ final class GraphExport {
         op.put("target", methodKey(invoke.getTargetMethod()));
 
         List<Object> callees = new ArrayList<>();
-        InvokeTypeFlow flow = flowsByBci.get(invoke.bci());
+        List<InvokeTypeFlow> found = flowsByBci.get(flowKey(invoke));
         String status;
-        if (flow == null) {
+        if (found == null) {
             status = "missing";
-        } else if (!flow.isFlowEnabled()) {
+        } else if (found.stream().noneMatch(InvokeTypeFlow::isFlowEnabled)) {
             status = "disabled";
         } else {
-            for (AnalysisMethod callee : flow.getOriginalCallees()) {
-                callees.add(methodKey(callee));
+            for (InvokeTypeFlow flow : found) {
+                for (AnalysisMethod callee : flow.getOriginalCallees()) {
+                    if (!callees.contains(methodKey(callee))) {
+                        callees.add(methodKey(callee));
+                    }
+                }
             }
             status = callees.isEmpty() ? "no-callees" : "ok";
         }
@@ -429,7 +430,7 @@ final class GraphExport {
                         node instanceof MethodCallTargetNode);
     }
 
-    private static Map<String, Object> exportScheduledNode(Node node, ControlFlowGraph cfg, Map<Integer, InvokeTypeFlow> flowsByBci, PointsTo pointsTo) {
+    private static Map<String, Object> exportScheduledNode(Node node, ControlFlowGraph cfg, Map<String, List<InvokeTypeFlow>> flowsByBci, PointsTo pointsTo) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", node.getId());
         out.put("op", node.getClass().getSimpleName().replaceAll("Node$", ""));
@@ -461,15 +462,53 @@ final class GraphExport {
             out.put("index", param.index());
         } else if (node instanceof ConstantNode constant) {
             out.put("value", constant.getValue().toValueString());
+            if (constant.getValue() instanceof jdk.vm.ci.meta.JavaConstant value && value.getJavaKind() == JavaKind.Object && !value.isNull()) {
+                out.put("object", value.toString()); // two objects of one type differ here
+            }
         } else if (node instanceof AccessFieldNode access) {
             out.put("field", fieldName(access.field()));
             out.put("receivers", pointsTo.receivers(access));
             out.put("at", PointsTo.site(access.getNodeSourcePosition()));
         } else if (node instanceof AccessIndexedNode access) {
+            out.put("kind", arrayPartition(access.elementKind()));
             out.put("receivers", pointsTo.receivers(access));
             out.put("at", PointsTo.site(access.getNodeSourcePosition()));
         } else if (node instanceof NewInstanceNode allocation) {
             out.put("class", allocation.instanceClass().toJavaName(true));
+        } else if (node instanceof NewArrayNode allocation) {
+            out.put("kind", arrayPartition(allocation.elementType().getJavaKind()));
+        } else if (node instanceof InstanceOfNode test) {
+            out.put("class", test.type().getType().toJavaName(true));
+        } else if (node instanceof jdk.graal.compiler.nodes.ShortCircuitOrNode or) {
+            out.put("negated", List.of(or.isXNegated(), or.isYNegated()));
+        } else if (node instanceof VirtualInstanceNode object) {
+            out.put("class", object.type().toJavaName(true));
+            List<Object> fields = new ArrayList<>();
+            for (int i = 0; i < object.entryCount(); i++) {
+                fields.add(fieldName(object.field(i)));
+            }
+            out.put("fields", fields);
+        } else if (node instanceof VirtualArrayNode array) {
+            out.put("kind", arrayPartition(array.componentType().getJavaKind()));
+            out.put("length", array.entryCount());
+        } else if (node instanceof CommitAllocationNode commit) {
+            // The objects it makes, and their fields' or elements' values, object by object.
+            List<Object> objects = new ArrayList<>();
+            List<Object> values = new ArrayList<>();
+            boolean locked = false;
+            for (int i = 0; i < commit.getVirtualObjects().size(); i++) {
+                objects.add(commit.getVirtualObjects().get(i).getId());
+                locked |= !commit.getLocks(i).isEmpty();
+            }
+            for (ValueNode value : commit.getValues()) {
+                values.add(value == null ? null : value.getId());
+            }
+            out.put("objects", objects);
+            out.put("values", values);
+            out.put("locked", locked);
+        } else if (node instanceof AllocatedObjectNode allocated) {
+            out.put("object", allocated.getVirtualObject().getId());
+            out.put("receivers", pointsTo.objects(allocated)); // what it may be: where it was allocated
         } else if (node instanceof Invoke invoke) {
             List<Object> args = new ArrayList<>();
             for (ValueNode arg : invoke.callTarget().arguments()) {
@@ -579,6 +618,38 @@ final class GraphExport {
     }
 
     /** The name and the descriptor: what tells overloads apart. */
+    /**
+     * A method's invoke flows by the position the analysis gives them: for an invoke inlined
+     * before it, the outermost call site, which more than one invoke may share.
+     */
+    static Map<String, List<InvokeTypeFlow>> flows(PointsToAnalysisMethod method) {
+        Map<String, List<InvokeTypeFlow>> flows = new HashMap<>();
+        for (InvokeTypeFlow flow : method.getTypeFlow().getMethodFlowsGraph().getInvokes()) {
+            flows.computeIfAbsent(flow.getBci() + " " + methodKey(flow.getTargetMethod()), k -> new ArrayList<>()).add(flow);
+        }
+        return flows;
+    }
+
+    /** The key of an invoke's flows in {@link #flows}. */
+    static String flowKey(Invoke invoke) {
+        BytecodePosition position = invoke.asFixedNode().getNodeSourcePosition();
+        while (position != null && position.getCaller() != null) {
+            position = position.getCaller();
+        }
+        int bci = position != null ? position.getBCI()
+                        : com.oracle.graal.pointsto.AbstractAnalysisEngine.syntheticSourcePosition(invoke.asFixedNode(), invoke.asFixedNode().graph().method()).getBCI();
+        return bci + " " + methodKey(invoke.getTargetMethod());
+    }
+
+    /** An array element's partition, by element kind: boolean[] and byte[] share one, and every reference array is Object[]. */
+    static String arrayPartition(JavaKind kind) {
+        return switch (kind) {
+            case Boolean, Byte -> "byte[]";
+            case Object -> "Object[]";
+            default -> kind.getJavaName() + "[]";
+        };
+    }
+
     static String methodKey(ResolvedJavaMethod method) {
         // An indirect call, as Native Image makes for a C function, names no method.
         return method == null ? "<indirect>" : methodName(method) + method.getSignature().toMethodDescriptor();
