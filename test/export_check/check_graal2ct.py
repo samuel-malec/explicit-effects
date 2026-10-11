@@ -41,16 +41,19 @@ def ops(lam: Lambda) -> list[str]:
 
 def check_examples_translate() -> None:
     """Every method of Examples translates and passes the static-single-use
-    check, except main, which allocates, and forwardAcrossVirtualCall, whose
-    interface call has two targets."""
+    check. main's allocations, which escape analysis made, become new_k, and
+    their fields' first values init_k. forwardAcrossVirtualCall's interface call
+    has two targets: it calls a dispatch that may do what either does."""
     program, translation = translate()
-    expected = {"Examples.main": "allocation", "Examples.forwardAcrossVirtualCall": "with 2 targets"}
-    assert translation.refused.keys() == expected.keys(), translation.refused
-    for key, reason in expected.items():
-        assert reason in translation.refused[key], translation.refused[key]
+    assert not translation.refused, translation.refused
+    main = [i for lam in structure(program, "Examples_main").lambdas for i in lam.body]
+    assert any(i.type == "heap" and i.op.startswith("new_") for i in main), "main allocates"
+    assert any(i.type == "heap" and i.op.startswith("init_") for i in main), "main initializes what it allocates"
+    calls = {i.type for lam in structure(program, "Examples_forwardAcrossVirtualCall").lambdas for i in lam.body if i.op == "run"}
+    assert any(c.startswith("dispatch_") for c in calls), calls
     errors = check(program)
     assert not errors, errors[:5]
-    print("ok   Examples translates, every λ passes the static-single-use check; main and the two-target call are refused")
+    print("ok   Examples translates, every λ passes the static-single-use check; main allocates, a two-target call dispatches")
 
 
 def check_heap_is_threaded() -> None:
@@ -346,9 +349,10 @@ def check_kills_for_graal() -> None:
     """What the round trip tells Graal about each method: the fields and array
     kinds it, or anything it calls, may write, which a call to it then kills.
     length writes nothing; countInto for a Logger writes Logger.count; fill
-    writes int[]. A method that allocates, as item and make do, or reaches a
-    monitor, a volatile store, a native or an unresolved call, may write
-    anything, and so may main. With objects told apart, in Aliasing, countInto
+    writes int[]. A method that allocates, as item and make do, writes the
+    initialization of what it allocates and the fields its constructor stores.
+    One that reaches a monitor, a volatile store, a native or an unresolved call
+    may write anything, and so may main. With objects told apart, in Aliasing, countInto
     writes Counter.value only of the counters passed to it, which is not the
     partition of forwardAcrossCallOnOtherObject's own counter; each access has
     its partition, two in forwardPastOtherObject and one in its control."""
@@ -364,7 +368,9 @@ def check_kills_for_graal() -> None:
     s = "Signatures"
     assert written[f"{s}.fill([I)V"] == ("int[]",)
     assert written[f"{s}.log(L{s}$Logger;)V"] == (f"{s}$Logger.count",)
-    for method in ("item(I)L{0}$Item;", "make()L{0}$Box;", "acrossMonitor(L{0}$Counter;L{0}$Box;)I",
+    assert written[f"{s}.item(I)L{s}$Item;"] == (f"{s}$Item.id", "init")
+    assert written[f"{s}.make()L{s}$Box;"] == ("init",)
+    for method in ("acrossMonitor(L{0}$Counter;L{0}$Box;)I",
                    "acrossVolatile(L{0}$Counter;L{0}$Flag;)I", "acrossNative(L{0}$Counter;)I",
                    "acrossUnresolved(L{0}$Counter;L{0}$Sink;)I"):
         assert written[f"{s}.{method.format(s)}"] == ANY, method
@@ -426,7 +432,9 @@ def check_object_partitions() -> None:
     too: countInto writes Counter.value of other only, so of
     forwardAcrossCallOnOtherObject's two Counter.value partitions it writes
     one. An access whose objects the analysis can't name may touch any object
-    with the field, so it joins them all. Named by type, as the analysis
+    with the field, so it joins them all, and the field of an object no listed
+    access of it names, as a new object's can be, is in that access's
+    partition, under both object partitionings. Named by type, as the analysis
     does by default, Examples has one object per class: object-field
     partitions are the field partitions, object partitions one per class."""
     facts, _ = load(ALIASING)
@@ -462,6 +470,16 @@ def check_object_partitions() -> None:
     assert {joined(f, r) for _, f, r in accesses(blind.methods[count]) if f == value} == \
            {joined(f, r) for _, f, r in accesses(blind.methods[call]) if f == value}
 
+    hidden = copy.deepcopy(facts)  # every access of Counter.value through a reference the analysis can't name
+    for e in hidden.methods.values():
+        for access in e.get("accesses", ()):
+            if access["field"] == value:
+                access["receivers"] = None
+    seen = next(r for e in hidden.methods.values() for _, f, r in accesses(e) if f == f"{a}$Counter.other" and r)
+    for partitioning in (by_object, by_object_field):
+        part = partitioning(hidden)
+        assert part(value, seen) == part(value, None), (partitioning.__name__, part(value, seen), part(value, None))
+
     facts, _ = load(EXAMPLES)
     assert analyse(facts, by_object_field(facts)).partitions == analyse(facts, by_field).partitions
     classes = analyse(facts, by_object(facts)).partitions
@@ -478,6 +496,7 @@ def check_the_parser_reads_the_output_back() -> None:
         program, _ = translate(partition)
         module = parser.parse(to_text(program))
         assert list(module.fields.items()) == list(program.fields.items()) and module.classes == program.classes
+        assert module.constants == program.constants
         assert list(module.structures) == [s.name for s in program.structures]
         for s in program.structures:
             parsed = module.structures[s.name].lambdas

@@ -1,43 +1,43 @@
 {
   "methods": {
-    "Aliasing$Counter.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Aliasing$Link.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V": {"reads": ["Aliasing$Counter.value", "Aliasing$Link.next"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:6"}, {"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:16"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:11"}]},
-    "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V": {"reads": ["Aliasing$Counter.value", "Aliasing$Link.next"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:6"}, {"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:16"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:11"}]},
-    "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.other", "Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:1"}, {"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:12"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:19"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
-    "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.other", "Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:1"}, {"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:12"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:19"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
-    "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2"}]},
-    "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2"}]},
-    "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:170", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34"}]},
-    "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:146"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34"}]},
-    "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:60"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
-    "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:39"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
-    "Aliasing.length(LAliasing$Link;)I": {"reads": ["Aliasing$Link.next"], "writes": [], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "accesses": [{"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.length(LAliasing$Link;)I:10"}]},
-    "Aliasing.main([Ljava/lang/String;)V": {"reads": [], "writes": ["Aliasing$Link.next", "Aliasing.result"], "callees": ["Aliasing$Counter.<init>()V", "Aliasing$Link.<init>()V", "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I"], "allocates": true, "unknown": [], "unresolved": [], "accesses": [{"kind": "write", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0"], "at": "Aliasing.main([Ljava/lang/String;)V:16"}, {"kind": "write", "field": "Aliasing.result", "receivers": ["Aliasing.<statics>"], "at": "Aliasing.main([Ljava/lang/String;)V:256"}]},
-    "java.lang.Boolean.booleanValue()Z": {"reads": ["java.lang.Boolean.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Boolean.valueOf(Z)Ljava/lang/Boolean;": {"reads": [], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Byte.byteValue()B": {"reads": ["java.lang.Byte.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Byte.valueOf(B)Ljava/lang/Byte;": {"reads": ["Object[]"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Character.<init>(C)V": {"reads": [], "writes": ["java.lang.Character.value"], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Character.charValue()C": {"reads": ["java.lang.Character.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Character.valueOf(C)Ljava/lang/Character;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Character.<init>(C)V"], "allocates": true, "unknown": [], "unresolved": []},
-    "java.lang.Double.<init>(D)V": {"reads": [], "writes": ["java.lang.Double.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Double.doubleValue()D": {"reads": ["java.lang.Double.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Double.valueOf(D)Ljava/lang/Double;": {"reads": [], "writes": [], "callees": ["java.lang.Double.<init>(D)V"], "allocates": true, "unknown": [], "unresolved": []},
-    "java.lang.Float.<init>(F)V": {"reads": [], "writes": ["java.lang.Float.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Float.floatValue()F": {"reads": ["java.lang.Float.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Float.valueOf(F)Ljava/lang/Float;": {"reads": [], "writes": [], "callees": ["java.lang.Float.<init>(F)V"], "allocates": true, "unknown": [], "unresolved": []},
-    "java.lang.Integer.<init>(I)V": {"reads": [], "writes": ["java.lang.Integer.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Integer.intValue()I": {"reads": ["java.lang.Integer.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Integer.valueOf(I)Ljava/lang/Integer;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Integer.<init>(I)V"], "allocates": true, "unknown": [], "unresolved": []},
-    "java.lang.Long.<init>(J)V": {"reads": [], "writes": ["java.lang.Long.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Long.longValue()J": {"reads": ["java.lang.Long.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Long.valueOf(J)Ljava/lang/Long;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Long.<init>(J)V"], "allocates": true, "unknown": [], "unresolved": []},
-    "java.lang.Number.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Object.<init>()V": {"reads": [], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Short.<init>(S)V": {"reads": [], "writes": ["java.lang.Short.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Short.shortValue()S": {"reads": ["java.lang.Short.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": []},
-    "java.lang.Short.valueOf(S)Ljava/lang/Short;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Short.<init>(S)V"], "allocates": true, "unknown": [], "unresolved": []}
+    "Aliasing$Counter.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "Aliasing$Link.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V": {"reads": ["Aliasing$Counter.value", "Aliasing$Link.next"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:6"}, {"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:16"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "at": "Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V:11"}]},
+    "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V": {"reads": ["Aliasing$Counter.value", "Aliasing$Link.next"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:6"}, {"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:16"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V:11"}]},
+    "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.other", "Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:1"}, {"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:12"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:19"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.other", "Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.other", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:1"}, {"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:12"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:19"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "at": "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countIntoAlias(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2"}]},
+    "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.countInto(LAliasing$Counter;LAliasing$Link;)V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "at": "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I:2"}]},
+    "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:170", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "at": "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34"}]},
+    "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:24"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:146"], "at": "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I:34"}]},
+    "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24", "Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:60"], "at": "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I": {"reads": ["Aliasing$Counter.value"], "writes": ["Aliasing$Counter.value"], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:11"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:2"}, {"kind": "write", "field": "Aliasing$Counter.value", "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:39"], "at": "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I:7"}]},
+    "Aliasing.length(LAliasing$Link;)I": {"reads": ["Aliasing$Link.next"], "writes": [], "callees": ["Aliasing.length(LAliasing$Link;)I"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "read", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0", "Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "at": "Aliasing.length(LAliasing$Link;)I:10"}]},
+    "Aliasing.main([Ljava/lang/String;)V": {"reads": [], "writes": ["Aliasing$Link.next", "Aliasing.result"], "callees": ["Aliasing$Counter.<init>()V", "Aliasing$Link.<init>()V", "Aliasing.deadStorePastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.deadStorePastOtherObject(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.forwardAcrossCallOnAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "Aliasing.forwardAcrossCallOnOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;)I", "Aliasing.forwardIntoLoopPastAliasControl(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "Aliasing.forwardIntoLoopPastOtherObject(LAliasing$Counter;LAliasing$Counter;LAliasing$Link;I)I", "Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I", "Aliasing.forwardPastOtherObject(LAliasing$Counter;LAliasing$Counter;)I"], "allocates": true, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": [], "accesses": [{"kind": "write", "field": "Aliasing$Link.next", "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0"], "at": "Aliasing.main([Ljava/lang/String;)V:16"}, {"kind": "write", "field": "Aliasing.result", "receivers": ["Aliasing.<statics>"], "at": "Aliasing.main([Ljava/lang/String;)V:256"}]},
+    "java.lang.Boolean.booleanValue()Z": {"reads": ["java.lang.Boolean.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Boolean.valueOf(Z)Ljava/lang/Boolean;": {"reads": [], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Byte.byteValue()B": {"reads": ["java.lang.Byte.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Byte.valueOf(B)Ljava/lang/Byte;": {"reads": ["Object[]"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Character.<init>(C)V": {"reads": [], "writes": ["java.lang.Character.value"], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Character.charValue()C": {"reads": ["java.lang.Character.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Character.valueOf(C)Ljava/lang/Character;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Character.<init>(C)V"], "allocates": true, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Double.<init>(D)V": {"reads": [], "writes": ["java.lang.Double.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Double.doubleValue()D": {"reads": ["java.lang.Double.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Double.valueOf(D)Ljava/lang/Double;": {"reads": [], "writes": [], "callees": ["java.lang.Double.<init>(D)V"], "allocates": true, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Float.<init>(F)V": {"reads": [], "writes": ["java.lang.Float.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Float.floatValue()F": {"reads": ["java.lang.Float.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Float.valueOf(F)Ljava/lang/Float;": {"reads": [], "writes": [], "callees": ["java.lang.Float.<init>(F)V"], "allocates": true, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Integer.<init>(I)V": {"reads": [], "writes": ["java.lang.Integer.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Integer.intValue()I": {"reads": ["java.lang.Integer.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Integer.valueOf(I)Ljava/lang/Integer;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Integer.<init>(I)V"], "allocates": true, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Long.<init>(J)V": {"reads": [], "writes": ["java.lang.Long.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Long.longValue()J": {"reads": ["java.lang.Long.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Long.valueOf(J)Ljava/lang/Long;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Long.<init>(J)V"], "allocates": true, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Number.<init>()V": {"reads": [], "writes": [], "callees": ["java.lang.Object.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Object.<init>()V": {"reads": [], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Short.<init>(S)V": {"reads": [], "writes": ["java.lang.Short.value"], "callees": ["java.lang.Number.<init>()V"], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Short.shortValue()S": {"reads": ["java.lang.Short.value"], "writes": [], "callees": [], "allocates": false, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []},
+    "java.lang.Short.valueOf(S)Ljava/lang/Short;": {"reads": ["Object[]"], "writes": [], "callees": ["java.lang.Short.<init>(S)V"], "allocates": true, "unknown": [], "unresolved": [], "vmWrites": [], "unknownReads": [], "dead": []}
   },
   "fields": {
     "Aliasing$Counter.other": {"read": true, "written": false},
@@ -1686,10 +1686,10 @@
           "preds": [],
           "nodes": [
             {"id": 1, "op": "Parameter", "type": "ref", "in": [], "index": 0, "bci": -1},
-            {"id": 272, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 0},
+            {"id": 272, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Link", "fields": ["Aliasing$Link.next"], "bci": 0},
             {"id": 270, "op": "Constant", "type": "ref", "in": [], "value": "null", "bci": -1},
-            {"id": 273, "op": "CommitAllocation", "type": "void", "in": [272, 270], "bci": -6},
-            {"id": 274, "op": "AllocatedObject", "type": "ref", "in": [272], "bci": 0},
+            {"id": 273, "op": "CommitAllocation", "type": "void", "in": [272, 270], "objects": [272], "values": [270], "locked": false, "bci": -6},
+            {"id": 274, "op": "AllocatedObject", "type": "ref", "in": [272], "object": 272, "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:0"], "bci": 0},
             {"id": 4, "op": "InvokeWithException", "type": "void", "in": [], "args": [274], "target": "Aliasing$Link.<init>()V", "callees": ["Aliasing$Link.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 4}
           ],
           "ops": [
@@ -1706,9 +1706,9 @@
           "id": 1,
           "preds": [0],
           "nodes": [
-            {"id": 276, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 9},
-            {"id": 277, "op": "CommitAllocation", "type": "void", "in": [276, 270], "bci": -6},
-            {"id": 278, "op": "AllocatedObject", "type": "ref", "in": [276], "bci": 9},
+            {"id": 276, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Link", "fields": ["Aliasing$Link.next"], "bci": 9},
+            {"id": 277, "op": "CommitAllocation", "type": "void", "in": [276, 270], "objects": [276], "values": [270], "locked": false, "bci": -6},
+            {"id": 278, "op": "AllocatedObject", "type": "ref", "in": [276], "object": 276, "receivers": ["Aliasing$Link@Aliasing.main([Ljava/lang/String;)V:9"], "bci": 9},
             {"id": 13, "op": "InvokeWithException", "type": "void", "in": [], "args": [278], "target": "Aliasing$Link.<init>()V", "callees": ["Aliasing$Link.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 13}
           ],
           "ops": [
@@ -1758,12 +1758,12 @@
           "nodes": [
             {"id": 28, "op": "Pi", "type": "ref", "in": [1], "bci": 20},
             {"id": 27, "op": "ArrayLength", "type": "int", "in": [28], "bci": 20},
-            {"id": 280, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 24},
+            {"id": 280, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 24},
             {"id": 271, "op": "Constant", "type": "int", "in": [], "value": "0", "bci": -1},
-            {"id": 281, "op": "CommitAllocation", "type": "void", "in": [280, 271, 271], "bci": -6},
+            {"id": 281, "op": "CommitAllocation", "type": "void", "in": [280, 271, 271], "objects": [280], "values": [271, 271], "locked": false, "bci": -6},
             {"id": 32, "op": "Constant", "type": "int", "in": [], "value": "3", "bci": 21},
             {"id": 33, "op": "Add", "type": "int", "in": [27, 32], "bci": 22},
-            {"id": 282, "op": "AllocatedObject", "type": "ref", "in": [280], "bci": 24},
+            {"id": 282, "op": "AllocatedObject", "type": "ref", "in": [280], "object": 280, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:24"], "bci": 24},
             {"id": 30, "op": "InvokeWithException", "type": "void", "in": [], "args": [282], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 28}
           ],
           "ops": [
@@ -1780,9 +1780,9 @@
           "id": 5,
           "preds": [4],
           "nodes": [
-            {"id": 284, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 32},
-            {"id": 285, "op": "CommitAllocation", "type": "void", "in": [284, 271, 271], "bci": -6},
-            {"id": 286, "op": "AllocatedObject", "type": "ref", "in": [284], "bci": 32},
+            {"id": 284, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 32},
+            {"id": 285, "op": "CommitAllocation", "type": "void", "in": [284, 271, 271], "objects": [284], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 286, "op": "AllocatedObject", "type": "ref", "in": [284], "object": 284, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:32"], "bci": 32},
             {"id": 40, "op": "InvokeWithException", "type": "void", "in": [], "args": [286], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 36}
           ],
           "ops": [
@@ -1799,9 +1799,9 @@
           "id": 6,
           "preds": [5],
           "nodes": [
-            {"id": 288, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 39},
-            {"id": 289, "op": "CommitAllocation", "type": "void", "in": [288, 271, 271], "bci": -6},
-            {"id": 290, "op": "AllocatedObject", "type": "ref", "in": [288], "bci": 39},
+            {"id": 288, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 39},
+            {"id": 289, "op": "CommitAllocation", "type": "void", "in": [288, 271, 271], "objects": [288], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 290, "op": "AllocatedObject", "type": "ref", "in": [288], "object": 288, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:39"], "bci": 39},
             {"id": 48, "op": "InvokeWithException", "type": "void", "in": [], "args": [290], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 43}
           ],
           "ops": [
@@ -1834,9 +1834,9 @@
           "id": 8,
           "preds": [7],
           "nodes": [
-            {"id": 292, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 53},
-            {"id": 293, "op": "CommitAllocation", "type": "void", "in": [292, 271, 271], "bci": -6},
-            {"id": 294, "op": "AllocatedObject", "type": "ref", "in": [292], "bci": 53},
+            {"id": 292, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 53},
+            {"id": 293, "op": "CommitAllocation", "type": "void", "in": [292, 271, 271], "objects": [292], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 294, "op": "AllocatedObject", "type": "ref", "in": [292], "object": 292, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:53"], "bci": 53},
             {"id": 63, "op": "InvokeWithException", "type": "void", "in": [], "args": [294], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 57}
           ],
           "ops": [
@@ -1853,9 +1853,9 @@
           "id": 9,
           "preds": [8],
           "nodes": [
-            {"id": 296, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 60},
-            {"id": 297, "op": "CommitAllocation", "type": "void", "in": [296, 271, 271], "bci": -6},
-            {"id": 298, "op": "AllocatedObject", "type": "ref", "in": [296], "bci": 60},
+            {"id": 296, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 60},
+            {"id": 297, "op": "CommitAllocation", "type": "void", "in": [296, 271, 271], "objects": [296], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 298, "op": "AllocatedObject", "type": "ref", "in": [296], "object": 296, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:60"], "bci": 60},
             {"id": 71, "op": "InvokeWithException", "type": "void", "in": [], "args": [298], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 64}
           ],
           "ops": [
@@ -1905,10 +1905,10 @@
           "id": 12,
           "preds": [11],
           "nodes": [
-            {"id": 300, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 85},
-            {"id": 301, "op": "CommitAllocation", "type": "void", "in": [300, 271, 271], "bci": -6},
+            {"id": 300, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 85},
+            {"id": 301, "op": "CommitAllocation", "type": "void", "in": [300, 271, 271], "objects": [300], "values": [271, 271], "locked": false, "bci": -6},
             {"id": 96, "op": "Add", "type": "int", "in": [85, 87], "bci": 80},
-            {"id": 302, "op": "AllocatedObject", "type": "ref", "in": [300], "bci": 85},
+            {"id": 302, "op": "AllocatedObject", "type": "ref", "in": [300], "object": 300, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:85"], "bci": 85},
             {"id": 94, "op": "InvokeWithException", "type": "void", "in": [], "args": [302], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 89}
           ],
           "ops": [
@@ -1925,9 +1925,9 @@
           "id": 13,
           "preds": [12],
           "nodes": [
-            {"id": 304, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 92},
-            {"id": 305, "op": "CommitAllocation", "type": "void", "in": [304, 271, 271], "bci": -6},
-            {"id": 306, "op": "AllocatedObject", "type": "ref", "in": [304], "bci": 92},
+            {"id": 304, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 92},
+            {"id": 305, "op": "CommitAllocation", "type": "void", "in": [304, 271, 271], "objects": [304], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 306, "op": "AllocatedObject", "type": "ref", "in": [304], "object": 304, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:92"], "bci": 92},
             {"id": 103, "op": "InvokeWithException", "type": "void", "in": [], "args": [306], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 96}
           ],
           "ops": [
@@ -1960,10 +1960,10 @@
           "id": 15,
           "preds": [14],
           "nodes": [
-            {"id": 308, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 107},
-            {"id": 309, "op": "CommitAllocation", "type": "void", "in": [308, 271, 271], "bci": -6},
+            {"id": 308, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 107},
+            {"id": 309, "op": "CommitAllocation", "type": "void", "in": [308, 271, 271], "objects": [308], "values": [271, 271], "locked": false, "bci": -6},
             {"id": 120, "op": "Add", "type": "int", "in": [96, 110], "bci": 102},
-            {"id": 310, "op": "AllocatedObject", "type": "ref", "in": [308], "bci": 107},
+            {"id": 310, "op": "AllocatedObject", "type": "ref", "in": [308], "object": 308, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:107"], "bci": 107},
             {"id": 118, "op": "InvokeWithException", "type": "void", "in": [], "args": [310], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 111}
           ],
           "ops": [
@@ -1980,9 +1980,9 @@
           "id": 16,
           "preds": [15],
           "nodes": [
-            {"id": 312, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 114},
-            {"id": 313, "op": "CommitAllocation", "type": "void", "in": [312, 271, 271], "bci": -6},
-            {"id": 314, "op": "AllocatedObject", "type": "ref", "in": [312], "bci": 114},
+            {"id": 312, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 114},
+            {"id": 313, "op": "CommitAllocation", "type": "void", "in": [312, 271, 271], "objects": [312], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 314, "op": "AllocatedObject", "type": "ref", "in": [312], "object": 312, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:114"], "bci": 114},
             {"id": 127, "op": "InvokeWithException", "type": "void", "in": [], "args": [314], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 118}
           ],
           "ops": [
@@ -2032,10 +2032,10 @@
           "id": 19,
           "preds": [18],
           "nodes": [
-            {"id": 316, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 139},
-            {"id": 317, "op": "CommitAllocation", "type": "void", "in": [316, 271, 271], "bci": -6},
+            {"id": 316, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 139},
+            {"id": 317, "op": "CommitAllocation", "type": "void", "in": [316, 271, 271], "objects": [316], "values": [271, 271], "locked": false, "bci": -6},
             {"id": 152, "op": "Add", "type": "int", "in": [141, 143], "bci": 134},
-            {"id": 318, "op": "AllocatedObject", "type": "ref", "in": [316], "bci": 139},
+            {"id": 318, "op": "AllocatedObject", "type": "ref", "in": [316], "object": 316, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:139"], "bci": 139},
             {"id": 150, "op": "InvokeWithException", "type": "void", "in": [], "args": [318], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 143}
           ],
           "ops": [
@@ -2052,9 +2052,9 @@
           "id": 20,
           "preds": [19],
           "nodes": [
-            {"id": 320, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 146},
-            {"id": 321, "op": "CommitAllocation", "type": "void", "in": [320, 271, 271], "bci": -6},
-            {"id": 322, "op": "AllocatedObject", "type": "ref", "in": [320], "bci": 146},
+            {"id": 320, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 146},
+            {"id": 321, "op": "CommitAllocation", "type": "void", "in": [320, 271, 271], "objects": [320], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 322, "op": "AllocatedObject", "type": "ref", "in": [320], "object": 320, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:146"], "bci": 146},
             {"id": 159, "op": "InvokeWithException", "type": "void", "in": [], "args": [322], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 150}
           ],
           "ops": [
@@ -2087,10 +2087,10 @@
           "id": 22,
           "preds": [21],
           "nodes": [
-            {"id": 324, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 163},
-            {"id": 325, "op": "CommitAllocation", "type": "void", "in": [324, 271, 271], "bci": -6},
+            {"id": 324, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 163},
+            {"id": 325, "op": "CommitAllocation", "type": "void", "in": [324, 271, 271], "objects": [324], "values": [271, 271], "locked": false, "bci": -6},
             {"id": 176, "op": "Add", "type": "int", "in": [152, 166], "bci": 158},
-            {"id": 326, "op": "AllocatedObject", "type": "ref", "in": [324], "bci": 163},
+            {"id": 326, "op": "AllocatedObject", "type": "ref", "in": [324], "object": 324, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:163"], "bci": 163},
             {"id": 174, "op": "InvokeWithException", "type": "void", "in": [], "args": [326], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 167}
           ],
           "ops": [
@@ -2107,9 +2107,9 @@
           "id": 23,
           "preds": [22],
           "nodes": [
-            {"id": 328, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 170},
-            {"id": 329, "op": "CommitAllocation", "type": "void", "in": [328, 271, 271], "bci": -6},
-            {"id": 330, "op": "AllocatedObject", "type": "ref", "in": [328], "bci": 170},
+            {"id": 328, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 170},
+            {"id": 329, "op": "CommitAllocation", "type": "void", "in": [328, 271, 271], "objects": [328], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 330, "op": "AllocatedObject", "type": "ref", "in": [328], "object": 328, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:170"], "bci": 170},
             {"id": 183, "op": "InvokeWithException", "type": "void", "in": [], "args": [330], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 174}
           ],
           "ops": [
@@ -2159,10 +2159,10 @@
           "id": 26,
           "preds": [25],
           "nodes": [
-            {"id": 332, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 199},
-            {"id": 333, "op": "CommitAllocation", "type": "void", "in": [332, 271, 271], "bci": -6},
+            {"id": 332, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 199},
+            {"id": 333, "op": "CommitAllocation", "type": "void", "in": [332, 271, 271], "objects": [332], "values": [271, 271], "locked": false, "bci": -6},
             {"id": 208, "op": "Add", "type": "int", "in": [197, 199], "bci": 194},
-            {"id": 334, "op": "AllocatedObject", "type": "ref", "in": [332], "bci": 199},
+            {"id": 334, "op": "AllocatedObject", "type": "ref", "in": [332], "object": 332, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:199"], "bci": 199},
             {"id": 206, "op": "InvokeWithException", "type": "void", "in": [], "args": [334], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 203}
           ],
           "ops": [
@@ -2179,9 +2179,9 @@
           "id": 27,
           "preds": [26],
           "nodes": [
-            {"id": 336, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 206},
-            {"id": 337, "op": "CommitAllocation", "type": "void", "in": [336, 271, 271], "bci": -6},
-            {"id": 338, "op": "AllocatedObject", "type": "ref", "in": [336], "bci": 206},
+            {"id": 336, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 206},
+            {"id": 337, "op": "CommitAllocation", "type": "void", "in": [336, 271, 271], "objects": [336], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 338, "op": "AllocatedObject", "type": "ref", "in": [336], "object": 336, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:206"], "bci": 206},
             {"id": 215, "op": "InvokeWithException", "type": "void", "in": [], "args": [338], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 210}
           ],
           "ops": [
@@ -2214,10 +2214,10 @@
           "id": 29,
           "preds": [28],
           "nodes": [
-            {"id": 340, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 222},
-            {"id": 341, "op": "CommitAllocation", "type": "void", "in": [340, 271, 271], "bci": -6},
+            {"id": 340, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 222},
+            {"id": 341, "op": "CommitAllocation", "type": "void", "in": [340, 271, 271], "objects": [340], "values": [271, 271], "locked": false, "bci": -6},
             {"id": 232, "op": "Add", "type": "int", "in": [208, 222], "bci": 217},
-            {"id": 342, "op": "AllocatedObject", "type": "ref", "in": [340], "bci": 222},
+            {"id": 342, "op": "AllocatedObject", "type": "ref", "in": [340], "object": 340, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:222"], "bci": 222},
             {"id": 230, "op": "InvokeWithException", "type": "void", "in": [], "args": [342], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 226}
           ],
           "ops": [
@@ -2234,9 +2234,9 @@
           "id": 30,
           "preds": [29],
           "nodes": [
-            {"id": 344, "op": "VirtualInstance", "type": "ref", "in": [], "bci": 229},
-            {"id": 345, "op": "CommitAllocation", "type": "void", "in": [344, 271, 271], "bci": -6},
-            {"id": 346, "op": "AllocatedObject", "type": "ref", "in": [344], "bci": 229},
+            {"id": 344, "op": "VirtualInstance", "type": "ref", "in": [], "class": "Aliasing$Counter", "fields": ["Aliasing$Counter.value", "Aliasing$Counter.other"], "bci": 229},
+            {"id": 345, "op": "CommitAllocation", "type": "void", "in": [344, 271, 271], "objects": [344], "values": [271, 271], "locked": false, "bci": -6},
+            {"id": 346, "op": "AllocatedObject", "type": "ref", "in": [344], "object": 344, "receivers": ["Aliasing$Counter@Aliasing.main([Ljava/lang/String;)V:229"], "bci": 229},
             {"id": 239, "op": "InvokeWithException", "type": "void", "in": [], "args": [346], "target": "Aliasing$Counter.<init>()V", "callees": ["Aliasing$Counter.<init>()V"], "flow": "ok", "exception_edge": true, "bci": 233}
           ],
           "ops": [

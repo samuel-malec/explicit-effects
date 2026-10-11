@@ -101,7 +101,8 @@ def check_forwarding() -> None:
     """With a token per field, a load whose token comes straight from a store
     or a load of the same field of the same object takes that value: the load
     after the call in forwardAcrossCall, forwardAcrossWritingCall, where it is
-    the 5 stored before the call, and repeatedLoadAcrossCall; in Signatures,
+    the 5 stored before the call, and repeatedLoadAcrossCall, and across the
+    dispatch in forwardAcrossVirtualCall, whose two targets write nothing; in Signatures,
     after each call whose signature leaves Counter.value out. Not in the
     controls, whose callee writes Counter.value or whose load goes through
     another reference (forwardMaybeAliasControl), nor after a call that
@@ -111,7 +112,7 @@ def check_forwarding() -> None:
     program = translate(EXAMPLES, "field")
     done = memory.apply(program)
     assert methods(within(done.forwarded)) == {"Examples_forwardAcrossCall", "Examples_forwardAcrossWritingCall",
-                                               "Examples_repeatedLoadAcrossCall"}, done.forwarded
+                                               "Examples_repeatedLoadAcrossCall", "Examples_forwardAcrossVirtualCall"}, done.forwarded
     run = structure(program, "Examples_forwardAcrossWritingCall").lambdas[0]
     move = next(i for i in run.body if i.note.startswith("forwarded"))
     assert origin(run, move.ins[0]).op == "cons_5", move.text()
@@ -412,6 +413,44 @@ def check_object_partitions_tell_objects_apart() -> None:
           " objects, take the value; a store past another object's load goes; the controls keep everything")
 
 
+def check_finer_partitions_leave_no_more() -> None:
+    """A finer partitioning licenses every rewrite a coarser one does (the
+    monotonicity theorem of the thesis's chapter on explicit effects):
+    object-field refines field and object, and both refine one heap. The rules
+    apply what is licensed under bounds that count instructions, and a finer
+    partitioning has more tokens to guard, so this is checked, not given: on
+    every fixture, no method keeps more stores or loads under a finer
+    partitioning, in all of it or in its loops, and every store dead in Java
+    under a coarser one is dead under the finer. Each finer partitioning
+    leaves fewer somewhere."""
+    def java_dead(path: Path, partition: str) -> set[str]:
+        program = translate(path, partition)
+        done = memory.apply(program, forward=False, java=True)
+        left = {f"{i.at}\t{i.note}" for s in program.structures for lam in s.lambdas for i in lam.body
+                if (m := memory.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
+        return set(done.dead) - left
+
+    finer = [("field", "none"), ("object", "none"), ("object-field", "field"), ("object-field", "object")]
+    fewer: Counter = Counter()
+    for path in (EXAMPLES, SIGNATURES, ALIASING):
+        left, loops, dead = {}, {}, {}
+        for partition in ("none", "field", "object", "object-field"):
+            program = translate(path, partition)
+            memory.apply(program)
+            left[partition], loops[partition] = accesses(program), accesses(program, in_loops=True)
+            dead[partition] = java_dead(path, partition)
+        for fine, coarse in finer:
+            for s in left[fine].keys() & left[coarse].keys():
+                for counts in (left, loops):
+                    assert all(a <= b for a, b in zip(counts[fine][s], counts[coarse][s])), \
+                        (path.name, fine, coarse, s, counts[fine][s], counts[coarse][s])
+                fewer[fine, coarse] += left[fine][s] != left[coarse][s]
+            assert dead[coarse] <= dead[fine], (path.name, fine, coarse, dead[coarse] - dead[fine])
+    assert all(fewer[pair] for pair in finer), fewer
+    print("ok   a finer partitioning leaves no more stores or loads in any method, in loops neither, and keeps every"
+          " dead store in Java; each leaves fewer somewhere")
+
+
 def check_rewritten_programs_stay_valid() -> None:
     """After the rules, every program of the fixtures, under every
     partitioning, still passes the single-use and type checks, which include
@@ -441,5 +480,6 @@ if __name__ == "__main__":
     check_dead_stores()
     check_dead_stores_in_java()
     check_object_partitions_tell_objects_apart()
+    check_finer_partitions_leave_no_more()
     check_rewritten_programs_stay_valid()
     print("all checks passed")
