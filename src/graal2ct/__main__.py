@@ -54,7 +54,8 @@ def main() -> int:
     for key, reason in translation.refused.items():
         print(f"  refused {key}: {reason}", file=sys.stderr)
     if rewrites:
-        print(f"forwarded {len(rewrites.forwarded)} load(s), removed {len(rewrites.removed)} dead store(s)", file=sys.stderr)
+        print(f"forwarded {len(rewrites.forwarded)} load(s), removed {len(rewrites.removed)} dead store(s)",
+              file=sys.stderr)
         for what, done in (("forwarded", rewrites.forwarded), ("removed", rewrites.removed)):
             for line in done:
                 print(f"  {what} {line}", file=sys.stderr)

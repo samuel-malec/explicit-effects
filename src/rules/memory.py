@@ -39,13 +39,14 @@ from dataclasses import dataclass, field
 from cthu.ir import LINEAR, Instr, Lambda, Program, Structure, frame_type, function_type
 from cthu.ssu import linearize
 
-ACCESS = re.compile(r"(get|set)(static)?_(\d+)")
+ACCESS = re.compile(r"(get|set|init)(static)?_(\d+)")  # init: a new object's field, as escape analysis left it
 
 VALUES = {"int", "long", "float", "double", "bool", "ref"}
 
 # Operations on values that can't throw: what may sit before a load in the part
 # of a merge that splitting copies, and what goes once nothing uses it.
-PURE = re.compile(r"cons_m?\d+|null|move|not|neg|add|sub|mul|and|or|xor|shl|shr|ushr|eq\?|lt\?|ult\?|nil\?|opt|join")
+PURE = re.compile(r"cons_m?\d+|const_\d+|null|move|not|neg|add|sub|mul|and|or|xor|shl|shr|ushr|eq\?|lt\?|ult\?|nil\?|opt|join"
+                  r"|abs|min|max|sqrt|cmp|to_(int|long|float|double)|instanceof_\d+|isinstance|hub")
 
 ROUNDS = 100  # merges split and loops peeled per method, at most
 
@@ -99,7 +100,7 @@ def apply(program: Program, forward: bool = True, java: bool = False) -> Rewrite
 def _access(i: Instr) -> tuple[str, bool, int] | None:
     """(get or set, static, field index) for a field access."""
     m = ACCESS.fullmatch(i.op) if i.type == "heap" else None
-    return (m.group(1), bool(m.group(2)), int(m.group(3))) if m else None
+    return ("get" if m.group(1) == "get" else "set", bool(m.group(2)), int(m.group(3))) if m else None
 
 
 def _pure(i: Instr) -> bool:

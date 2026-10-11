@@ -22,10 +22,10 @@ from pathlib import Path
 
 from effects.signatures import PARTITIONERS, REST, analyse, no_analysis
 from graal.graal_import import load
-from graal2ct.translate import Translation
+from graal2ct.translate import Translation, structure_name
 
 from . import memory
-from .compare import MODES, accesses, read_probe
+from .compare import MODES, accesses, looping, probe_name, read_probe
 
 #: A refusal's reason, by what it starts with.
 REASONS = [
@@ -105,12 +105,59 @@ def native(out: Path) -> None:
               f" {calls:>6}   {narrowed}, {partitioned}, {dead}")
 
 
+def side_by_side(export: Path, allocsens: Path, images: list[Path]) -> None:
+    """The token form next to Native Image, method by method: the field stores and loads
+    the export has, what our rules leave of them, and what each image leaves of them."""
+    ours: dict[str, dict[str, tuple[int, int]]] = {}
+    names: dict[str, str] = {}
+    for column, path, partition in (("per field", export, "field"), ("obj+field", allocsens, "object-field")):
+        facts, graphs = load(path)
+        program = Translation(graphs, analyse(facts, PARTITIONERS[partition](facts))).translate(sorted(graphs))
+        if column == "per field":
+            ours["export"], ours["export in loops"] = accesses(program), accesses(program, in_loops=True)
+        memory.apply(program)
+        ours[column], ours[column + " in loops"] = accesses(program), accesses(program, in_loops=True)
+        for key, graph in graphs.items():  # as the images name a method: no package
+            simple = graph.name.rsplit(".", 1)
+            names[structure_name(key)] = probe_name(simple[0].rsplit(".", 1)[-1] + "." + simple[1], graph.descriptor)
+    built: dict[str, dict[str, tuple[Counter, Counter]]] = {}
+    for out in images:
+        for mode in MODES:
+            if (out / mode / "counts.txt").exists():
+                for method, modes in read_probe((out / mode / "counts.txt").read_text()).items():
+                    built.setdefault(method, {}).update(modes)
+    columns = ("export", "per field", "obj+field", *MODES)
+    rows = []
+    for structure, name in sorted(names.items(), key=lambda kv: kv[1]):
+        cells = [ours[c].get(structure) for c in columns[:3]]
+        if None in cells or not all(m in built.get(name, {}) for m in MODES):
+            continue
+        for loops in ("", " in loops"):
+            mine = [ours[c + loops][structure] for c in columns[:3]]
+            theirs = [tuple(sum(n for f, n in c.items() if f.endswith("(loop)") == bool(loops)) for c in built[name][m]) for m in MODES]
+            rows.append((name, loops, mine + theirs))
+    for loops in ("", " in loops"):
+        chosen = [cells for _, l, cells in rows if l == loops]
+        print(f"\n{len(chosen)} methods translated and compiled, field stores/loads{loops}:")
+        print("  " + "  ".join(f"{c:>10}" for c in columns))
+        print("  " + "  ".join(f"{sum(c[i][0] for c in chosen)}/{sum(c[i][1] for c in chosen):<6}".rjust(10) for i in range(len(columns))))
+    print("\nwhere our rules and the kills image differ, all accesses:")
+    for name, loops, cells in rows:
+        if not loops and cells[1] != cells[4]:
+            print(f"  {name:70} " + "  ".join(f"{c[0]}/{c[1]}" for c in cells))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path)
     parser.add_argument("allocsens", type=Path, nargs="?", help="the same program, exported with allocation sites")
     parser.add_argument("--native", type=Path, nargs="*", default=[], help="graal-native's builds of the program")
+    parser.add_argument("--side", type=Path, nargs="*", default=[],
+                        help="graal-native's builds whose exports were translated, to set the rules next to the images")
     args = parser.parse_args()
+    if args.side:
+        side_by_side(args.export, args.allocsens, args.side)
+        return 0
     report(args.export, args.allocsens)
     for out in args.native:
         native(out)

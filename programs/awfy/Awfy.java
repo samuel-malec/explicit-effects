@@ -7,6 +7,7 @@
  *
  *   java -cp classes Awfy             # the suite's test sizes, once each
  *   java -cp classes Awfy 10 timing   # the sizes it benchmarks with, 10 times each
+ *   java -cp classes Awfy 10 timing CD   # one benchmark only
  */
 public final class Awfy {
 
@@ -34,6 +35,9 @@ public final class Awfy {
             new Entry("Towers", new Towers(), 1, 600),
         };
         for (Entry entry : entries) {
+            if (args.length > 2 && !entry.name().equals(args[2])) {
+                continue;
+            }
             int size = timing ? entry.timing() : entry.test();
             for (int i = 0; i < iterations; i++) {
                 long start = System.nanoTime();

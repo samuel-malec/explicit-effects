@@ -1,16 +1,7 @@
-"""Which stores Graal may remove: the dead stores the rules find, in Java.
+"""Translates the program's methods of an export and removes dead stores
 
 Usage:
     uv run python -m rules.decisions graal-native/out/examples/decisions/export.json -o dead.txt
-
-Translates the program's methods of an export and removes dead stores, after
-the shape the rules need but without forwarding a load first, so that a store
-is dead whatever Graal does with the loads. Only what is dead in Java goes:
-nothing between a store and the store that overwrites it may throw, since an
-exception leaving the method lets a caller read it.
-
-Writes one line per dead store: where it is, a tab, and its field. A store the
-rules copied counts only if every copy went.
 """
 
 import argparse

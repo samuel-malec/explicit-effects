@@ -10,18 +10,35 @@ from graal.graal_ir import Block, Edge, Graph, Node
 
 ARITHMETIC = {
     "Add": "add", "Sub": "sub", "Mul": "mul", "SignedDiv": "div", "SignedRem": "rem",
+    "SignedFloatingIntegerDiv": "div", "SignedFloatingIntegerRem": "rem", "FloatDiv": "div", "FloatRem": "rem",
     "And": "and", "Or": "or", "Xor": "xor",
     "LeftShift": "shl", "RightShift": "shr", "UnsignedRightShift": "ushr",
+    "Min": "min", "Max": "max",
 }
 
-UNARY = {"Negate": "neg", "Not": "not"}
+UNARY = {"Negate": "neg", "Not": "not", "Abs": "abs", "Sqrt": "sqrt"}
 
 COMPARISON = {
     "IntegerEquals": "eq?", "IntegerLessThan": "lt?", "IntegerBelow": "ult?",
-    "ObjectEquals": "eq?", "PointerEquals": "eq?",
+    "ObjectEquals": "eq?", "PointerEquals": "eq?", "FloatEquals": "eq?", "FloatLessThan": "lt?",
 }
 
-ALIASES = {"Pi", "ValueProxy"}
+CONVERSIONS = {"Narrow", "SignExtend", "ZeroExtend", "FloatConvert", "Reinterpret"}
+NUMBERS = {"int", "long", "float", "double"}
+
+#: What escape analysis made virtual: described, and made by a CommitAllocation.
+VIRTUAL = {"VirtualInstance", "VirtualArray", "VirtualBoxing"}
+
+#: Nodes that touch memory in a way the dialect has no operation for. Each becomes a call to
+#: an external that takes every token of the method: the method's signature covers the node.
+OPAQUE = {"EnsureClassInitialized", "MarkStaticFinalFieldInitialized", "PureBox", "AllocatingBox", "CopyOf",
+          "CopyOfRange",
+          "ArrayEquals", "ArrayRegionEquals", "ArrayRegionEqualsWithMask", "ArrayCompareTo", "ArrayRegionCompareTo",
+          "ArrayIndexOf", "VectorizedHashCode", "CalcStringAttributes", "StringLatin1Inflate",
+          "ArrayCopyWithConversions",
+          "UnaryMathIntrinsic", "ArrayCopy"}
+
+ALIASES = {"Pi", "ValueProxy", "PublishWrites"}
 
 ENDS = {"If", "Return", "Unwind"}
 
@@ -45,12 +62,12 @@ def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
     names = {p: "h" if p == "heap" else "h_rest" for p in partitions if p in ("heap", REST)}
     names |= {p: "h_" + p[:-2] + "_arr" for p in partitions if p.endswith("[]")}
     parts = {p: re.split(r"[.$]", p) for p in partitions if p not in names}
-    
+
     for depth in range(1, max((len(s) for s in parts.values()), default=0) + 1):
         candidates = {p: "h_" + "_".join(s[-depth:]) for p, s in parts.items()}
         if len(set(candidates.values()) | set(names.values())) == len(candidates) + len(names):
             break
-    
+
     for p, s in parts.items():
         names[p] = "".join(c if c.isalnum() else "_" for c in ("h_" + "_".join(s[-depth:])).replace("[]", "_arr"))
         names[p] += "_" if names[p][-1].isdigit() else ""
@@ -108,13 +125,13 @@ class Translation:
                 continue
 
             method = MethodTranslation(self, graph, structure_name(key))
-            
+
             try:
                 structure = method.structure()
             except Unsupported as e:
                 self.refused[key] = str(e)
                 continue
-            
+
             self.program.structures.append(structure)
             calls.update(method.calls)
 
@@ -123,7 +140,7 @@ class Translation:
         for structure, method in calls.items():
             if structure not in defined:
                 self.program.externals.setdefault(structure, method)
-        
+
         return self.program
 
     def callee_structure(self, method: str) -> tuple[str, bool]:
@@ -150,6 +167,10 @@ class MethodTranslation:
             result = "ref"
 
         self.renamed: dict[int, str] = {}  # objects a constructor call has initialized, in the current λ
+        # A virtual object goes by the name of the AllocatedObject that gives it out.
+        self.allocated = {n.virtual if n.virtual is not None else n.inputs[0]: n.id for n in self.nodes.values() if
+                          n.op == "AllocatedObject"}
+        self.block_of = {n.id: b.id for b in graph.blocks.values() for n in b.nodes}
         self.token = {p: translation.token_names[p] for p in translation.effects.tokens(graph.name + graph.descriptor)}
         self.tokens = list(self.token.values())
         self.outs = ([("r", result)] if result else []) + [(f"{t}out", "heap") for t in self.tokens]
@@ -164,6 +185,10 @@ class MethodTranslation:
 
     def ref(self, node_id: int) -> str:
         node = self.nodes[self.value(node_id)]
+        if node.type == "void" and node.op not in VIRTUAL:
+            raise Unsupported(f"{node.op} as a value, which the export gives no type")
+        if node.op in VIRTUAL:
+            return f"v{self.allocated.get(node.id, node.id)}"
         if node.id in self.renamed:
             return self.renamed[node.id]
         return f"p{node.index}" if node.op == "Parameter" else f"v{node.id}"
@@ -222,7 +247,7 @@ class MethodTranslation:
                 if b in doomed:
                     continue
                 out = set()
- 
+
                 for e in self.successors(blocks[b]):
                     out |= live[e.to] - self._phis(e.to)
                 new = uses[b] | (out - defs[b])
@@ -251,15 +276,18 @@ class MethodTranslation:
             if n.op == "ValuePhi":
                 defs.add(n.id)
                 continue
-            
+
             if n.op in ALIASES:
                 continue
-            
+
             for i in (*n.inputs, *n.args):
                 v = self.value(i)
-                if v not in defs:
+                # A virtual object, or a node with no value such as the commit an
+                # allocated object comes from, is nothing a block passes on.
+                if v not in defs and not (
+                        v in self.nodes and (self.nodes[v].op in VIRTUAL or self.nodes[v].type == "void")):
                     uses.add(v)
-            
+
             if n.type != "void" and n.op not in ENDS:
                 defs.add(n.id)
 
@@ -320,6 +348,7 @@ class MethodTranslation:
 
     def _block(self, block_id: int) -> Lambda:
         block = self.g.blocks[block_id]
+        self.block_id = block_id
         self.renamed = {}
         lam = Lambda(self._lambda_name(block_id), self._lambda_params(block_id), list(self.outs))
         self.body = lam.body
@@ -332,7 +361,8 @@ class MethodTranslation:
         self._end(block)
         return lam
 
-    def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "", at: str = "") -> None:
+    def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "",
+              at: str = "") -> None:
         self.body.append(Instr(type_, op, ins, outs, out_types, note, at))
 
     def _advance(self, token: str) -> tuple[str, str]:
@@ -356,8 +386,66 @@ class MethodTranslation:
                 self._emit(t, "cons_" + n.value.replace("-", "m"), [], [v], [t])
             elif t == "ref" and n.value == "null":
                 self._emit("ref", "null", [], [v], ["ref"])
-            else:
-                raise Unsupported(f"constant {n.value}")
+            else:  # an object, a string, a float: a constant of the program's
+                k = self.t.program.constant_index(t, n.constant or n.value or "")
+                self._emit(t, f"const_{k}", [], [v], [t])
+
+        elif op == "InstanceOf":
+            k = self.t.program.class_index(n.cls)
+            self._emit("ref", f"instanceof_{k}", [self.ref(n.inputs[0])], [v], ["bool"], note=n.cls)
+
+        elif op == "InstanceOfDynamic":  # Class.isInstance: the class is a value
+            self._emit("ref", "isinstance", [self.ref(n.inputs[0]), self.ref(n.inputs[1])], [v], ["bool"])
+
+        elif op in CONVERSIONS:
+            source = self.type_of(n.inputs[0])
+            if source not in NUMBERS or t not in NUMBERS:
+                raise Unsupported(f"{op} from {source} to {t}")
+            self._emit(source, f"to_{t}", [self.ref(n.inputs[0])], [v], [t])
+
+        elif op in ("LoadHub", "GetClass", "LoadArrayComponentHub"):  # a class, which never changes
+            self._emit("ref", "hub", [self.ref(n.inputs[0])], [v], ["ref"])
+
+        elif op == "Unbox":  # reads a box's value, which never changes
+            self._emit("ref", f"unbox_{t}", [self.ref(n.inputs[0])], [v], [t])
+
+        elif op == "IntegerTest":  # (x & y) == 0
+            x, y = n.inputs[:2]
+            t_in = self.type_of(x)
+            self._emit(t_in, "and", [self.ref(x), self.ref(y)], [f"{v}_and"], [t_in])
+            self._emit(t_in, "cons_0", [], [f"{v}_zero"], [t_in])
+            self._emit(t_in, "eq?", [f"{v}_and", f"{v}_zero"], [v], ["bool"])
+
+        elif op == "ShortCircuitOr":
+            if len(n.negated) != 2:  # an export from before the flags
+                raise Unsupported(op)
+            sides = []
+            for side, negated in zip(n.inputs[:2], n.negated):
+                sides.append(self.ref(side))
+                if negated:
+                    self._emit("bool", "not", [sides[-1]], [f"{v}_side{len(sides)}"], ["bool"])
+                    sides[-1] = f"{v}_side{len(sides)}"
+            self._emit("bool", "or", sides, [v], ["bool"])
+
+        elif op in ("IntegerNormalizeCompare", "FloatNormalizeCompare"):
+            self._emit(self.type_of(n.inputs[0]), "cmp", [self.ref(i) for i in n.inputs[:2]], [v], ["int"])
+
+        elif op in ("LoadIndexed", "StoreIndexed"):
+            self._array(n)
+
+        elif op == "NewArray":
+            before, after = self._advance(self._token_for(self.t.effects.partition(REST), f"allocating {n.kind}"))
+            self._emit("heap", f"newarray_{_element(n.kind)}", [before, self.ref(n.inputs[0])], [v, after],
+                       ["ref", "heap"], note=n.kind)
+
+        elif op == "CommitAllocation":
+            self._commit(n)
+
+        elif op in VIRTUAL or op == "AllocatedObject":
+            pass  # made by the CommitAllocation
+
+        elif op in OPAQUE:
+            self._opaque(n)
 
         elif op in ARITHMETIC:
             self._emit(t, ARITHMETIC[op], [self.ref(i) for i in n.inputs], [v], [t])
@@ -399,9 +487,6 @@ class MethodTranslation:
         elif op in ("BytecodeException", "ExceptionObject"):
             raise Unsupported(f"exception handler (a caught exception) for bci {n.bci}")
 
-        elif op in ("CommitAllocation", "VirtualInstance", "AllocatedObject"):
-            raise Unsupported("allocation after escape analysis")
-
         elif op == "FinalFieldBarrier" and self.constructor:
             pass  # ordered by the receiver the constructor returns
 
@@ -416,25 +501,117 @@ class MethodTranslation:
         except ValueError as e:  # objects the facts don't list together
             raise Unsupported(str(e)) from e
         before, after = self._advance(self._token_for(partition, n.field))
-        static = "static" if (n.op == "LoadField" and not n.inputs) or (n.op == "StoreField" and len(n.inputs) == 1) else ""
+        static = "static" if (n.op == "LoadField" and not n.inputs) or (
+                n.op == "StoreField" and len(n.inputs) == 1) else ""
         ins = [before, *(self.ref(i) for i in n.inputs)]
 
         if n.op == "LoadField":
-            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.field, at=n.at or "")
+            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.field,
+                       at=n.at or "")
         else:
             self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], note=n.field, at=n.at or "")
 
+    def _array(self, n: Node) -> None:
+        try:
+            partition = self.t.effects.partition(n.kind, None if n.receivers is None else frozenset(n.receivers))
+        except ValueError as e:  # objects the facts don't list together
+            raise Unsupported(str(e)) from e
+        before, after = self._advance(self._token_for(partition, n.kind))
+        ins = [before, *(self.ref(i) for i in n.inputs)]
+        if n.op == "LoadIndexed":
+            self._emit("heap", f"aget_{_element(n.kind)}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.kind,
+                       at=n.at or "")
+        else:
+            self._emit("heap", f"aset_{_element(n.kind)}", ins, [after], ["heap"], note=n.kind, at=n.at or "")
+
+    def _commit(self, n: Node) -> None:
+        """Makes the objects escape analysis left virtual, then gives their fields and
+        elements their values: one object may point to another."""
+        if not n.objects:  # an export from before the commits were described
+            raise Unsupported("allocation after escape analysis")
+        if n.locked:
+            raise Unsupported("an allocation escape analysis made, locked as it is made")
+        rest = self._token_for(self.t.effects.partition(REST), "allocating")
+        objects = [self.nodes[o] for o in n.objects]
+        for o in objects:
+            if self.block_of.get(self.allocated.get(o.id), self.block_id) != self.block_id:
+                raise Unsupported("an allocation escape analysis made, given out in another block")
+            before, after = self._advance(rest)
+            name = self.ref(o.id)
+            if o.op != "VirtualArray":
+                self._emit("heap", f"new_{self.t.program.class_index(o.cls)}", [before], [name, after], ["ref", "heap"],
+                           note=o.cls)
+            else:
+                self._emit("int", f"cons_{o.length}", [], [f"{name}_len"], ["int"])
+                self._emit("heap", f"newarray_{_element(o.kind)}", [before, f"{name}_len"], [name, after],
+                           ["ref", "heap"], note=o.kind)
+        start = 0
+        for o in objects:
+            size = o.length if o.op == "VirtualArray" else len(o.fields)
+            name = self.ref(o.id)
+            given = self.nodes.get(self.allocated.get(o.id))
+            receivers = frozenset(given.receivers) if given is not None and given.receivers is not None else None
+            for i, value in enumerate(n.entries[start:start + size]):
+                field = o.fields[i] if o.op != "VirtualArray" else o.kind
+                partition = self._initialized(field, receivers)
+                # A part nothing in the method or its callees touches is no ordering's business:
+                # the object is new, and the facts leave initializing it out.
+                if value is None or partition not in self.token:
+                    continue
+                before, after = self._advance(self.token[partition])
+                if o.op != "VirtualArray":
+                    k = self.t.program.field_index(field, self.type_of(value))
+                    self._emit("heap", f"init_{k}", [before, name, self.ref(value)], [after], ["heap"], note=field)
+                else:
+                    self._emit("int", f"cons_{i}", [], [f"{name}_at{i}"], ["int"])
+                    self._emit("heap", f"aset_{_element(o.kind)}", [before, name, f"{name}_at{i}", self.ref(value)],
+                               [after], ["heap"], note=o.kind)
+            start += size
+
+    def _initialized(self, field: str, receivers: frozenset | None) -> str | None:
+        """The partition of a new object's field: by where the object was allocated, else by
+        the field alone; None if the facts have neither, since nothing they list touches it."""
+        for objects in (receivers, None):
+            try:
+                return self.t.effects.partition(field, objects)
+            except ValueError:
+                continue
+        return None
+
+    def _opaque(self, n: Node) -> None:
+        """A node the dialect has no operation for, as a call to an external that takes its
+        values and every token of the method."""
+        structure = f"graal_{n.op}"
+        self.calls[structure] = n.op
+        result = None if n.type == "void" else _type(n)
+        values = [i for i in n.inputs if self.nodes[self.value(i)].op not in VIRTUAL and self.type_of(i) != "void"]
+        heaps = ["heap"] * len(self.tokens)
+        ftype = function_type([self.type_of(i) for i in values] + heaps, ([result] if result else []) + heaps)
+        versions = [self._advance(t) for t in self.tokens]
+        k = self._continuation(n.id)
+        self._emit(structure, "run", [], [k], [ftype])
+        self._emit(ftype, "call", [k, *(self.ref(i) for i in values), *(before for before, _ in versions)],
+                   ([f"v{n.id}"] if result else []) + [after for _, after in versions],
+                   ([result] if result else []) + heaps, note=n.op)
+
     def _call(self, n: Node) -> None:
         if len(n.callees) > 1:
-            raise Unsupported(f"call to {n.target} with {len(n.callees)} targets")
-        
-        callee = n.callees[0] if n.callees else n.target
-        structure, _ = self.t.callee_structure(callee)
-        self.calls[structure] = callee
+            # A dispatch to one of several targets: an external, which may do what any of them does.
+            callee = n.target
+            structure = structure_name("dispatch " + n.target)
+            self.calls[structure] = f"one of {', '.join(n.callees)}"
+        else:
+            callee = n.callees[0] if n.callees else n.target
+            structure, _ = self.t.callee_structure(callee)
+            self.calls[structure] = callee
 
-        # The callee gets the tokens of its own signature; a call the analysis
-        # did not resolve gets all of them.
-        partitions = self.t.effects.tokens(callee) if n.flow == "ok" else self.t.effects.partitions
+        # The callee gets the tokens of its own signature, a dispatch those of every
+        # target; a call the analysis did not resolve gets all of them.
+        if n.flow == "ok":
+            wanted = set().union(*(self.t.effects.tokens(c) for c in n.callees))
+            partitions = [p for p in self.t.effects.partitions if p in wanted]
+        else:
+            partitions = self.t.effects.partitions
         tokens = [self._token_for(p, f"the call to {callee}") for p in partitions]
         heaps = ["heap"] * len(tokens)
         constructs = ".<init>(" in callee  # gives back the object it initialized
@@ -443,12 +620,17 @@ class MethodTranslation:
         ftype = function_type(arg_types + heaps, ([result] if result else []) + heaps)
         versions = [self._advance(t) for t in tokens]
         outs = ([f"v{n.id}"] if result else []) + [after for _, after in versions]
-        self._emit(structure, "run", [], [f"k{n.id}"], [ftype])
+        k = self._continuation(n.id)
+        self._emit(structure, "run", [], [k], [ftype])
 
-        self._emit(ftype, "call", [f"k{n.id}", *(self.ref(a) for a in n.args), *(before for before, _ in versions)], outs,
+        self._emit(ftype, "call", [k, *(self.ref(a) for a in n.args), *(before for before, _ in versions)], outs,
                    ([result] if result else []) + heaps, note=callee)
         if constructs:
             self.renamed[self.value(n.args[0])] = f"v{n.id}"
+
+    def _continuation(self, node_id: int) -> str:
+        """A call's callee as a value: k and the node, unless a jump to a block of that number has it."""
+        return f"k{node_id}" if node_id not in self.g.blocks else f"kc{node_id}"
 
     def _end(self, block: Block) -> None:
         succ = self.successors(block)
@@ -476,7 +658,8 @@ class MethodTranslation:
         args = [self.ref(phis[i][src]) if i in phis else self.ref(i) for i in self.param_ids[dst]]
         ftype = function_type([t for _, t in self._lambda_params(dst)], self.out_types)
         self._emit(self.name, self._lambda_name(dst), [], [f"k{dst}"], [ftype])
-        self._emit(ftype, "call", [f"k{dst}", *args, *(self.current[t] for t in self.tokens)], [n for n, _ in self.outs], self.out_types)
+        self._emit(ftype, "call", [f"k{dst}", *args, *(self.current[t] for t in self.tokens)],
+                   [n for n, _ in self.outs], self.out_types)
 
     def _branch(self, cond: int, true: int, false: int) -> None:
         params = self._lambda_params(true)
@@ -491,20 +674,24 @@ class MethodTranslation:
         self._emit(ftype, "opt", ["cn", "kf"], ["af"], [ftype])
         self._emit(ftype, "join", ["at", "af", "frame"], ["k"], [ftype])
         args = [self.ref(i) for i in self.param_ids[true]]
-        self._emit(ftype, "call", ["k", *args, *(self.current[t] for t in self.tokens)], [n for n, _ in self.outs], self.out_types)
+        self._emit(ftype, "call", ["k", *args, *(self.current[t] for t in self.tokens)], [n for n, _ in self.outs],
+                   self.out_types)
 
     def _frame(self, ftype: str, params: list[tuple[str, str]]) -> Lambda:
         if ftype in self.frames:
             return self.frames[ftype]
 
         xs = [(f"x{i}", t) for i, (_, t) in enumerate(params[:len(params) - len(self.tokens)])]
-        lam = Lambda(f"frame_{len(self.frames)}", [("A", ftype), ("B", ftype), *xs, *((t, "heap") for t in self.tokens)], list(self.outs))
+        lam = Lambda(f"frame_{len(self.frames)}",
+                     [("A", ftype), ("B", ftype), *xs, *((t, "heap") for t in self.tokens)], list(self.outs))
         for t in self.tokens:
             lam.body.append(Instr("heap", "fork", [t], [f"{t}_a", f"{t}_b"], ["heap", "heap"]))
         outs_a = [f"{name}_a" for name, _ in self.outs]
         outs_b = [f"{name}_b" for name, _ in self.outs]
-        lam.body.append(Instr(ftype, "call", ["A", *(x for x, _ in xs), *(f"{t}_a" for t in self.tokens)], outs_a, self.out_types))
-        lam.body.append(Instr(ftype, "call", ["B", *(x for x, _ in xs), *(f"{t}_b" for t in self.tokens)], outs_b, self.out_types))
+        lam.body.append(
+            Instr(ftype, "call", ["A", *(x for x, _ in xs), *(f"{t}_a" for t in self.tokens)], outs_a, self.out_types))
+        lam.body.append(
+            Instr(ftype, "call", ["B", *(x for x, _ in xs), *(f"{t}_b" for t in self.tokens)], outs_b, self.out_types))
 
         for (name, t), a, b in zip(self.outs, outs_a, outs_b):
             lam.body.append(Instr(t, "join", [a, b], [name], [t]))
@@ -515,3 +702,8 @@ class MethodTranslation:
 
 def _type(n: Node) -> str:
     return "bool" if n.type == "cond" else n.type
+
+
+def _element(kind: str) -> str:
+    """An array kind as the dialect's operations name it: int[] → int, Object[] → Object."""
+    return kind.removesuffix("[]")

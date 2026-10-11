@@ -680,8 +680,9 @@ with the kills our tool computes is in
 | `forwardAcrossIterationsPeeled` | 2/1 | 4/2 | 4/3 | 2/1 | **1/1** |
 | `forwardAcrossWritingCall` | 1/1 | 1/1 | 1/1 | 1/1 | **1/0** |
 | `forwardAcrossMerge` | 2/1 | 2/1 | 2/1 | 2/1 | **2/0** |
+| `forwardAcrossVirtualCall` (translated since step 8) | 1/1 | 1/1 | 1/1 | 1/1 | **1/0** |
 | `Signatures.acrossField` | 1/1 | 1/1 | 1/0 | 1/1 | **1/0** |
-| **Total, 38 methods** | 60/38 | 64/45 | 75/51 | 58/38 | 51/27 |
+| **Total, 39 methods** | 61/39 | 65/46 | 76/52 | 59/39 | 52/27 |
 
 How to read it:
 - **Inlining column:** inlined callees add accesses to the same fields, so its totals overstate what is left of each method's own accesses.
@@ -705,6 +706,55 @@ that jump, through others, back to themselves.
 - **`forwardAcrossIterations`, `forwardAcrossIterationsPeeled`:** Graal keeps the load and the store in the loop, for the same reason.
 - **`forwardIntoLoopAliasControl`:** both Graal and the rules move both loads out of their loops. For the second loop, Graal peels one iteration and its read floats out, while the rules peel two.
 
+## What the design chapter adds (step 9)
+
+The thesis chapter on explicit effects,
+[`explicit-effects.tex`](../../thesis/chapters/explicit-effects.tex), shows
+why the rules are sound. Every rule is a change of shape followed by one of two
+licences, each with a theorem:
+- **Forwarding:** a load whose token comes from an access of the same field of
+  the same object, past moves and guards only, reads that access's value. It
+  doesn't depend on the trap model.
+- **Dead stores:** a store whose token reaches, on every path, a store of the
+  same field of the same object, or a trap, can go in the trap model. It can go
+  in Java if, moreover, nothing in between may throw.
+
+The changes of shape (guards for branches that trap, joining blocks, merging
+parameters, peeling, splitting merges) keep every run's accesses, in order and
+with their values; the chapter sketches why.
+
+The proofs rest on one fact about the tokens: an instruction that doesn't
+take a partition's token leaves the partition alone, except for fields of
+objects allocated in the meantime, which nothing before can have seen.
+Swapping two instructions that share no token keeps the result when both
+finish, but not necessarily which of a trap and a hang happens: a guard takes
+every token, while a call of a method that touches no memory takes none. The
+rules never move an instruction, so they don't depend on it.
+
+### A finer partitioning leaves no more
+
+The chapter proves that a finer partitioning licenses everything a coarser one
+does: object-field refines field and object, and both refine one heap. The
+rules apply the licences under bounds, though, and `PEEL` counts instructions,
+guards included. A finer partitioning has more tokens, so more guards, and a
+loop a coarser partitioning peels may be too long for a finer one. So it is
+measured, on the exports with allocation sites, where each program is the same
+under all four:
+
+| Program | Methods | One heap | Per field | Object | Object-field |
+|---|---|---|---|---|---|
+| `Aliasing` | 14 | 18/15 | 18/15 | 17/12 | 17/12 |
+| `Examples` | 41 | 51/37 | 44/29 | 45/29 | 44/29 |
+| `Signatures` | 18 | 10/10 | 10/6 | 10/6 | 10/6 |
+| Are We Fast Yet | 370 | 223/345 | 223/308 | 223/321 | 223/308 |
+| native-image driver | 427 | 209/675 | 209/656 | 209/665 | 209/656 |
+
+No method keeps more stores or loads under a finer partitioning, in all of it
+or in its loops. Every store dead in Java under a coarser partitioning is dead
+under a finer one. `check_finer_partitions_leave_no_more` checks the same on
+the fixtures. Making object-field forget the field, so that it no longer
+refines field, fails it.
+
 ## What they don't do yet
 
 - **Loops:** only a loop whose body is one arm of the header's branch that jumps straight back. A loop header isn't split as a merge, and peeling copies at most `PEEL` instructions.
@@ -713,13 +763,15 @@ that jump, through others, back to themselves.
   - Guards stay in the loop: nothing removes a null check that an earlier one makes redundant.
 - **A load forwarded into an arm** doesn't tell a merge below it that the value is known.
 - **Splitting a merge** only happens for a load with nothing before it but guards and operations that can't throw.
-- **Refused methods:** the translation refuses calls with two targets and allocations that went through escape analysis, so the rules never see those methods.
+- **Arrays:** array accesses thread their kind's token, so they order what they must, but no rule forwards or removes one: the rules look at fields only. A field's first value in an object escape analysis made (`init_k`) counts as a store.
+- **Refused methods:** since step 8, the translation refuses only `switch`es, caught exceptions and values the export gives no type ([`../graal2ct/README.md`](../graal2ct/README.md)): 4 of the 459 methods of Are We Fast Yet's native image.
 
 ## How the checks keep them honest
 
 `test/export_check/check_rules.py` has one check per rule, each with its
-controls, and one for what object partitions add (`Aliasing`). A further check
-makes sure every rewritten program, under all four partitionings:
+controls, one for what object partitions add (`Aliasing`), and one that a finer
+partitioning leaves no more than a coarser one. A further check makes sure
+every rewritten program, under all four partitionings:
 - still passes the single-use and type checks;
 - parses back;
 - is unchanged by a second pass.

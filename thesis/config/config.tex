@@ -42,3 +42,42 @@
     maxnames=100,
 ]{biblatex}
 \addbibresource{bibliography.bib}
+
+% Mathematics: symbols, inference rules, and the theorem environments of the
+% formal chapters, numbered within each chapter on one counter.
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{mathpartir}
+\usepackage{array}
+
+\usepackage[capitalise,nameinlink]{cleveref}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\crefname{assumption}{Assumption}{Assumptions}
+
+% Listings of graal.ct, the Cthulhu dialect that models Graal IR.
+\usepackage{listings}
+\lstdefinelanguage{ct}{
+    morekeywords={structure,field,class,constant},
+    morecomment=[l]{;},
+}
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    commentstyle=\itshape,
+    columns=fullflexible,
+    keepspaces=true,
+    upquote=true,
+    xleftmargin=1em,
+    literate={λ}{{$\lambda$}}1 {→}{{$\to$}}1 {×}{{$\times$}}1 {∅}{{$\emptyset$}}1 {…}{{\ldots}}1,
+}
