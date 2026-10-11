@@ -9,6 +9,7 @@
 #   make awfy         Are We Fast Yet as a whole program: coverage, opacity, the rules
 #   make driver       the same for the native-image driver, from the graal tree
 #   make native-awfy  its round trip, every image timed
+#   make awfy-layouts why the narrowed images ran slower: counters across method alignments
 #   make test-data    refresh test/data/examples.json, signatures.json and aliasing.json
 #   make check        run the checks (uv run pytest)
 #
@@ -53,7 +54,7 @@ PARTITION ?= none
 CT := $(if $(filter none,$(PARTITION)),,.$(PARTITION)).ct
 SOURCE := $(if $(filter object%,$(PARTITION)),.allocsens)
 
-.PHONY: all export translate compare native awfy native-awfy driver test-data check
+.PHONY: all export translate compare native awfy native-awfy awfy-layouts driver test-data check
 # build.sh recompiles the one classes/ directory that every export analyses.
 .NOTPARALLEL:
 .DELETE_ON_ERROR:
@@ -94,6 +95,21 @@ native-awfy:
 	ALLOCSENS=1 $(NATIVE_DIR)/run.sh Awfy
 	uv run python $(AWFY)/time.py $(NATIVE)/awfy
 	uv run python $(AWFY)/time.py $(NATIVE)/awfy-allocsens
+
+# Step 6: graal and kills with the symbols perf needs, as built by default (awfy-sym,
+# methods at multiples of 32 bytes) and with methods at multiples of 16, 64 and 128 bytes,
+# and two kills images that narrow CD's methods not at all, or only RedBlackTree.remove.
+# Then CD's counters in each, and graal against kills for every benchmark across the
+# alignments. See programs/README.md.
+awfy-layouts:
+	$(NATIVE_DIR)/build.sh
+	ONLY="graal kills" TAG=sym EXTRA=-H:-DeleteLocalSymbols $(NATIVE_DIR)/run.sh Awfy
+	for a in 16 64 128; do \
+		ONLY="graal kills" TAG=a$$a EXTRA="-H:-DeleteLocalSymbols -H:CodeAlignment=$$a" $(NATIVE_DIR)/run.sh Awfy; done
+	ONLY=kills TAG=skipcd EXTRA="-H:-DeleteLocalSymbols -J-Deffects.skip=cd." $(NATIVE_DIR)/run.sh Awfy
+	ONLY=kills TAG=onlyremove EXTRA="-H:-DeleteLocalSymbols -J-Deffects.only=cd.RedBlackTree.remove" $(NATIVE_DIR)/run.sh Awfy
+	uv run python $(AWFY)/counters.py CD $(NATIVE)/awfy-sym $(NATIVE)/awfy-skipcd $(NATIVE)/awfy-onlyremove $(NATIVE)/awfy-a64 --runs 5
+	uv run python $(AWFY)/layouts.py $(NATIVE)/awfy-a16 $(NATIVE)/awfy-sym $(NATIVE)/awfy-a64 $(NATIVE)/awfy-a128 --runs 3
 
 $(OUT)/awfy.json: $(AWFY_SOURCES) $(EXPORTER)
 	$(AWFY)/build.sh
