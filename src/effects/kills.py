@@ -1,27 +1,15 @@
-"""What each method may write, as Graal's memory kills: the answer of the round trip.
+"""Determine, what locations can each method may write to
 
 Usage:
     uv run python -m effects.kills graal-native/out/examples.json -o graal-native/out/examples.kills
     uv run python -m effects.kills graal-native/out/aliasing.json -o kills.txt \\
         --partition object-field --accesses accesses.txt
-
-Writes one line per method the facts know: its name and descriptor, and
-what it, or anything it calls, may write. That is either `any`, or the
-partitions it writes, comma-separated, possibly none. A method may write `any`
-when its signature touches everything, or when it writes the rest of memory,
-which no field of the program names: a platform field or an allocation.
-
-With the default `--partition field` the partitions are fields and array
-kinds, which are Graal's own memory locations. With `object-field` they are
-fields of sets of objects, `Aliasing$Counter.value@main:199`, and
-`--accesses` writes the partition of each access the facts list, by where it
-is: the position, the field, and the partition. Graal can then
-give each access to a field that location instead.
 """
 
 import argparse
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 from graal.graal_import import PointsToFacts
@@ -29,13 +17,43 @@ from graal.graal_import import PointsToFacts
 from .signatures import PARTITIONERS, REST, accesses, analyse
 
 ANY = "any"
+INIT = "init"
 
 
 def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tuple[str, ...]]:
-    """Method → `any`, or the partitions it may write."""
     effects = analyse(facts, PARTITIONERS[partition](facts))
-    return {m: ANY if s.opaque or effects.partition(REST) in s.writes else tuple(sorted(s.writes))
-            for m, s in sorted(effects.signatures.items())}
+    part, rest = effects.partition, effects.partition(REST)
+    methods = facts.methods
+    written: dict[str, set[str]] = {}
+    for m, e in methods.items():
+        own = {field if part(field, receivers) == rest else part(field, receivers)
+               for kind, field, receivers in accesses(e) if kind == "write"}
+        written[m] = own | set(e.get("vmWrites", ())) | ({INIT} if e.get("allocates") else set())
+
+    unknown = {m for m, e in methods.items()
+               if e.get("unknown") or e.get("unresolved") or any(c not in methods for c in e.get("callees", ()))}
+    callers: dict[str, set[str]] = defaultdict(set)
+    for m, e in methods.items():
+        for callee in e.get("callees", ()):
+            callers[callee].add(m)
+    work = list(unknown)
+    while work:
+        for caller in callers[work.pop()]:
+            if caller not in unknown:
+                unknown.add(caller)
+                work.append(caller)
+
+    changed = True
+    while changed:
+        changed = False
+        for m, e in methods.items():
+            if m in unknown:
+                continue
+            more = set().union(*(written[c] for c in e.get("callees", ()))) - written[m]
+            if more:
+                written[m] |= more
+                changed = True
+    return {m: ANY if m in unknown else tuple(sorted(written[m])) for m in sorted(methods)}
 
 
 def partitioned(facts: PointsToFacts, partition: str) -> dict[tuple[str, str], str]:
@@ -60,8 +78,9 @@ def main() -> int:
     written = kills(facts, args.partition)
     args.out.write_text("".join(f"{m}\t{w if w == ANY else ','.join(w)}\n" for m, w in written.items()))
     narrowed = [w for w in written.values() if w != ANY]
-    print(f"{len(written)} methods: {len(narrowed)} narrowed, {sum(1 for w in narrowed if not w)} of them writing nothing",
-          file=sys.stderr)
+    print(
+        f"{len(written)} methods: {len(narrowed)} narrowed, {sum(1 for w in narrowed if not w)} of them writing nothing",
+        file=sys.stderr)
     if args.accesses:
         located = partitioned(facts, args.partition)
         args.accesses.write_text("".join(f"{at}\t{field}\t{p}\n" for (at, field), p in sorted(located.items())))

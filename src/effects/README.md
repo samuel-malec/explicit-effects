@@ -129,6 +129,14 @@ A method outside the program lists no receivers. Its accesses are unknown, but
 they are to the platform's fields, which are the rest of memory anyway, and to
 arrays: every array of a kind that platform code touches is one set.
 
+A field of an object that no listed access of that field names, as a new
+object's can be, is in the partition of the field's accesses with unknown
+receivers, if it has any: only those touch it. Until step 9, `object` put it in
+its object's partition instead, so a new object's initialization and an unknown
+access to the same location could take different tokens. None of the five
+programs in the design chapter's table has such an initialization, and no rule
+could have used one, but `check_object_partitions` now covers it.
+
 Two accesses that may touch the same location share an element, and so a set:
 that is the disjointness argument. A field with one set keeps its name,
 `Aliasing$Link.next`. Otherwise its sets are named by where their first object
@@ -186,9 +194,9 @@ follow it: `h_value_main_199_1` is version 1 of `h_value_main_199_`.
 - **Loop:** in `forwardIntoLoopPastOtherObject` the loop keeps only the store
   `other.value = i`. Graal keeps the load and the store in the loop.
 
-| `Examples` + `Signatures`, 38 methods | Graal | Per field | Object | Object-field |
+| `Examples` + `Signatures`, 39 methods | Graal | Per field | Object | Object-field |
 |---|---|---|---|---|
-| stores/loads left | 64/45 | 51/27 | 52/27 | 51/27 |
+| stores/loads left | 65/46 | 52/27 | 53/27 | 52/27 |
 
 `object` loses one store to `field` here. `deadStoreOtherField` stores
 `value`, then `other`, then `value` again on one counter. With all of an
@@ -198,17 +206,46 @@ stores to `value`, as it does with one heap. That is the case for presenting
 
 ## Kills for Graal
 
-[`kills.py`](kills.py) turns the signatures into what each method may write:
-`any`, or the partitions it writes. The round trip in
+[`kills.py`](kills.py) turns the facts into what each method, or anything it
+calls, may write: `any`, or a list. The round trip in
 [`graal-native`](../../graal-native/README.md) narrows each call in a native
-image to that.
-- **With `--partition field`,** the kills are fields and array kinds, which are
-  Graal's own locations.
-- **With `--partition object-field`,** they are fields of sets of objects.
-  `--accesses` then gives each access its partition by where it is, and the
-  image gives each access to a field the location of its partition. That
-  takes a location per partition, which the graal tree's
-  `FieldLocationIdentity` now has.
+image to that. The list holds:
+- **the program's partitions.** With `--partition field` they are fields and
+  array kinds, which are Graal's own locations. With `--partition object-field`
+  they are fields of sets of objects; `--accesses` then gives each access its
+  partition by where it is, and the image gives each access to a field the
+  location of its partition, which the graal tree's `FieldLocationIdentity` now
+  has.
+- **the platform's fields, by name,** `java.lang.Throwable.stackTrace`. A kill is
+  a location, so a platform field is as good as one of the program's. They used
+  to be the rest of memory, which turned any call that reached one into `any`.
+- **the VM's own locations Graal names,** `vm:identityHashCode`.
+- **`init`** when it allocates: the new objects' initialization.
+
+A method kills `any` when it, or something it calls, has no facts, makes a call
+the analysis can't resolve, or has an effect that may write anything. An
+effect that may read anything doesn't count: it changes nothing a caller could
+read, though the tokens still treat it as touching everything.
+
+## What the design chapter adds (step 9)
+
+The thesis chapter on explicit effects,
+[`explicit-effects.tex`](../../thesis/chapters/explicit-effects.tex), defines
+partitions, signatures and the token form, and proves what they guarantee. Two
+of its findings concern this directory:
+- **A signature covers the memory that exists when its method is called.** It
+  says nothing about the fields of objects the call allocates itself. That is
+  what lets the facts leave initializations out. It would also let them leave
+  out any access to an object the call allocated, which needs an analysis of
+  which objects are new in the current call, as Sălcianu and Rinard's purity
+  analysis has. Only initializations use it now, because Graal marks them.
+- **Tokens order Java's memory, not the VM's.** The facts list the VM's
+  locations a method writes (`vmWrites`), for the kill sets, but signatures
+  leave them out, and the facts don't list the ones a method reads. So tokens
+  order accesses to fields, array elements and the allocator, but not, say, a
+  write and a read of off-heap memory in two callees. In Are We Fast Yet's
+  image, 25 methods write `vm:OFF_HEAP_LOCATION`. No rule moves a call, so no
+  rewrite depends on it.
 
 ## Limits
 
@@ -232,6 +269,7 @@ image to that.
   - `forwardPastOtherObject` has two `Counter.value` partitions, and its control one;
   - `countInto` writes only `other`'s;
   - an access with unknown receivers joins every object of its field;
+  - a field of an object no listed access of it names is in that access's partition, under both object partitionings;
   - named by type, `object-field` is `field`.
 - **`check_object_partitions_tell_objects_apart`** (`check_rules.py`): per
   field the rules change nothing in `Aliasing`; with either object
@@ -239,12 +277,13 @@ image to that.
 - **`check_rewritten_programs_stay_valid`** now runs every fixture under all
   four partitionings.
 
-Six mutations of the partitioner are each caught:
+Seven mutations of the partitioner are each caught:
 - an access joins nothing;
 - an unknown access joins nothing;
 - receivers are ignored;
 - per field forgets the field;
 - the listed accesses are ignored;
-- a method's accesses don't reach its signature.
+- a method's accesses don't reach its signature;
+- an object's field that no listed access names keeps its object's partition (step 9).
 
 The 32 mutations of the rules are still caught.
