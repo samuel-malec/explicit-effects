@@ -65,7 +65,8 @@ class Structure:
 class Program:
     structures: list[Structure] = field(default_factory=list)
     fields: dict[str, str] = field(default_factory=dict)  # `field T "name"` declarations, in order: get_i / set_i
-    classes: list[str] = field(default_factory=list)  # `class` declarations: new_i
+    classes: list[str] = field(default_factory=list)  # `class` declarations: new_i, instanceof_i
+    constants: list[tuple[str, str]] = field(default_factory=list)  # `constant T "what"` declarations: const_i
     externals: dict[str, str] = field(default_factory=dict)  # external functions called from the analyzed code: structure → method
 
     def field_index(self, name: str, type_: str) -> int:
@@ -78,6 +79,13 @@ class Program:
             self.classes.append(name)
         return self.classes.index(name)
 
+    def constant_index(self, type_: str, what: str) -> int:
+        """A constant other than an int, a long or null: an object, a string, a float."""
+        what = what.replace('"', "'").replace("\n", " ")
+        if (type_, what) not in self.constants:
+            self.constants.append((type_, what))
+        return self.constants.index((type_, what))
+
 
 def to_text(program: Program) -> str:
     lines = []
@@ -86,11 +94,14 @@ def to_text(program: Program) -> str:
     
     for i, name in enumerate(program.classes):
         lines.append(f'class "{name}"   ; new_{i}')
+
+    for i, (type_, what) in enumerate(program.constants):
+        lines.append(f'constant {type_} "{what}"   ; const_{i}')
     
     for name in program.externals.values():
         lines.append(f"; external: {name}")
     
-    if program.fields or program.classes or program.externals:
+    if program.fields or program.classes or program.constants or program.externals:
         lines.append("")
 
     for structure in program.structures:

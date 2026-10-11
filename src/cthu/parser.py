@@ -44,6 +44,7 @@ class Module:
     structures: dict[str, StructureDef] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)  # `field T "name"`: name → T, in order
     classes: list[str] = field(default_factory=list)  # `class "name"`, in order
+    constants: list[tuple[str, str]] = field(default_factory=list)  # `constant T "what"`, in order
 
 
 def parse(text: str) -> Module:
@@ -125,6 +126,10 @@ class _Parser:
             elif keyword == "field":
                 type_ = self.name()
                 self.parsed.fields[self.expect(Category.STRING).text] = type_
+
+            elif keyword == "constant":
+                type_ = self.name()
+                self.parsed.constants.append((type_, self.expect(Category.STRING).text))
 
             else:
                 self.parsed.classes.append(self.expect(Category.STRING).text)

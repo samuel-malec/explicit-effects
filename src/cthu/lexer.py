@@ -14,7 +14,7 @@ class Category(Enum):
     LAMBDA = "λ"
 
 
-KEYWORDS = {"type", "signature", "structure", "field", "class"}
+KEYWORDS = {"type", "signature", "structure", "field", "class", "constant"}
 _PUNCT = {":", "∷", "×", "=", ","}
 
 

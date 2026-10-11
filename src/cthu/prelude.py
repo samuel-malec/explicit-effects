@@ -14,6 +14,8 @@ GRAAL = Path(__file__).with_name("graal.ct")
 FUNCTION = ("function", "stck", "bool") # operations a function supports
 CONSTANTS = {"int", "long"}  # the structures with cons_<n>
 MEMORY = "heap"  # the structure with the field and allocation operations
+#: An array kind, as the operations on it name it, and the type of its elements.
+ARRAYS = {"byte": "int", "char": "int", "short": "int", "int": "int", "long": "long", "float": "float", "double": "double", "Object": "ref"}
 
 
 @dataclass
@@ -39,6 +41,7 @@ class Prelude:
         ops = {}
         for parent, parent_args in s.parents:
             ops.update(self.operations(parent, [binding.get(a, a) for a in parent_args], within | {signature}))
+
         ops.update({op: (bind(ins), bind(outs)) for op, (ins, outs) in s.operations.items()})
         return ops
 
@@ -89,15 +92,19 @@ def _reference(signatures: dict[str, Signature], name: str, args: list[str]) -> 
     """What is wrong with naming signature `name` with these arguments, if anything."""
     if name not in signatures:
         return f"no signature {name}"
+
     params = signatures[name].params
+
     if len(args) != len(params):
         return f"{name}[ {', '.join(params)} ] takes {len(params)} argument(s), given {len(args)}"
+
     return None
 
 
 def _cycle(signatures: dict[str, Signature], start: str) -> list[str] | None:
     """A chain of parents leading from `start` back to it, if there is one."""
     work, seen = [[start]], set()
+
     while work:
         chain = work.pop()
         for parent, _ in signatures[chain[-1]].parents if chain[-1] in signatures else ():
@@ -146,9 +153,27 @@ def _expected(instr: Instr, program: Program, prelude: Prelude,
         if t in CONSTANTS and re.fullmatch(r"cons_m?\d+", op):
             return [], [t]
 
-        memory = re.fullmatch(r"(get|set|getstatic|setstatic|new)_(\d+)", op)
+        if constant := re.fullmatch(r"const_(\d+)", op):
+            k = int(constant.group(1))
+            if k >= len(program.constants) or program.constants[k][0] != t:
+                return f"no {t} constant {k}"
+            return [], [t]
+
+        if t == "ref" and (box := re.fullmatch(r"unbox_(int|long|float|double)", op)):
+            return ["ref"], [box.group(1)]
+
+        if t == "ref" and (test := re.fullmatch(r"instanceof_(\d+)", op)):
+            return (["ref"], ["bool"]) if int(test.group(1)) < len(program.classes) else f"no class {test.group(1)}"
+
+        memory = re.fullmatch(r"(get|set|init|getstatic|setstatic|new)_(\d+)", op)
         if t == MEMORY and memory:
             return _memory(memory.group(1), int(memory.group(2)), program)
+
+        array = re.fullmatch(r"(aget|aset|newarray)_(\w+)", op)
+        if t == MEMORY and array and array.group(2) in ARRAYS:
+            element = ARRAYS[array.group(2)]
+            return {"aget": ([MEMORY, "ref", "int"], [element, MEMORY]), "aset": ([MEMORY, "ref", "int", element], [MEMORY]),
+                    "newarray": ([MEMORY, "int"], ["ref", MEMORY])}[array.group(1)]
 
         return f"{t} has no {op}"
 
@@ -190,7 +215,7 @@ def _memory(kind: str, k: int, program: Program) -> OpType | str:
     
     v = fields[k]
     
-    return {"get": ([MEMORY, "ref"], [v, MEMORY]), "set": ([MEMORY, "ref", v], [MEMORY]),
+    return {"get": ([MEMORY, "ref"], [v, MEMORY]), "set": ([MEMORY, "ref", v], [MEMORY]), "init": ([MEMORY, "ref", v], [MEMORY]),
             "getstatic": ([MEMORY], [v, MEMORY]), "setstatic": ([MEMORY, v], [MEMORY])}[kind]
 
 
