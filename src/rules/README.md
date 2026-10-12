@@ -21,7 +21,7 @@ when that block joined the λ. Every example is a method of
 
 ## In what order
 
-1. A branch to a trap becomes a guard.
+1. A branch to an arm that throws becomes a guard.
 2. A block that only one jump reaches joins the λ that jumps, and two
    parameters of a λ that every caller passes the same value for become one.
 3. Loads are forwarded: within a λ, into branch arms, into loops and across
@@ -35,38 +35,47 @@ Steps 1 and 2 only change the shape of the program. They make more of it
 straight-line, so that the rules after them can be local: each follows a
 token from one operation to the next.
 
-## 1. A branch to a trap becomes a guard
+## 1. A branch to an arm that throws becomes a guard
 
-A branch whose one arm traps on every path becomes a `guard` on each token,
-which traps when that arm would have run, and a jump to the other arm. Graal
-checks for null before every field access, and each check is such a branch,
-so without this, every null check would split straight-line code in two.
-`guard ∷ H × B → H` is declared in `graal.ct`. Graal has guards of its own,
-`FixedGuardNode`.
+An exception is control flow in the token form
+([`../graal2ct/README.md`](../graal2ct/README.md#exceptions)): a failed check
+branches to a block that makes the exception, and every call branches on the
+exception it gave back. A branch whose one arm throws on every path becomes a
+`guard` on each token, which leaves the method when that arm would have run,
+and a jump to the other arm. Without this, every null check and every call
+would split straight-line code in two. `guard ∷ H × B → H` is declared in
+`graal.ct`. Graal has guards of its own, `FixedGuardNode`.
+
+A guard notes how its arm leaves: `throws`, giving the caller the exception and
+every token, or `traps`, stopping the program, for an arm that deoptimizes.
 
 `forwardAcrossWritingCall` starts with the null check on `counter`:
 
 ```
 before:
-  run = λ p0 p1 p2 h_value h_next h_count → r h_valueout h_nextout h_countout
+  run = λ p0 p1 p2 h_value h_next h_count → r exc h_valueout h_nextout h_countout
       ref nil? p0 → v6
-      Examples_forwardAcrossWritingCall b1 → kt          ; b1 traps
+      Examples_forwardAcrossWritingCall b1 → kt          ; b1 throws
       Examples_forwardAcrossWritingCall b2 → kf
       Examples_forwardAcrossWritingCall frame_0 → frame
       bool not v6 → cn
-      f_rrrhhh_ihhh opt v6 kt → at
-      f_rrrhhh_ihhh opt cn kf → af
-      f_rrrhhh_ihhh join at af frame → k
-      f_rrrhhh_ihhh call k p0 p1 p2 h_value h_next h_count → r h_valueout h_nextout h_countout
+      f_rrrhhh_irhhh opt v6 kt → at
+      f_rrrhhh_irhhh opt cn kf → af
+      f_rrrhhh_irhhh join at af frame → k
+      f_rrrhhh_irhhh call k p0 p1 p2 h_value h_next h_count → r exc h_valueout h_nextout h_countout
 
 after:
-  run = λ p0 p1 p2 h_value h_next h_count → r h_valueout h_nextout h_countout
+  run = λ p0 p1 p2 h_value h_next h_count → r exc h_valueout h_nextout h_countout
       ref nil? p0 → v6
-      heap guard h_value v6 → h_value_g                    ; traps when counter is null
-      heap guard h_next v6 → h_next_g
-      heap guard h_count v6 → h_count_g
+      heap guard h_value v6 → h_value_g   ; throws       ; leaves when counter is null
+      heap guard h_next v6 → h_next_g   ; throws
+      heap guard h_count v6 → h_count_g   ; throws
       …                                                    ; b2's code follows
 ```
+
+The call in `b2` ends its block the same way, with a branch on the exception
+`countInto` gave back, `v17`: to `b4`, which throws it, or on. It becomes
+three more guards, which leave when `v17` isn't null.
 
 ## 2. A block that only one jump reaches joins it
 
@@ -106,28 +115,34 @@ return counter.value;
 ```
 
 ```
-  run = λ p0 p1 p2 h_value h_next h_count → r h_valueout h_nextout h_countout
+  run = λ p0 p1 p2 h_value h_next h_count → r exc h_valueout h_nextout h_countout
       ref nil? p0 → v6
-      heap guard h_value v6 → h_value_g
-      heap guard h_next v6 → h_next_g
-      heap guard h_count v6 → h_count_g
+      heap guard h_value v6 → h_value_g   ; throws
+      heap guard h_next v6 → h_next_g   ; throws
+      heap guard h_count v6 → h_count_g   ; throws
       int cons_5 → v11_b2
       heap set_3 h_value_g p0 v11_b2 → h_value1_b2         ; counter.value = 5
       Examples_countInto_LExamples_Logger_LExamples_Link__V run → k13_b2
-      f_rrhh_hh call k13_b2 p1 p2 h_next_g h_count_g → h_next1_b2 h_count1_b2
+      f_rrhh_rhh call k13_b2 p1 p2 h_next_g h_count_g → v17_b2 h_next1_b2 h_count1_b2
+      ref nil? v17_b2 → v17_none_b2
+      bool not v17_none_b2 → cn_b2
+      heap guard h_value1_b2 cn_b2 → h_value1_g_b2   ; throws   ; leaves if countInto threw
+      heap guard h_next1_b2 cn_b2 → h_next1_g_b2   ; throws
+      heap guard h_count1_b2 cn_b2 → h_count1_g_b2   ; throws
       int move v11_b2 → v24_b3   ; forwarded Examples$Counter.value
-      heap move h_value1_b2 → h_value1_b3
+      heap move h_value1_g_b2 → h_value1_b3
+      ref null → exc
       int move v24_b3 → r
       heap move h_value1_b3 → h_valueout
-      heap move h_next1_b2 → h_nextout
-      heap move h_count1_b2 → h_countout
+      heap move h_next1_g_b2 → h_nextout
+      heap move h_count1_g_b2 → h_countout
 ```
 
-The two moves after the call were `heap get_3 h_value1_b2 p0 → v24_b3
+The two moves after the guards were `heap get_3 h_value1_g_b2 p0 → v24_b3
 h_value1_b3`, the load. The call takes `h_next` and `h_count` only, so the
-load's `h_value1_b2` comes straight from the store, through `counter` (`p0`)
-both times: the load returns 5. With one heap token, the call takes `h`, the
-load's token comes from the call, and nothing is forwarded.
+load's token comes straight from the store, past a guard, through `counter`
+(`p0`) both times: the load returns 5. With one heap token, the call takes
+`h`, the load's token comes from the call, and nothing is forwarded.
 
 A load forwards from a load the same way. In `repeatedLoadAcrossCall`, the
 second load of `counter.value`, after `length(list)`, takes the first one's
@@ -541,13 +556,19 @@ The paths follow the token through:
 - jumps, into a merge as well;
 - both arms of a branch.
 
-A loop that neither reads nor overwrites the field adds no path. Any other
-use of the token keeps the store:
+A loop that neither reads nor overwrites the field adds no path, and a trap,
+which stops the program, ends a path well: nothing reads the store after it.
+Any other use of the token keeps the store:
 - a load of the field, through any reference, since another reference may be the same object;
 - a store through another reference, which may be another object;
 - with one heap token, an access to another field: the rule never looks past a memory operation;
 - a call that takes the token;
+- a guard that throws, and an arm that throws: the method leaves there with an exception, and a handler up the stack may read the store;
 - leaving the method.
+
+So does an allocation between the store and the overwrite, whichever token it
+takes: it may throw `OutOfMemoryError`, the one exception Graal IR has no edge
+for.
 
 ### Per field, not with one heap: `deadStoreOtherField`
 
@@ -606,12 +627,16 @@ so a single heap token is enough.
 
 ### After forwarding
 
-A store whose reader was forwarded can be dead too:
-- **`deadStoreReadAfterMerge`:** once the load takes the 1 on that path, the store in the arm goes. Its token then goes, through a guard, to the last store.
-- **`deadStoreReadInArm`:** once the load in the arm takes the 1, the first store goes.
-- **`deadStoreReadInLoop`:** once every iteration's load takes the 1, the store before the loop goes. Its token goes around the loop unread, and the exit overwrites it.
-- **`forwardAcrossIterations`:** once the loop carries the value as a phi, both the store before the loop and the one in it go. The next iteration's store, or the one after the loop, overwrites each, and nothing reads them any more.
-- **`forwardAcrossIterationsPeeled`:** the same for the peeled iteration's store and the loop's.
+A store whose reader was forwarded is overwritten too, but in `Examples` each
+such store has something between it and its overwrite that may throw, so it
+stays:
+- **`deadStoreReadInArm`, `deadStoreReadInLoop`:** once the load in the arm, or in every iteration, takes the 1, the first store is overwritten after `length(list)`, a call.
+- **`forwardAcrossIterations`, `forwardAcrossIterationsPeeled`:** once the loop carries the value as a phi, the next iteration's store, or the one after the loop, overwrites each store, after `length(list)` again. Peeling copies the loop's store into the first iteration, so `forwardAcrossIterationsPeeled` keeps one store more than its bytecode has.
+- **`deadStoreReadAfterMerge`:** once the load takes the 1 on that path, the store in the arm is overwritten after the merge, past the null check of `counter` there. That check repeats one made before the store, so it can't fail, but nothing tells the rules so.
+
+Before step 10 these were dead, in a model in which a path that throws ends the
+program, and nothing reads a store on it. That is not Java: there a handler up
+the stack, or the code that prints an uncaught exception, can read it.
 
 ### Controls
 
@@ -620,41 +645,23 @@ A store whose reader was forwarded can be dead too:
 - **`deadStoreOneArm`:** one arm leaves it to the caller.
 - **`forwardAcrossIterationsAliasControl`:** the first iteration's load reads it, and the loop stores through another reference, so that load can't take the value.
 
-### The trap model
+### Every dead store is dead in Java
 
-A path that throws ends in a trap, or at a guard, and that ends the program,
-so nothing reads the store on that path. In Java a handler up the stack
-could. So a store removed across a call or a guard is legal in Java only if
-neither can throw.
+Three stores of `Examples` are dead: those of `deadStoreOtherField`,
+`deadStoreOtherObject` and `deadStoreBothArms`. Between each and its overwrite
+nothing may throw. Forwarding a load never depends on exceptions: it happens on
+the path where nothing threw.
 
-Of the ten stores removed in `Examples`, four are legal in Java as well:
-- In `deadStoreOtherField`, `deadStoreOtherObject` and `deadStoreBothArms`, nothing between the two stores can throw.
-- In `deadStoreReadAfterMerge`, the guard in between checks a reference already checked on that path.
-
-The other six, in `deadStoreReadInArm`, `deadStoreReadInLoop` and the two
-each in `forwardAcrossIterations` and `forwardAcrossIterationsPeeled`, are
-not: `length(list)` comes between the stores and may throw
-`StackOverflowError`. Forwarding a load never depends on
-the trap model.
-
-`memory.apply(program, java=True)` removes only what is dead in Java.
-- **What counts as a read:** a trap or a guard on the store's token. So does
-  anything that may throw between the store and the overwrite, on any token:
-  a call to a method, an allocation, a division.
-- **What it finds:** three of the four above. It misses
-  `deadStoreReadAfterMerge`, because it doesn't know that a guard repeats a
-  check already made.
-- **Without forwarding** (`forward=False`), the same three are dead. So none
-  of them needs a load the rules took away.
-
-[`decisions.py`](decisions.py) runs it that way, and the round trip removes
-those stores in Graal: see [`graal-native`](../../graal-native/README.md).
+Without forwarding (`forward=False`), the same three are dead, so none of them
+needs a load the rules took away. [`decisions.py`](decisions.py) runs the rules
+that way, and the round trip removes those stores in Graal: see
+[`graal-native`](../../graal-native/README.md).
 
 ## 5. Clean-up
 
 What nothing uses any more goes:
 - values, such as the constant a dead store stored, or the `not` a guard left unused;
-- λs nothing takes, such as a trap arm or an old frame.
+- λs nothing takes, such as an arm that throws, once it is a guard, or an old frame.
 
 `linearize` then puts copies and drops back. Every rewritten program passes
 the single-use and type checks, and a second pass changes nothing.
@@ -673,20 +680,24 @@ with the kills our tool computes is in
 |---|---|---|---|---|---|
 | `deadStoreOtherField` | 3/0 | 3/0 | 3/0 | 3/0 | **2/0** |
 | `deadStoreBothArms` | 3/0 | 3/0 | 3/0 | **2/0** | **2/0** |
-| `deadStoreReadAfterMerge` | 2/1 | 1/1 | 1/1 | 1/1 | 1/1 |
-| `deadStoreReadInArm` | 2/1 | 2/1 | 3/1 | 2/1 | **1/0** |
-| `deadStoreReadInLoop` | 2/1 | 2/1 | 2/1 | 2/1 | **1/0** |
-| `forwardAcrossIterations` | 3/1 | 4/2 | 4/2 | 3/1 | **1/0** |
-| `forwardAcrossIterationsPeeled` | 2/1 | 4/2 | 4/3 | 2/1 | **1/1** |
+| `deadStoreReadAfterMerge` | 2/1 | 1/1 | 1/1 | 2/1 | 2/1 |
+| `deadStoreReadInArm` | 2/1 | 2/1 | 3/1 | 2/1 | **2/0** |
+| `deadStoreReadInLoop` | 2/1 | 2/1 | 2/1 | 2/1 | **2/0** |
+| `forwardAcrossIterations` | 3/1 | 4/2 | 4/2 | 3/1 | **3/0** |
+| `forwardAcrossIterationsPeeled` | 2/1 | 4/2 | 4/3 | 2/1 | 3/1 |
 | `forwardAcrossWritingCall` | 1/1 | 1/1 | 1/1 | 1/1 | **1/0** |
 | `forwardAcrossMerge` | 2/1 | 2/1 | 2/1 | 2/1 | **2/0** |
 | `forwardAcrossVirtualCall` (translated since step 8) | 1/1 | 1/1 | 1/1 | 1/1 | **1/0** |
 | `Signatures.acrossField` | 1/1 | 1/1 | 1/0 | 1/1 | **1/0** |
-| **Total, 39 methods** | 61/39 | 65/46 | 76/52 | 59/39 | 52/27 |
+| **Total, 39 methods** | 61/39 | 65/46 | 76/52 | 60/39 | 59/27 |
 
 How to read it:
 - **Inlining column:** inlined callees add accesses to the same fields, so its totals overstate what is left of each method's own accesses.
 - **Graal's loads above the bytecode:** loop peeling and merge duplication copy loads.
+- **Our stores above the bytecode:** peeling copies stores too. In
+  `forwardAcrossIterationsPeeled` the peeled iteration's store and the loop's
+  both stay, since `length(list)` may throw before the next store overwrites
+  them.
 
 `make compare` also prints the accesses left inside loops. Graal's come
 from the probe, which marks an access in a loop. Ours are the accesses in λs
@@ -696,14 +707,14 @@ that jump, through others, back to themselves.
 |---|---|---|---|---|---|
 | `hoistLoadOutOfLoop` | 0/1 | 0/1 | 0/1 | 0/1 | **0/0** |
 | `deadStoreReadInLoop` | 0/1 | 0/1 | 0/1 | 0/1 | **0/0** |
-| `forwardAcrossIterations` | 1/1 | 1/1 | 1/1 | 1/1 | **0/0** |
-| `forwardAcrossIterationsPeeled` | 1/1 | 1/1 | 1/1 | 1/1 | **0/0** |
+| `forwardAcrossIterations` | 1/1 | 1/1 | 1/1 | 1/1 | **1/0** |
+| `forwardAcrossIterationsPeeled` | 1/1 | 1/1 | 1/1 | 1/1 | **1/0** |
 | `forwardIntoLoopAliasControl` | 0/2 | 0/0 | 0/0 | **0/0** | **0/0** |
 | `hoistLoadOutOfLoopListControl` | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 |
-| **Total, 8 methods** | 3/9 | 3/7 | 3/7 | 3/7 | 1/3 |
+| **Total, 8 methods** | 3/9 | 3/7 | 3/7 | 3/7 | 3/3 |
 
 - **`hoistLoadOutOfLoop`:** Graal keeps the load in the loop, since in its model `length` may write any memory.
-- **`forwardAcrossIterations`, `forwardAcrossIterationsPeeled`:** Graal keeps the load and the store in the loop, for the same reason.
+- **`forwardAcrossIterations`, `forwardAcrossIterationsPeeled`:** Graal keeps the load and the store in the loop, for the same reason. The rules keep the store only: the next iteration's call may throw before its store overwrites it.
 - **`forwardIntoLoopAliasControl`:** both Graal and the rules move both loads out of their loops. For the second loop, Graal peels one iteration and its read floats out, while the rules peel two.
 
 ## What the design chapter adds (step 9)
@@ -714,12 +725,16 @@ why the rules are sound. Every rule is a change of shape followed by one of two
 licences, each with a theorem:
 - **Forwarding:** a load whose token comes from an access of the same field of
   the same object, past moves and guards only, reads that access's value. It
-  doesn't depend on the trap model.
+  doesn't depend on how exceptions are modelled: it happens on the path where
+  nothing threw.
 - **Dead stores:** a store whose token reaches, on every path, a store of the
-  same field of the same object, or a trap, can go in the trap model. It can go
-  in Java if, moreover, nothing in between may throw.
+  same field of the same object, or a trap that stops the program, can go,
+  provided nothing in between may throw: in Java a handler up the stack can read
+  a store a path that throws leaves behind. Since step 10 that is the only
+  model: exceptions are control flow, and a path that throws leaves the method
+  with every token, as a return does.
 
-The changes of shape (guards for branches that trap, joining blocks, merging
+The changes of shape (guards for branches to arms that throw, joining blocks, merging
 parameters, peeling, splitting merges) keep every run's accesses, in order and
 with their values; the chapter sketches why.
 
@@ -727,9 +742,9 @@ The proofs rest on one fact about the tokens: an instruction that doesn't
 take a partition's token leaves the partition alone, except for fields of
 objects allocated in the meantime, which nothing before can have seen.
 Swapping two instructions that share no token keeps the result when both
-finish, but not necessarily which of a trap and a hang happens: a guard takes
-every token, while a call of a method that touches no memory takes none. The
-rules never move an instruction, so they don't depend on it.
+finish, but not necessarily which of an exception and a hang happens: a guard
+takes every token, while a call of a method that touches no memory takes none.
+The rules never move an instruction, so they don't depend on it.
 
 ### A finer partitioning leaves no more
 
@@ -744,16 +759,20 @@ under all four:
 | Program | Methods | One heap | Per field | Object | Object-field |
 |---|---|---|---|---|---|
 | `Aliasing` | 14 | 18/15 | 18/15 | 17/12 | 17/12 |
-| `Examples` | 41 | 51/37 | 44/29 | 45/29 | 44/29 |
+| `Examples` | 41 | 52/37 | 51/29 | 52/29 | 51/29 |
 | `Signatures` | 18 | 10/10 | 10/6 | 10/6 | 10/6 |
 | Are We Fast Yet | 370 | 223/345 | 223/308 | 223/321 | 223/308 |
-| native-image driver | 427 | 209/675 | 209/656 | 209/665 | 209/656 |
+| native-image driver | 436 | 266/714 | 266/695 | 266/704 | 266/695 |
 
-No method keeps more stores or loads under a finer partitioning, in all of it
-or in its loops. Every store dead in Java under a coarser partitioning is dead
-under a finer one. `check_finer_partitions_leave_no_more` checks the same on
-the fixtures. Making object-field forget the field, so that it no longer
-refines field, fails it.
+No method keeps a store or a load under a finer partitioning that a coarser
+one removes, counted by where it is in the bytecode, or keeps more of them in
+its loops. Every dead store under a coarser partitioning is dead under a finer
+one. Counted in the code, `forwardAcrossIterationsPeeled` keeps a store more
+per field than with one heap: per field the rules peel its loop, which copies
+the store, and both copies stay, since the call in the loop may throw before
+the next store. `check_finer_partitions_leave_no_more` checks the same on the
+fixtures. Making object-field forget the field, so that it no longer refines
+field, fails it.
 
 ## What they don't do yet
 
@@ -764,7 +783,8 @@ refines field, fails it.
 - **A load forwarded into an arm** doesn't tell a merge below it that the value is known.
 - **Splitting a merge** only happens for a load with nothing before it but guards and operations that can't throw.
 - **Arrays:** array accesses thread their kind's token, so they order what they must, but no rule forwards or removes one: the rules look at fields only. A field's first value in an object escape analysis made (`init_k`) counts as a store.
-- **Refused methods:** since step 8, the translation refuses only `switch`es, caught exceptions and values the export gives no type ([`../graal2ct/README.md`](../graal2ct/README.md)): 4 of the 459 methods of Are We Fast Yet's native image.
+- **Refused methods:** since step 10, the translation refuses only `switch`es and values the export gives no type ([`../graal2ct/README.md`](../graal2ct/README.md)): 4 of the 459 methods of Are We Fast Yet's native image.
+- **A repeated check:** a guard that repeats an earlier null check can't fail, but it still stands between a store and its overwrite (`deadStoreReadAfterMerge`).
 
 ## How the checks keep them honest
 
@@ -780,4 +800,7 @@ Every control was confirmed by breaking a rule on purpose, in 32 different
 ways. They range from ignoring the object to a guard trapping on the wrong
 arm, a loop ignoring what its back edge brings, a peeled phi starting from
 the load instead of the store, and parameters merging when only some callers
-agree. Each break makes a check fail.
+agree. Step 10 added eleven breaks of exceptions as control flow, from a call
+ignoring its exception edge, or a handler not taking the exception, to a guard
+that throws letting a store go, or an allocation that can't throw. Each break
+makes a check fail.

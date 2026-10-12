@@ -19,7 +19,7 @@ def dead_stores(export: Path, partition: str = "field") -> list[str]:
     """`position\\tfield` of each store that is dead in Java."""
     facts, graphs = load(export)
     program = Translation(graphs, analyse(facts, PARTITIONERS[partition](facts))).translate(sorted(graphs))
-    done = memory.apply(program, forward=False, java=True)
+    done = memory.apply(program, forward=False)
     left = {f"{i.at}\t{i.note}" for s in program.structures for lam in s.lambdas for i in lam.body
             if (m := memory.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
     return sorted(set(done.dead) - left)

@@ -1,36 +1,9 @@
-"""Memory rules on the token form: a load takes the value of the access its
-token comes from, and a store goes when every path its token takes overwrites
-the same location first.
-
-Both rules are local. They follow a token from one operation to the next,
-through what only passes it on (a move, a guard, a jump to the next block, a
-branch to both of its arms), and never past another memory operation, so what
-they find depends on the partitioning alone: with one heap token, a store to
-another field stands in the way.
-
-First the program takes a shape in which more of it is local: a branch whose
-arm only traps becomes a guard on each token, a block that only one jump
-reaches joins the λ that jumps, and two parameters that every caller passes
-the same value for become one. Three rules then carry a known value past a
-λ's edge as a parameter. A load in a branch arm takes the value from above the
-branch, which passes it to both arms. A load in a loop takes the value known
-on entry when the back edge brings the field's value too: the header takes
-it, and the back edge passes back the value it got, when nothing on the way
-around writes the field, or the value of the body's last store or load of
-it, a loop-carried phi. When no entry knows it, the loop's first
-iteration is peeled, and the loop takes what that iteration leaves for the
-next: the load leaves the loop. An object that is another one from the
-second iteration on, one the loop keeps, settles: two iterations are peeled. A load after a merge whose predecessors
-know its value splits the merge: those that know it get a copy, up to the
-load, which takes the value as a parameter, like a phi, and both copies go on
-to the same λ for the code after the load.
-
-Dead stores rely on the trap model: a path that throws ends in a trap, which
-ends the program, so nothing reads the store on it. In Java a handler up the
-stack could, so a store removed across a call or a guard is legal there only
-if neither can throw. With `java`, only such stores go: nothing between one
-and the store that overwrites it may throw, on any token. Forwarding a load
-never depends on it.
+""" Memory rules on the token form.
+    
+    We perform:
+    - Load forwarding
+    - Dead store elimination
+    - LICM
 """
 
 import re
@@ -46,7 +19,10 @@ VALUES = {"int", "long", "float", "double", "bool", "ref"}
 # Operations on values that can't throw: what may sit before a load in the part
 # of a merge that splitting copies, and what goes once nothing uses it.
 PURE = re.compile(r"cons_m?\d+|const_\d+|null|move|not|neg|add|sub|mul|and|or|xor|shl|shr|ushr|eq\?|lt\?|ult\?|nil\?|opt|join"
-                  r"|abs|min|max|sqrt|cmp|to_(int|long|float|double)|instanceof_\d+|isinstance|hub")
+                  r"|abs|min|max|sqrt|cmp|to_(int|long|float|double)|instanceof_\d+|isinstance|hub|exception")
+
+# An allocation may throw OutOfMemoryError, the one exception Graal IR leaves implicit.
+ALLOCATION = re.compile(r"new_\d+|newarray_\w+")
 
 ROUNDS = 100  # merges split and loops peeled per method, at most
 
@@ -62,38 +38,45 @@ class Rewrites:
     dead: list[str] = field(default_factory=list)
 
 
-def apply(program: Program, forward: bool = True, java: bool = False) -> Rewrites:
+def apply(program: Program, forward: bool = True) -> Rewrites:
     """Rewrite the program in place, and say what changed. Without `forward`,
     only the shape changes before dead stores go: a store is then dead
-    whatever happens to the loads. With `java`, only what is dead in Java
-    goes, where an exception that leaves the method is one more way to read
-    a store."""
+    whatever happens to the loads."""
     done = Rewrites()
     for s in program.structures:
         for lam in s.lambdas:
             _unshare(lam)
-        _guard_traps(s)
+        _guard_exits(s)
+        
         for _ in range(ROUNDS):
             _remove_unreferenced(s)
             _fuse(s)
             _merge_same_params(s)
+            
             if not forward:
                 break
+            
             for lam in s.lambdas:
                 done.forwarded += [f"{s.name}: {note}" for note in _forward(lam)]
+            
             done.forwarded += [f"{s.name}: {note}" for note in _forward_into_arms(s)]
             done.forwarded += [f"{s.name}: {note}" for note in _forward_into_loops(s)]
             changed = _hoist_out_of_loop(s) or _split_merge(s)
+            
             if changed is None:
                 break
+            
             done.forwarded.append(f"{s.name}: {changed}")
-        dead = _remove_dead_stores(s, java)
+        
+        dead = _remove_dead_stores(s)
         done.removed += [f"{s.name}: {i.note}" for i in dead]
         done.dead += [f"{i.at}\t{i.note}" for i in dead if i.at]
         _remove_unreferenced(s)
+        
         for lam in s.lambdas:
             _drop_unused(lam)
             linearize(lam)
+    
     return done
 
 
@@ -111,6 +94,7 @@ def _types(lam: Lambda) -> dict[str, str]:
     types = dict(lam.params)
     for i in lam.body:
         types.update(zip(i.outs, i.out_types))
+
     return types
 
 
@@ -119,6 +103,7 @@ def _fresh(taken: set[str], base: str) -> str:
     while name in taken:
         n += 1
         name = f"{base}{n}"
+
     taken.add(name)
     return name
 
@@ -132,6 +117,7 @@ def _unshare(lam: Lambda) -> None:
     drops go, so the same object has the same name all through the λ."""
     original: dict[str, str] = {}
     body = []
+    
     for i in lam.body:
         i.ins = [original.get(n, n) for n in i.ins]
         if i.op == "dup" and i.type not in LINEAR:
@@ -141,11 +127,13 @@ def _unshare(lam: Lambda) -> None:
     lam.body = body
 
 
-def _guard_traps(s: Structure) -> None:
-    """A branch whose arm traps on every path, such as a null check's, becomes
-    a guard on each token, which traps when that arm would have run, and a jump
-    to the other arm."""
-    traps = {lam.name for lam in s.lambdas if lam.note.startswith("traps")}
+def _guard_exits(s: Structure) -> None:
+    """A branch whose arm leaves the method on every path becomes a guard on each
+    token, which leaves when that arm would have run, and a jump to the other
+    arm: a null check's branch to the exception it throws, a call's branch to
+    where its exception goes. The guard says how the arm leaves: `throws`, with
+    an exception and every token, or `traps`, stopping the program."""
+    exits = {lam.name: lam.note.split(":")[0] for lam in s.lambdas if lam.note.startswith(("throws", "traps"))}
     for lam in s.lambdas:
         call = lam.body[-1] if lam.body else None
         defs = {out: i for i in lam.body for out in i.outs}
@@ -154,16 +142,16 @@ def _guard_traps(s: Structure) -> None:
             continue
         opts = [defs.get(n) for n in join.ins[:2]]
         refs = [defs.get(o.ins[1]) if o is not None and o.op == "opt" else None for o in opts]
-        if not all(r is not None and r.type == s.name for r in refs) or [r.op in traps for r in refs].count(True) != 1:
+        if not all(r is not None and r.type == s.name for r in refs) or [r.op in exits for r in refs].count(True) != 1:
             continue
 
-        trap = next(n for n, r in enumerate(refs) if r.op in traps)
-        when = opts[trap].ins[0]
+        trap = next(n for n, r in enumerate(refs) if r.op in exits)
+        when, how = opts[trap].ins[0], exits[refs[trap].op]
         taken, types = _names(lam), _types(lam)
         guards, args = [], []
         for a in call.ins[1:]:
             if types[a] == "heap":
-                guards.append(Instr("heap", "guard", [a, when], [_fresh(taken, f"{a}_g")], ["heap"]))
+                guards.append(Instr("heap", "guard", [a, when], [_fresh(taken, f"{a}_g")], ["heap"], note=how))
                 args.append(guards[-1].outs[0])
             else:
                 args.append(a)
@@ -232,11 +220,14 @@ def _forward(lam: Lambda) -> list[str]:
         if not a or a[0] != "get":
             continue
         source = _source(lam, i.ins[0])
+        
         if not _same(source, a, None if a[1] else i.ins[1]):
             continue
+        
         at = next(n for n, x in enumerate(lam.body) if x is i)
         lam.body[at:at + 1] = _forwarded(i, _value(source))
         forwarded.append(i.note)
+    
     return forwarded
 
 
@@ -295,11 +286,14 @@ def _branch_into(s: Structure, name: str) -> _Branch | None:
     join = defs.get(call.ins[0]) if call.op == "call" else None
     if join is None or join.op != "join":
         return None
+
     opts = [defs.get(n) for n in join.ins[:2]]
     refs = [defs.get(o.ins[1]) if o is not None and o.op == "opt" else None for o in opts]
+
     if not all(r is not None and r.type == s.name for r in refs) or name not in {r.op for r in refs} \
             or any(len(places(r.op)) != 1 for r in refs):
         return None
+
     return _Branch(parent, refs, opts, join, defs.get(join.ins[2]), call)
 
 
@@ -326,20 +320,26 @@ def _from_above(s: Structure, arm: Lambda, load: Instr) -> tuple[str, list[tuple
     a = _access(load)
     if not a or a[0] != "get":
         return None
+
     lam, token, obj = arm, _param_origin(arm, load.ins[0]), None if a[1] else load.ins[1]
     hops: list[tuple[_Branch, Lambda]] = []
+
     while token is not None and all(lam is not l for _, l in hops):
         names = [n for n, _ in lam.params]
         branch = _branch_into(s, lam.name)
         if branch is None or (obj is not None and obj not in names):
             return None
+
         hops.append((branch, lam))
         args = branch.call.ins[1:]
         token, obj = args[names.index(token)], None if obj is None else args[names.index(obj)]
         source = _source(branch.parent, token)
+
         if source is not None:
             return (_value(source), hops[::-1]) if _same(source, a, obj) else None
+
         lam, token = branch.parent, _param_origin(branch.parent, token)
+
     return None
 
 
@@ -354,12 +354,15 @@ def _thread(s: Structure, value: str, hops: list[tuple[_Branch, Lambda]], load: 
             target = next(lam for lam in s.lambdas if lam.name == ref.op)
             given[target.name] = _fresh(_names(target), f"{load.outs[0]}_in")
             target.params.insert(p, (given[target.name], load.out_types[0]))
+
         ftype = arm.function_type
+
         for i in (*branch.refs, *branch.opts, branch.join):
             if i.op not in ("opt", "join"):
                 i.out_types = [ftype]
             else:
                 i.type, i.out_types = ftype, [ftype]
+
         branch.frame.op, branch.frame.out_types = _frame(s, arm.params, arm.outs), [frame_type(ftype)]
         branch.call.type = ftype
         branch.call.ins = branch.call.ins[:1 + p] + [value] + branch.call.ins[1 + p:]
@@ -386,13 +389,17 @@ def _loop(s: Structure, header: Lambda) -> _Loop | None:
     """The loop that `header` begins, if it has that shape."""
     sites = _jump_sites(s, header.name) if header.name != "run" else None
     back = [site for site in sites or () if _in_loop(s, header.name, [site])]
+
     if len(back) != 1:
         return None
+    
     body, ref, jump = back[0]
     branch = _branch_into(s, body.name)
     entries = [site for site in sites if site is not back[0]]
+    
     if branch is None or branch.parent is not header or not entries:
         return None
+    
     return _Loop(header, branch, body, (ref, jump), entries)
 
 
@@ -735,7 +742,7 @@ def _copy(i: Instr) -> Instr:
     return Instr(i.type, i.op, list(i.ins), list(i.outs), list(i.out_types), i.note, i.at)
 
 
-def _remove_dead_stores(s: Structure, java: bool = False) -> list[Instr]:
+def _remove_dead_stores(s: Structure) -> list[Instr]:
     lambdas = {lam.name: lam for lam in s.lambdas}
     dead = []
     for lam in s.lambdas:
@@ -743,7 +750,7 @@ def _remove_dead_stores(s: Structure, java: bool = False) -> list[Instr]:
             a = _access(i)
             if a and a[0] == "set":
                 location = (a[1], a[2], None if a[1] else i.ins[1])
-                if _overwritten(s.name, lambdas, lam, i.outs[0], location, frozenset(), java, n + 1):
+                if _overwritten(s.name, lambdas, lam, i.outs[0], location, frozenset(), n + 1):
                     dead.append((lam, i))
 
     for lam, i in dead:
@@ -753,16 +760,17 @@ def _remove_dead_stores(s: Structure, java: bool = False) -> list[Instr]:
 
 
 def _overwritten(structure: str, lambdas: dict[str, Lambda], lam: Lambda, token: str,
-                 location: tuple[bool, int, str | None], seen: frozenset, java: bool = False, start: int = 0) -> bool:
+                 location: tuple[bool, int, str | None], seen: frozenset, start: int = 0) -> bool:
     """Whether every path the token takes from here overwrites the location,
-    (static, field index, object), before anything can read it. In Java an
-    exception that leaves the method can, so nothing from `start` in the λ on
-    to the overwrite may throw, whichever token it takes."""
+    (static, field index, object), before anything can read it. A path that
+    throws leaves the method, as one that returns does, and the caller or a
+    handler may read it; so may one after an allocation from `start` in the λ
+    on, which may throw OutOfMemoryError whichever token it takes."""
     static, k, obj = location
     at = next((n for n, i in enumerate(lam.body) if token in i.ins), None)
     if at is None:
         return False  # it leaves the method: the caller may read it
-    if java and any(_may_throw(structure, i) for i in lam.body[start:at]):
+    if any(_may_throw(i) for i in lam.body[start:at]):
         return False  # an exception may leave the method before the overwrite
     use = lam.body[at]
 
@@ -770,11 +778,11 @@ def _overwritten(structure: str, lambdas: dict[str, Lambda], lam: Lambda, token:
     if a:
         return a[0] == "set" and a[1:] == (static, k) and (static or use.ins[1] == obj)
     if use.type == "heap" and use.op == "trap":
-        return not java  # in Java, the exception leaves the method
+        return True  # the program stops, and nothing reads it
+    if use.type == "heap" and use.op == "guard" and use.note != "traps":
+        return False  # the method may leave here, with an exception
     if use.type == "heap" and use.op in ("move", "guard"):
-        if java and use.op == "guard":
-            return False
-        return _overwritten(structure, lambdas, lam, use.outs[0], location, seen, java, at + 1)
+        return _overwritten(structure, lambdas, lam, use.outs[0], location, seen, at + 1)
 
     targets = _jump_targets(lam, use.ins[0], structure) if use.op == "call" else None
     if targets is None:
@@ -788,18 +796,17 @@ def _overwritten(structure: str, lambdas: dict[str, Lambda], lam: Lambda, token:
         key = (name, j, o)
         if key in seen:
             continue  # a loop that neither reads nor overwrites it
-        if not _overwritten(structure, lambdas, target, target.params[j][0], (static, k, o), seen | {key}, java):
+        if not _overwritten(structure, lambdas, target, target.params[j][0], (static, k, o), seen | {key}):
             return False
     return True
 
 
-def _may_throw(structure: str, i: Instr) -> bool:
-    """Whether an instruction may throw in Java: a call to a method, a guard, a
-    trap, an allocation, a division, and anything else not known not to. A
-    field access doesn't, since its null check is a guard of its own. A jump
-    or a branch never stands between two uses of a token: it ends its λ, and
-    takes the token on."""
-    return not (_access(i) or PURE.fullmatch(i.op) or i.op == "run" or i.type == structure)
+def _may_throw(i: Instr) -> bool:
+    """Whether an instruction may leave the method with an exception, whichever
+    token it takes: a guard, unless its arm traps, and an allocation, whose
+    OutOfMemoryError Graal IR leaves implicit. Every other way to throw is a
+    branch to where the exception goes, which the token follows."""
+    return i.type == "heap" and (bool(ALLOCATION.fullmatch(i.op)) or (i.op == "guard" and i.note != "traps"))
 
 
 def _jump_targets(lam: Lambda, k: str, structure: str) -> list[str] | None:
