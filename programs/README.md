@@ -634,3 +634,41 @@ every image:
 - **So on real programs, the token form counts through its signatures,** which
   tokens each method takes. Given to Graal as kill sets, they let Graal
   forward; the rules that rewrite the token form add little to that.
+
+## Exceptions as control flow (step 10)
+
+Until step 10 the translation turned every block from which all paths throw
+into a trap, which ends the program, and refused a method whose exception
+handler could complete. Now an exception is control flow, as in Graal IR: a
+call gives back its exception and branches on it, a failed check makes one,
+and a path that throws leaves the method with every token
+([`../src/graal2ct/README.md`](../src/graal2ct/README.md#exceptions)). The
+rules follow tokens into those paths, so a store is dead only if it is dead in
+Java ([`../src/rules/README.md`](../src/rules/README.md#4-dead-stores)).
+
+| | before | after |
+|---|---|---|
+| Are We Fast Yet, the native image's export: methods translated | 455 of 459 | 455 |
+| Are We Fast Yet, the standalone export | 370 of 379 | 370 |
+| the native-image driver | 427 of 449 | **436** |
+| the driver per field: export, then rules (stores/loads) | 209/680, 209/656 | 266/740, 266/695 |
+
+- **Are We Fast Yet doesn't change.** The same methods translate, the rules
+  leave the same stores and loads, and the side-by-side with the images is the
+  same: no store of the suite was dead only because a path that throws ended
+  the program. Its one dead store, in `JsonPureStringParser.endCapture`, was
+  already dead in Java.
+- **The driver's nine methods with a handler that completes translate.**
+  Methods that translated before now count the accesses on their paths that
+  throw: 23 loads, such as the ones in `NativeImage.getBuiltInModules`, whose
+  handler of an `IOException` builds an error message before it rethrows. The
+  rules forward one more load, in `BundleSupport.complete`.
+- **Every translated method still passes the single-use and type checks**,
+  before and after the rules, under every partitioning.
+
+On the examples, seven stores that the trap model made dead now stay (see
+[`../graal-native/README.md`](../graal-native/README.md#exceptions-as-control-flow-step-10)).
+On the real programs, the model made no store dead that Java keeps, so the
+precise model costs nothing there, and the token form now holds the handlers
+and the paths that throw, which an analysis of exceptions as an effect would
+need.
