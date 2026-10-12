@@ -143,27 +143,34 @@ class _Parser:
         """`[ T, S, B ]`"""
         self.expect(Category.BRACKET, "[")
         args = []
+
         while not self.accept(Category.BRACKET, "]"):
             if args:
                 self.expect(Category.PUNCT, ",")
             args.append(self.name())
+
         return args
 
     def references(self) -> list[Reference]:
         """`simple[ T, S, B ], bitwise[ T, I ]`"""
         refs = [(self.name(), self.arguments())]
+
         while self.accept(Category.PUNCT, ","):
             self.lines()
             refs.append((self.name(), self.arguments()))
+
         return refs
 
     def product(self) -> list[str]:
         """`T × T`, or `∅` for none."""
         if self.accept(Category.IDENT, "∅"):
             return []
+
         types = [self.name()]
+
         while self.accept(Category.PUNCT, "×"):
             types.append(self.name())
+
         return types
 
     def signature(self) -> None:

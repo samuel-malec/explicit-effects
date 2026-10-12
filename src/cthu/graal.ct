@@ -102,15 +102,17 @@ signature reference[ R, S, B, I ] : simple[ R, S, B ]
     nil?   ∷ R → B
     eq?    ∷ R × R → B
     length ∷ R → I
-    hub    ∷ R → R  ; the object's class, which never changes
-    isinstance ∷ R × R → B  ; whether an object is an instance of a class given as a value
+    hub    ∷ R → R  ; the object's class
+    isinstance ∷ R × R → B
+    exception ∷ ∅ → R  ; a new exception
 )
 
-; TODO: we will have to refactor this using control flow
+; An exception is control flow: a method gives back the exception it threw, null when it
+; returned normally, and its caller branches on it.
 signature memory[ H, S, B ] : linear[ H, S, B ]
 (
-    trap ∷ H → ∅        ; for now, this is how we model a Java exception
-    guard ∷ H × B → H   ; traps when B holds, as a branch to an arm that traps
+    trap ∷ H → ∅        ; the program stops: a deoptimization, which ahead-of-time code never comes back from
+    guard ∷ H × B → H   ; leaves the method when B holds, as a branch to an arm that throws or traps would
 )
 
 signature function[ F, S, B, I, O, G ] : simple[ F, S, B ]
@@ -305,6 +307,7 @@ structure ref : reference[ ref, stck, bool, int ]
     length = graal_ref_length
     hub    = graal_ref_hub
     isinstance = graal_ref_isinstance
+    exception = graal_ref_exception
 )
 
 structure heap : memory[ heap, stck, bool ]

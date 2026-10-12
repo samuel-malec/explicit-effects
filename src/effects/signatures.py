@@ -23,25 +23,21 @@ from typing import Callable, Protocol
 
 from graal.graal_import import PointsToFacts
 
-#: The objects an access's receiver may point to, as the export names them:
-#: `Examples$Counter` by type, `Examples$Counter@Examples.main([Ljava/lang/String;)V:9`
-#: by allocation site. None when the analysis can't say.
+# The objects an access's receiver may point to, as the export names them
 Receivers = frozenset[str] | None
 
-
 class Partitioner(Protocol):
-    """A field, `Examples$Counter.value`, or an array kind, `int[]`, and the
+    """A field, or an array kind, `int[]`, and the
     objects an access may touch, to the access's partition."""
 
     def __call__(self, field: str, receivers: Receivers = None, /) -> str: ...
 
 
-#: Memory that no field of the program names: the platform's fields, and
-#: whatever an opaque method may touch.
+# Memory partition that no field of the program names, such as platform's fields or opaque methods or other
 REST = "*"
 
-#: The pseudo-objects of an access whose receiver the analysis can't say
-#: anything about, and of one whose receiver is always null, which touches nothing.
+# The pseudo-objects of an access whose receiver the analysis can't say
+# anything about, and of one whose receiver is always null, which touches nothing.
 UNKNOWN, NOTHING = "?", "null"
 
 
@@ -65,7 +61,6 @@ def by_object_field(facts: PointsToFacts) -> Partitioner:
     return _by_objects(facts, per_field=True)
 
 
-#: The partitionings by name, each made from the facts.
 PARTITIONERS: dict[str, Callable[[PointsToFacts], Partitioner]] = {
     "heap": lambda facts: one_heap,
     "field": lambda facts: by_field,
@@ -156,9 +151,11 @@ def _names(classes: dict, per_field: bool) -> dict:
     def label(members: list) -> str:
         found = sorted(o for o in ([m[1] for m in members] if per_field else [m for m in members if isinstance(m, str)])
                        if o not in (UNKNOWN, NOTHING))
+
         if not found:  # only the field's unknown or null receivers
             field, pseudo = members[0] if per_field else reversed(members[0])
             return pseudo if per_field else f"{field}@{pseudo}"
+
         kind, site = _site(found[0])
         return (site or kind) if per_field else f"{kind}@{site}" if site else kind
 
@@ -173,11 +170,14 @@ def _names(classes: dict, per_field: bool) -> dict:
         if per_field:
             field = members[0][0]
             name = field if count[field] == 1 else f"{field}@{name}"
+
         unique, k = name, 2
         while unique in used:
             unique, k = f"{name}#{k}", k + 1
+
         names[root] = unique
         used.add(unique)
+
     return names
 
 
@@ -206,8 +206,7 @@ class Effects:
     partitions: tuple[str, ...]  # every partition of the program, the rest of memory included
 
     def tokens(self, method: str) -> tuple[str, ...]:
-        """The partitions a method needs a token for, in a fixed order: all of
-        them for a method without a signature or an opaque one."""
+        """The partitions a method needs a token for."""
         signature = self.signatures.get(method)
         if signature is None or signature.opaque:
             return self.partitions
@@ -215,7 +214,7 @@ class Effects:
 
 
 def no_analysis() -> Effects:
-    """No signatures: every method threads all of memory as one token."""
+    """Baseline analysis version that treats all of the heap as a single partion."""
     return Effects(one_heap, {}, ("heap",))
 
 

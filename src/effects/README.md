@@ -1,23 +1,20 @@
 # Heap partitions
 
-[`signatures.py`](signatures.py) splits memory into partitions and gives each
-method a signature: the partitions it, or anything it calls, may read or
-write. The translation gives each partition its own token, so two operations
-are ordered only when they touch the same partition.
+[`signatures.py`](signatures.py) splits memory into partitions.
+Then it annotates functions signatures based on the partitions it, or anything it calls, may read or
+write. The translation gives each partition its own token.
 
 That is sound only if the partitions are **disjoint**. Every memory location
 must be in exactly one partition, so that two accesses that may touch the
-same location always thread the same token. There are four partitionings:
+same location always thread the same token. There are four types of partitionings:
 
-| `--partition` | One partition per | Why it is disjoint |
-|---|---|---|
-| `none` (one heap) | program | there is only one |
-| `field` | field and array element kind | two fields are different memory whatever the objects (Java's type system) |
-| `object` | set of objects, with all their fields | union-find: two objects share a set when one access may touch both |
-| `object-field` | field of a set of objects | the same, for each field on its own: the product of `field` and `object` |
+| `--partition` | One partition per 
+|---|---
+| `none` (one heap) | program
+| `field` | field and array element kind 
+| `object` | set of objects, with all their fields 
+| `object-field` | field of a set of objects
 
-`object` is the partitioning the paper describes. `object-field` is the
-finest of the four.
 
 ```bash
 uv run graal2ct graal-export/out/aliasing.allocsens.json --partition object-field --rules
@@ -29,6 +26,7 @@ make compare
 
 The exporter, [`GraphExport.PointsTo`](../../graal-export/GraphExport.java),
 lists for every field and array access the objects its receiver may point to.
+
 It writes them in two places:
 - as `receivers` on the access's node in the graph;
 - in the `accesses` of the method's facts, for the program's own methods.
@@ -42,19 +40,6 @@ a flow in the points-to analysis:
 The receivers are null, meaning unknown, when a flow saturated or a value has
 no flow. A static field's receiver is one pseudo-object per class, such as
 `Aliasing.<statics>`.
-
-**What the analysis names an object depends on how it runs:**
-
-| Analysis | `counter` in `Examples` | `alias` in `forwardAcrossIterationsAliasControl` |
-|---|---|---|
-| default (`insens`) | `Examples$Counter` | `Examples$Counter` |
-| `-H:AnalysisContextSensitivity=allocsens` | `Examples$Counter@Examples.main([Ljava/lang/String;)V:0` | `…main(…):170`, plus `…:0` from the aliasing call |
-
-By default the analysis names objects by type. Then `object-field` partitions
-are exactly the `field` partitions on every example, and `object` partitions
-are one per class. Telling two counters apart takes allocation sites. The
-Makefile writes `<name>.allocsens.json` next to `<name>.json` whenever an
-object partitioning or `make compare` needs it.
 
 ## Findings
 
@@ -196,7 +181,11 @@ follow it: `h_value_main_199_1` is version 1 of `h_value_main_199_`.
 
 | `Examples` + `Signatures`, 39 methods | Graal | Per field | Object | Object-field |
 |---|---|---|---|---|
-| stores/loads left | 65/46 | 52/27 | 53/27 | 52/27 |
+| stores/loads left | 65/46 | 59/27 | 60/27 | 59/27 |
+
+Since step 10 a store is dead only if it is dead in Java, which keeps seven
+stores the earlier model removed (52, 53 and 52 stores before;
+[`../rules/README.md`](../rules/README.md#4-dead-stores)).
 
 `object` loses one store to `field` here. `deadStoreOtherField` stores
 `value`, then `other`, then `value` again on one counter. With all of an
@@ -226,26 +215,6 @@ A method kills `any` when it, or something it calls, has no facts, makes a call
 the analysis can't resolve, or has an effect that may write anything. An
 effect that may read anything doesn't count: it changes nothing a caller could
 read, though the tokens still treat it as touching everything.
-
-## What the design chapter adds (step 9)
-
-The thesis chapter on explicit effects,
-[`explicit-effects.tex`](../../thesis/chapters/explicit-effects.tex), defines
-partitions, signatures and the token form, and proves what they guarantee. Two
-of its findings concern this directory:
-- **A signature covers the memory that exists when its method is called.** It
-  says nothing about the fields of objects the call allocates itself. That is
-  what lets the facts leave initializations out. It would also let them leave
-  out any access to an object the call allocated, which needs an analysis of
-  which objects are new in the current call, as Sălcianu and Rinard's purity
-  analysis has. Only initializations use it now, because Graal marks them.
-- **Tokens order Java's memory, not the VM's.** The facts list the VM's
-  locations a method writes (`vmWrites`), for the kill sets, but signatures
-  leave them out, and the facts don't list the ones a method reads. So tokens
-  order accesses to fields, array elements and the allocator, but not, say, a
-  write and a read of off-heap memory in two callees. In Are We Fast Yet's
-  image, 25 methods write `vm:OFF_HEAP_LOCATION`. No rule moves a call, so no
-  rewrite depends on it.
 
 ## Limits
 
