@@ -12,6 +12,7 @@ from cthu.ir import Lambda
 from effects.signatures import (PARTITIONERS, REST, accesses, analyse, by_field, by_object, by_object_field, no_analysis,
                                 one_heap)
 from graal.graal_import import load
+from graal.graal_ir import Node
 from graal2ct.translate import Translation
 
 DATA = Path(__file__).resolve().parent.parent / "data"
@@ -33,6 +34,14 @@ def structure(program: Program, name: str):
 
 def lam(program: Program, structure_name: str, name: str) -> Lambda:
     return next(l for l in structure(program, structure_name).lambdas if l.name == name)
+
+
+def root(lam: Lambda, name: str) -> str:
+    """The value a name is a copy of, past the dups linearize added."""
+    defs = {out: i for i in lam.body for out in i.outs}
+    while name in defs and defs[name].op == "dup":
+        name = defs[name].ins[0]
+    return name
 
 
 def ops(lam: Lambda) -> list[str]:
@@ -106,37 +115,64 @@ def check_loops_are_recursion() -> None:
     print(f"ok   a loop is recursion ({', '.join(sorted(loop))} in hoistLoadOutOfLoop); a loop-free method has none")
 
 
-def check_exceptions_trap() -> None:
-    """For now a path that throws is a trap that consumes the heap, and a
-    call's exception edge is not followed."""
+def check_exceptions_are_control_flow() -> None:
+    """A method gives back the exception it threw, null when it returned, and
+    a call branches on the one its callee gave back. In
+    forwardAcrossWritingCall, the call to countInto gives back an exception,
+    whose null check sends it to the λ of the call's exception edge, which
+    takes it as its first parameter. The arm where the null check of counter
+    fails makes an exception. Both go on to the λ that leaves the method with
+    it as exc, and with every token; the λ that returns gives back null.
+    Every λ from which each path throws says so, for the rules. Nothing
+    deoptimizes in Examples, so nothing traps."""
     program, _ = translate()
-    reset = structure(program, "Examples_deadStoreOtherField")
-    traps = [l.name for l in reset.lambdas if "heap trap" in ops(l)]
-    assert traps, [l.name for l in reset.lambdas]
-    assert all(ops(lam(program, reset.name, t))[-2:] == ["heap trap", "heap bot"] for t in traps)
-    assert not any(i.op == "ExceptionObject" for l in reset.lambdas for i in l.body)
-    print("ok   a throwing path is a trap; call exception edges are not followed")
+    s = structure(program, "Examples_forwardAcrossWritingCall")
+    lambdas = {l.name: l for l in s.lambdas}
+    assert [n for n, _ in lambdas["run"].outs][:2] == ["r", "exc"], lambdas["run"].outs
+    call = next(i for l in s.lambdas for i in l.body if i.op == "call" and "countInto" in i.note)
+    caller = next(l for l in s.lambdas if call in l.body)
+    exception = call.outs[0]  # countInto gives back nothing else
+    tested = next(i for i in caller.body if i.op == "nil?")
+    assert call.out_types[0] == "ref" and root(caller, tested.ins[0]) == exception, (call.text(), tested.text())
+    branch = caller.body[-1]
+    defs = {o: i for i in caller.body for o in i.outs}
+    arms = [defs[defs[a].ins[1]].op for a in defs[branch.ins[0]].ins[:2]]  # the opts' closures: normal, exceptional
+    handler = lambdas[arms[1]]
+    assert handler.params[0] == (exception, "ref") and handler.note.startswith("throws"), (arms, handler.params)
+
+    throwing = {l.name for l in s.lambdas if l.note.startswith("throws")}
+    made = next(l.name for l in s.lambdas if "ref exception" in ops(l))
+    leaves = next(l for l in s.lambdas if any(i.op == "move" and i.outs == ["exc"] for i in l.body))
+    assert {made, handler.name, leaves.name} == throwing, (made, handler.name, leaves.name, throwing)
+    assert any(i.op == "null" and i.outs == ["exc"] for i in lambdas[arms[0]].body), ops(lambdas[arms[0]])
+    assert not any(i.op == "trap" for s in program.structures for l in s.lambdas for i in l.body)
+    print("ok   exceptions are control flow: a call gives back its exception and branches on it to the λ that"
+          " takes it; a failed check makes one; both leave the method with it")
 
 
-def check_caught_exceptions_are_refused() -> None:
-    """Exceptions trap, so no handler ever runs: a method whose handler could
-    complete normally is refused, not translated without it. Every exception
-    edge in Examples leads to a rethrow, so length translates; once the
-    handler of its recursive call returns instead, length is refused."""
+def check_handlers_translate() -> None:
+    """A handler is code like any other: the λ of a call's exception edge takes
+    the exception and runs. Every exception edge in Examples leads to a
+    rethrow, so make the handler of length's recursive call return 0 instead:
+    length still translates, and that λ gives back 0 and a null exception,
+    and no longer says it throws."""
     _, graphs = load(EXAMPLES)
     key = "Examples.length"
     graph = graphs[key]
     handler = next(e.to for b in graph.blocks.values() for e in b.succs if e.label == "exception")
-    translation = Translation(graphs)
-    translation.translate([key])
-    assert key not in translation.refused and graph.blocks[handler].exit == "unwind", translation.refused
-
-    returning = dataclasses.replace(graph.blocks[handler], exit="return")
-    caught = {**graphs, key: dataclasses.replace(graph, blocks={**graph.blocks, handler: returning})}
-    translation = Translation(caught)
-    translation.translate([key])
-    assert "exception handler" in translation.refused.get(key, ""), translation.refused
-    print(f"ok   a handler that can complete normally is refused ({translation.refused[key]}); one that rethrows traps")
+    block = graph.blocks[handler]
+    caught, top = block.nodes[0], max(n.id for b in graph.blocks.values() for n in b.nodes)
+    zero = Node(top + 1, "Constant", "int", value="0")
+    returning = dataclasses.replace(block, nodes=(caught, zero, Node(top + 2, "Return", "void", inputs=(zero.id,))),
+                                    succs=(), exit="return", end={"node": "ReturnNode"})
+    changed = {**graphs, key: dataclasses.replace(graph, blocks={**graph.blocks, handler: returning})}
+    translation = Translation(changed)
+    program = translation.translate([key])
+    assert not translation.refused and caught.op == "ExceptionObject", translation.refused
+    body = lam(program, "Examples_length", f"b{handler}")
+    assert not body.note.startswith("throws") and "ref null" in ops(body) and "int move" in ops(body), (body.note, ops(body))
+    assert not check(program) and not prelude.check(program, prelude.load())
+    print("ok   a handler translates: one that returns gives back a null exception")
 
 
 def check_what_the_export_flags_is_refused() -> None:
@@ -243,7 +279,7 @@ def check_programs_type_check() -> None:
     errors = prelude.check(program, graal)
     assert any("heap has no dup" in e for e in errors), errors
     assert any(constant.text() in e and "given" in e for e in errors), errors
-    assert any(frame.text() in e and "frame[f_rih_h]" in e for e in errors), errors
+    assert any(frame.text() in e and "frame[f_rih_rh]" in e for e in errors), errors
     print("ok   every instruction type-checks against graal.ct; a broken prelude, a copied heap, a mistyped value"
           " and a frame for other arms don't")
 
@@ -331,8 +367,8 @@ def check_signature_rules() -> None:
     program = Translation(graphs, effects).translate(["Signatures$Item.<init>"])
     run = lam(program, "Signatures_Item__init_", "run")
     initialized = next(i for i in run.body if i.op == "call" and "Object.<init>" in i.note).outs[0]
-    jump = run.body[-1]
-    assert run.outs[0] == ("r", "ref") and jump.ins[1] == initialized, (run.outs, jump.text())
+    branch = run.body[-1]  # on the exception Object.<init> gave back
+    assert run.outs[0] == ("r", "ref") and initialized in branch.ins[1:], (run.outs, branch.text())
 
     blind = copy.deepcopy(facts)
     for method in ("Signatures$Box.add(I)V", "Signatures.raise(LSignatures$Flag;)V"):
@@ -561,8 +597,8 @@ if __name__ == "__main__":
     check_heap_is_threaded()
     check_branches_fork_the_heap()
     check_loops_are_recursion()
-    check_exceptions_trap()
-    check_caught_exceptions_are_refused()
+    check_exceptions_are_control_flow()
+    check_handlers_translate()
     check_what_the_export_flags_is_refused()
     check_overloads_resolve()
     check_partial_translation()

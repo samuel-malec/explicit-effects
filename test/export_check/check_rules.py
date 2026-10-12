@@ -77,24 +77,29 @@ def origin(lam: Lambda, name: str) -> Instr:
 
 def check_shape() -> None:
     """Before the rules, the program takes a shape in which more of it is
-    local. A branch whose arm only traps, such as a null check's, becomes a
-    guard on each token, and a block that only one jump reaches joins the λ
-    that jumps: forwardAcrossWritingCall, a null check and three blocks split
-    at its call, becomes one λ. A merge stays a λ (deadStoreBothArms' b5, which
-    both arms jump to), and so does a loop header (hoistLoadOutOfLoop keeps a λ
-    that reaches itself)."""
+    local. A branch whose arm throws on every path becomes a guard on each
+    token, which leaves the method where that arm would have run: a null
+    check's, and a call's on the exception it gave back. A block that only one
+    jump reaches joins the λ that jumps: forwardAcrossWritingCall, a null check
+    and three blocks split at its call, becomes one λ, with the guards of the
+    null check on counter and then those of the call. A merge stays a λ
+    (deadStoreBothArms' b5, which both arms jump to), and so does a loop header
+    (hoistLoadOutOfLoop keeps a λ that reaches itself)."""
     program = translate(EXAMPLES, "field")
     writing = [l.name for l in structure(program, "Examples_forwardAcrossWritingCall").lambdas]
     memory.apply(program)
     s = structure(program, "Examples_forwardAcrossWritingCall")
     assert {"b1", "b2", "b3"} <= set(writing) and [l.name for l in s.lambdas] == ["run"], (writing, s.lambdas)
     guards = [i for i in s.lambdas[0].body if i.op == "guard"]
-    null = origin(s.lambdas[0], guards[0].ins[1])  # it traps when counter is null, as the arm did
-    assert len(guards) == 3 and null.op == "nil?" and null.ins[0].split("_")[0] == "p0", (guards, null)
+    assert len(guards) == 6 and all(g.note == "throws" for g in guards), guards
+    null = origin(s.lambdas[0], guards[0].ins[1])  # it leaves when counter is null, as the arm did
+    assert null.op == "nil?" and null.ins[0].split("_")[0] == "p0", null
+    thrown = origin(s.lambdas[0], guards[3].ins[1])  # it leaves when the call gave back an exception
+    assert thrown.op == "not" and origin(s.lambdas[0], thrown.ins[0]).op == "nil?", thrown
 
     assert "b5" in {l.name for l in structure(program, "Examples_deadStoreBothArms").lambdas}
     assert cyclic(structure(program, "Examples_hoistLoadOutOfLoop"))
-    print("ok   null checks become guards and straight-line blocks one λ; merges and loop headers stay")
+    print("ok   null checks and calls' exceptions become guards, and straight-line blocks one λ; merges and loop headers stay")
 
 
 def check_forwarding() -> None:
@@ -208,7 +213,8 @@ def check_hoisting_out_of_loops() -> None:
     writes Counter.value, so that is the value the copy of the load read: the
     one load left is the peeled iteration's, outside the loop. In
     forwardAcrossIterationsPeeled the loop stores i, so the loop takes the i
-    the peeled iteration stored, as a phi, and every store in the loop goes.
+    the peeled iteration stored, as a phi. Each store stays, since the call in
+    the next iteration may throw before the store that overwrites it.
     The first loop of forwardIntoLoopAliasControl, which only reads
     Counter.value, leaves too, and so does its second, whose object c is
     counter only in the first iteration and alias after: once that iteration
@@ -216,7 +222,7 @@ def check_hoisting_out_of_loops() -> None:
     iteration is peeled for its load. Nor do the loops of
     hoistLoadOutOfLoopControl, whose call writes Counter.value,
     and forwardAcrossIterationsAliasControl, which stores through another
-    reference, while forwardAcrossIterations' loop keeps no load and no store.
+    reference, while forwardAcrossIterations' loop keeps no load, and its store.
     With one heap token the call in each takes the heap, and only the first
     loop of forwardIntoLoopAliasControl, with no call in it, leaves."""
     program = translate(EXAMPLES, "field")
@@ -227,10 +233,10 @@ def check_hoisting_out_of_loops() -> None:
     in_loops, left = accesses(program, in_loops=True), accesses(program)
     expected = {"Examples_hoistLoadOutOfLoop": (0, 0), "Examples_forwardIntoLoopAliasControl": (0, 0),
                 "Examples_hoistLoadOutOfLoopControl": (0, 1), "Examples_forwardAcrossIterationsAliasControl": (1, 1),
-                "Examples_forwardAcrossIterations": (0, 0), "Examples_forwardAcrossIterationsPeeled": (0, 0)}
+                "Examples_forwardAcrossIterations": (1, 0), "Examples_forwardAcrossIterationsPeeled": (1, 0)}
     assert {name: in_loops[name] for name in expected} == expected, in_loops
     assert left["Examples_hoistLoadOutOfLoop"] == (0, 1), left["Examples_hoistLoadOutOfLoop"]
-    assert left["Examples_forwardAcrossIterationsPeeled"] == (1, 1), left["Examples_forwardAcrossIterationsPeeled"]
+    assert left["Examples_forwardAcrossIterationsPeeled"] == (3, 1), left["Examples_forwardAcrossIterationsPeeled"]
     settled = [line for line in hoisted if "two iterations" in line]
     assert methods(settled) == {"Examples_forwardIntoLoopAliasControl"} and len(settled) == 1, hoisted
 
@@ -262,8 +268,9 @@ def check_forwarding_across_merges() -> None:
     forwardAcrossMerge both arms store, and the call in one leaves
     Counter.value alone, so the load goes. In deadStoreReadAfterMerge only the
     arm that stores knows the value, so the load goes on its path and stays on
-    the other; that arm's store is then dead, and one store and one load are
-    left, as in Graal. In forwardAcrossMergeAliasControl the second arm stores
+    the other. That arm's store is then overwritten, but stays: the null check
+    after the merge may throw first, though it repeats an earlier one, which
+    Graal sees, keeping one store. In forwardAcrossMergeAliasControl the second arm stores
     through another reference, and with one heap token then to another field,
     so its path keeps the load. With one heap token, the call in
     forwardAcrossMerge takes the heap, so only the arm without it knows the
@@ -275,7 +282,7 @@ def check_forwarding_across_merges() -> None:
                                              "Examples_forwardAcrossMergeAliasControl": "1 of 2"}, done.forwarded
     left = accesses(program)
     assert left["Examples_forwardAcrossMerge"][1] == 0, left["Examples_forwardAcrossMerge"]
-    assert left["Examples_deadStoreReadAfterMerge"] == (1, 1), left["Examples_deadStoreReadAfterMerge"]
+    assert left["Examples_deadStoreReadAfterMerge"] == (2, 1), left["Examples_deadStoreReadAfterMerge"]
     assert left["Examples_forwardAcrossMergeAliasControl"][1] == 1, left["Examples_forwardAcrossMergeAliasControl"]
 
     done = memory.apply(translate(EXAMPLES, "none"))
@@ -286,104 +293,91 @@ def check_forwarding_across_merges() -> None:
 
 def check_dead_stores() -> None:
     """A store goes when every path its token takes overwrites the same field
-    of the same object before anything can read it: per field, the first store
-    of deadStoreOtherField and of deadStoreOtherObject, the first of
-    deadStoreBothArms, which both arms overwrite, in deadStoreReadAfterMerge the
-    store in the arm, once the load after the merge takes its value on that
-    path, and in deadStoreReadInArm and deadStoreReadInLoop the first, once
-    the load in the arm or the loop takes its value. In forwardAcrossIterations
-    both the store before the loop and the one in it go, once the loop
-    carries the value as a phi: the next iteration's store or the one after
-    the loop overwrites each. So do the stores of forwardAcrossIterationsPeeled,
-    the peeled iteration's and the loop's. Not in the controls: a load through another
+    of the same object before anything can read it. A path that throws leaves
+    the method with every token, as one that returns does, and a handler up
+    the stack may read the store on it: a guard, where the method may leave so,
+    stands in the way, and so does an allocation, which may throw
+    OutOfMemoryError. Per field three stores are dead: the first of
+    deadStoreOtherField and of deadStoreOtherObject, and the first of
+    deadStoreBothArms, which both arms overwrite. Once loads are forwarded, more
+    stores are overwritten, but something that may throw comes first:
+    length(list) in deadStoreReadInArm, deadStoreReadInLoop and the
+    forwardAcrossIterations pairs, the null check after the merge in
+    deadStoreReadAfterMerge. Not in the controls: a load through another
     reference may read it (deadStoreMaybeAliasControl), a store through
     another reference may not overwrite it (deadStoreMaybeAliasStoreControl),
-    and one arm leaves it to the caller (deadStoreOneArm). Nor in
-    forwardAcrossIterationsAliasControl, whose first iteration loads it and
-    whose loop then stores through another reference, so that load can't take
-    the value. With one heap token the store to another field stands in the
-    way of the first two, and the call of the last three.
+    and one arm leaves it to the caller (deadStoreOneArm). With one heap token
+    the store to another field stands in the way of the first two.
 
-    A path that throws traps, which ends the program, so it reads nothing:
-    when the arm of deadStoreOneArm that doesn't store throws instead, the
-    store goes too. That is the trap model; in Java, a handler up the stack
-    could read it."""
-    done = memory.apply(translate(EXAMPLES, "field"))
-    dead = {"Examples_deadStoreOtherField", "Examples_deadStoreOtherObject", "Examples_deadStoreBothArms",
-            "Examples_deadStoreReadAfterMerge", "Examples_deadStoreReadInArm", "Examples_deadStoreReadInLoop",
-            "Examples_forwardAcrossIterations", "Examples_forwardAcrossIterationsPeeled"}
-    assert methods(done.removed) == dead and len(done.removed) == 10, done.removed
-    done = memory.apply(translate(EXAMPLES, "none"))
-    assert methods(done.removed) == {"Examples_deadStoreBothArms", "Examples_deadStoreReadAfterMerge"}, done.removed
-
-    done = memory.apply(throwing_arm())
-    assert "Examples_deadStoreOneArm" in methods(done.removed), done.removed
-    print("ok   a store every path overwrites goes: ten per field, with one heap the two nothing else stands in front of;"
-          " a path that throws reads nothing")
-
-
-def throwing_arm() -> Program:
-    """Examples per field, with the arm of deadStoreOneArm that doesn't store throwing instead."""
-    program = translate(EXAMPLES, "field")
-    s = structure(program, "Examples_deadStoreOneArm")
-    arm = next(l for l in s.lambdas if l.name.startswith("b") and len(l.params) == 2
-               and not any(i.op.startswith("set_") or i.op == "trap" for i in l.body))
-    (obj, _), (token, _), (out, _) = *arm.params, *arm.outs
-    arm.body = [Instr("ref", "drop", [obj]), Instr("heap", "trap", [token]), Instr("heap", "bot", [], [out], ["heap"])]
-    assert not check(program), check(program)
-    return program
-
-
-def check_dead_stores_in_java() -> None:
-    """In Java an exception that leaves the method can read a store, so a store
-    is dead only if nothing between it and the store that overwrites it may
-    throw, on any token: a call, a guard, a trap. Of the ten per field, three
-    are: the first store of deadStoreOtherField, of deadStoreOtherObject and of
-    deadStoreBothArms. length(list) may throw between the others in
-    deadStoreReadInArm, deadStoreReadInLoop and the forwardAcrossIterations
-    pair, and in deadStoreReadAfterMerge a null check stands between, if one
-    that repeats an earlier check. When the arm of deadStoreOneArm that doesn't
-    store throws instead, its store stays. Without forwarding the same three
-    are dead, so none needs a load the rules took away: rules.decisions gives
-    Graal exactly these, by where they are. In Aliasing, with objects told
-    apart, deadStorePastOtherObject's first store is dead in Java too."""
-    java = {"Examples_deadStoreOtherField", "Examples_deadStoreOtherObject", "Examples_deadStoreBothArms"}
+    Without forwarding the same three are dead, so none needs a load the
+    rules took away: rules.decisions gives Graal exactly these, by where they
+    are. In Aliasing, with objects told apart, deadStorePastOtherObject's first
+    store is dead too. When the arm of deadStoreOneArm that doesn't store
+    throws instead, its store stays; when it traps, which stops the program,
+    nothing reads the store after, and it goes."""
+    dead = {"Examples_deadStoreOtherField", "Examples_deadStoreOtherObject", "Examples_deadStoreBothArms"}
     for forward in (True, False):
-        done = memory.apply(translate(EXAMPLES, "field"), forward=forward, java=True)
-        assert methods(done.removed) == java and len(done.removed) == 3, (forward, done.removed)
-    done = memory.apply(translate(EXAMPLES, "field"), forward=False)
-    assert methods(done.removed) == java, done.removed
-    done = memory.apply(throwing_arm(), java=True)
-    assert "Examples_deadStoreOneArm" not in methods(done.removed), done.removed
+        done = memory.apply(translate(EXAMPLES, "field"), forward=forward)
+        assert methods(done.removed) == dead and len(done.removed) == 3, (forward, done.removed)
+    done = memory.apply(translate(EXAMPLES, "none"))
+    assert methods(done.removed) == {"Examples_deadStoreBothArms"}, done.removed
 
     e = "Examples"
     assert dead_stores(EXAMPLES) == [f"{e}.deadStoreBothArms(L{e}$Counter;Z)V:2\t{e}$Counter.value",
                                      f"{e}.deadStoreOtherField(L{e}$Counter;)V:2\t{e}$Counter.value",
                                      f"{e}.deadStoreOtherObject(L{e}$Counter;L{e}$Logger;)V:7\t{e}$Counter.value"], dead_stores(EXAMPLES)
-    done = memory.apply(translate(ALIASING, "object-field"), java=True)
+    done = memory.apply(translate(ALIASING, "object-field"))
     assert methods(done.removed) == {"Aliasing_deadStorePastOtherObject"}, done.removed
 
-    # A guard that only another token passes stands in the way too: the null
-    # checks the translation makes guard every token, so build one by hand.
-    def guarded() -> Structure:
+    for noted in (False, True):  # as it is, or once the rules make a guard of the branch to it
+        assert "Examples_deadStoreOneArm" not in methods(memory.apply(leaving_arm("throws", noted)).removed), noted
+        assert "Examples_deadStoreOneArm" in methods(memory.apply(leaving_arm("traps", noted)).removed), noted
+
+    # What may throw stands in the way on any token: a guard, unless its arm
+    # traps, and an allocation. The translation's guards take every token, so
+    # build one on another token by hand, between the two stores of
+    # deadStoreOtherField to Counter.value.
+    def between(op: str, how: str = "") -> Structure:
         s = structure(translate(EXAMPLES, "field"), "Examples_deadStoreOtherField")
         for lam in s.lambdas:
             memory._unshare(lam)
-        memory._guard_traps(s)
+        memory._guard_exits(s)
         memory._fuse(s)
         memory._remove_unreferenced(s)
         body = s.lambdas[0].body
         first = next(n for n, i in enumerate(body) if i.op.startswith("set_") and i.note.endswith(".value"))
         other = next(i for i in body if i.op.startswith("set_") and i.note.endswith(".other"))
         cond = next(i for i in body if i.op == "guard").ins[1]
-        body.insert(first + 1, Instr("heap", "guard", [other.ins[0], cond], ["h_other_g2"], ["heap"]))
-        other.ins[0] = "h_other_g2"
+        made = Instr("heap", "guard", [other.ins[0], cond], ["h_other_2"], ["heap"], note=how) if op == "guard" else \
+            Instr("heap", op, [other.ins[0]], ["v_new", "h_other_2"], ["ref", "heap"])
+        body.insert(first + 1, made)
+        other.ins[0] = "h_other_2"
         return s
 
-    assert memory._remove_dead_stores(guarded(), java=True) == []
-    assert len(memory._remove_dead_stores(guarded())) == 1
-    print("ok   in Java a store is dead only if nothing that may throw stands before the overwrite: three of the ten;"
+    assert memory._remove_dead_stores(between("guard", "throws")) == []
+    assert len(memory._remove_dead_stores(between("guard", "traps"))) == 1
+    assert memory._remove_dead_stores(between("new_0")) == []
+    print("ok   a store every path overwrites goes, unless something that may throw comes first: three per field,"
           " the same without forwarding, which rules.decisions gives Graal by where they are")
+
+
+def leaving_arm(how: str, noted: bool = False) -> Program:
+    """Examples per field, with the arm of deadStoreOneArm that doesn't store
+    leaving the method instead: throwing an exception, or trapping. Noted, the
+    arm says so, as the translation's do, and the rules make a guard of the
+    branch to it."""
+    program = translate(EXAMPLES, "field")
+    s = structure(program, "Examples_deadStoreOneArm")
+    arm = next(l for l in s.lambdas if l.name.startswith("b") and len(l.params) == 2 and not l.note
+               and not any(i.op.startswith("set_") for i in l.body))
+    (obj, _), (token, _), (exc, _), (out, _) = *arm.params, *arm.outs
+    leave = ([Instr("ref", "exception", [], [exc], ["ref"]), Instr("heap", "move", [token], [out], ["heap"])]
+             if how == "throws" else
+             [Instr("heap", "trap", [token]), Instr("ref", "bot", [], [exc], ["ref"]), Instr("heap", "bot", [], [out], ["heap"])])
+    arm.body = [Instr("ref", "drop", [obj]), *leave]
+    arm.note = f"{how}: every path from here leaves" if noted else ""
+    assert not check(program), check(program)
+    return program
 
 
 def check_object_partitions_tell_objects_apart() -> None:
@@ -419,13 +413,22 @@ def check_finer_partitions_leave_no_more() -> None:
     object-field refines field and object, and both refine one heap. The rules
     apply what is licensed under bounds that count instructions, and a finer
     partitioning has more tokens to guard, so this is checked, not given: on
-    every fixture, no method keeps more stores or loads under a finer
-    partitioning, in all of it or in its loops, and every store dead in Java
-    under a coarser one is dead under the finer. Each finer partitioning
-    leaves fewer somewhere."""
+    every fixture, every store and load of a method that a finer partitioning
+    keeps, a coarser one keeps too. A store or a load counts as gone only when
+    every copy the rules made of it went: peeling copies a loop's first
+    iteration, stores included, and a store that the next iteration's call may
+    throw before stays in both copies. The loops keep no more under a finer
+    partitioning, and every store dead in Java under a coarser one is dead
+    under the finer. Each finer partitioning leaves fewer somewhere."""
+    def kept(program: Program) -> dict[str, set[str]]:
+        """Structure → where the stores and loads are that some copy of is left."""
+        return {s.name: {f"{m.group(1)} {i.at}\t{i.note}" for lam in s.lambdas for i in lam.body
+                         if i.type == "heap" and (m := memory.ACCESS.fullmatch(i.op)) and m.group(1) in ("get", "set")}
+                for s in program.structures}
+
     def java_dead(path: Path, partition: str) -> set[str]:
         program = translate(path, partition)
-        done = memory.apply(program, forward=False, java=True)
+        done = memory.apply(program, forward=False)
         left = {f"{i.at}\t{i.note}" for s in program.structures for lam in s.lambdas for i in lam.body
                 if (m := memory.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
         return set(done.dead) - left
@@ -437,18 +440,18 @@ def check_finer_partitions_leave_no_more() -> None:
         for partition in ("none", "field", "object", "object-field"):
             program = translate(path, partition)
             memory.apply(program)
-            left[partition], loops[partition] = accesses(program), accesses(program, in_loops=True)
+            left[partition], loops[partition] = kept(program), accesses(program, in_loops=True)
             dead[partition] = java_dead(path, partition)
         for fine, coarse in finer:
             for s in left[fine].keys() & left[coarse].keys():
-                for counts in (left, loops):
-                    assert all(a <= b for a, b in zip(counts[fine][s], counts[coarse][s])), \
-                        (path.name, fine, coarse, s, counts[fine][s], counts[coarse][s])
-                fewer[fine, coarse] += left[fine][s] != left[coarse][s]
+                assert left[fine][s] <= left[coarse][s], (path.name, fine, coarse, s, left[fine][s] - left[coarse][s])
+                assert all(a <= b for a, b in zip(loops[fine][s], loops[coarse][s])), \
+                    (path.name, fine, coarse, s, loops[fine][s], loops[coarse][s])
+                fewer[fine, coarse] += left[fine][s] != left[coarse][s] or loops[fine][s] != loops[coarse][s]
             assert dead[coarse] <= dead[fine], (path.name, fine, coarse, dead[coarse] - dead[fine])
     assert all(fewer[pair] for pair in finer), fewer
-    print("ok   a finer partitioning leaves no more stores or loads in any method, in loops neither, and keeps every"
-          " dead store in Java; each leaves fewer somewhere")
+    print("ok   a finer partitioning keeps no store or load a coarser one removes, keeps no more in loops, and keeps"
+          " every dead store in Java; each leaves fewer somewhere")
 
 
 def check_rewritten_programs_stay_valid() -> None:
@@ -478,7 +481,6 @@ if __name__ == "__main__":
     check_hoisting_out_of_loops()
     check_forwarding_across_merges()
     check_dead_stores()
-    check_dead_stores_in_java()
     check_object_partitions_tell_objects_apart()
     check_finer_partitions_leave_no_more()
     check_rewritten_programs_stay_valid()
