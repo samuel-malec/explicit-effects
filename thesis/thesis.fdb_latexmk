@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex thesis"] 1791711393.06079 "thesis.aux" "thesis.bbl" "thesis" 1791711501.54512 0
+["bibtex thesis"] 1791727973.41136 "thesis.aux" "thesis.bbl" "thesis" 1791728002.93872 0
   "./bibliography.bib" 1791710210.27177 6591 2865fbb844b8c54b4366dcaa11472161 ""
-  "./thesis-blx.bib" 1791711501.24288 346 1b0fea1913cdb95ec10c3538a98d40d6 ""
+  "./thesis-blx.bib" 1791728002.66747 346 1b0fea1913cdb95ec10c3538a98d40d6 ""
   "/usr/share/texlive/texmf-dist/bibtex/bst/biblatex/biblatex.bst" 1678141846 65484 b7949c47a88ed6dca66ebc7a04577312 ""
-  "thesis.aux" 1791711501.23488 31461 637dff93edcd21d76c468ba3cfbf41ea "pdflatex"
+  "thesis.aux" 1791728002.66047 31743 68d12f96b410d962062249e84b1dddb3 "pdflatex"
   (generated)
   "thesis.bbl"
   "thesis.blg"
   (rewritten before read)
-["pdflatex"] 1791711499.33816 "main.tex" "thesis.pdf" "thesis" 1791711501.54538 0
+["pdflatex"] 1791728000.83227 "main.tex" "thesis.pdf" "thesis" 1791728002.93896 0
   "/etc/texmf/web2c/texmf.cnf" 1759605324.56054 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/ebgaramond-maths/a_w5zv5t.enc" 1569355526 2298 bccb2f2eb974c2133551124283532689 ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/ebgaramond/ebg_byuyni.enc" 1679344195 3645 7e30a6c2020f6c2e5207ff5bf518ca0f ""
@@ -48,6 +48,8 @@
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti8.tfm" 1136768653 1504 1747189e0441d1c18f3ea56fafc1c480 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti9.tfm" 1136768653 1476 cccc6cc4935c18ec3d5623b77ecb8b74 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond-maths/EBGaramond-Italic--oml-ebgaramond.tfm" 1569355526 1308 84b1d45c9da677cb3b06826d5e063ce8 ""
+  "/usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Italic-osf-sc-t1--base.tfm" 1554754090 1952 2994e2f1b430e886bd0dbab334e13856 ""
+  "/usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Italic-osf-sc-t1.tfm" 1679344195 5992 aecf1bfc5c99076d888d8bb86205e10e ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Italic-osf-t1--base.tfm" 1571002637 1976 20c52627ab03d5d67515da6336acf4ea ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Italic-osf-t1.tfm" 1679344195 20776 841bf8a8ca971f2c300a4bdfb77223f6 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/ebgaramond/EBGaramond-Regular-osf-sc-t1--base.tfm" 1679344195 1704 4d90cc32d9f1cf87a5bfddb6f4614167 ""
@@ -83,6 +85,7 @@
   "/usr/share/texlive/texmf-dist/fonts/vf/adobe/sourcecodepro/SourceCodePro-Bold-tosf-t1.vf" 1558300257 1736 f86ee15400fd6250232c55da1f539d13 ""
   "/usr/share/texlive/texmf-dist/fonts/vf/adobe/sourcecodepro/SourceCodePro-It-tosf-t1.vf" 1558300257 1736 1ecb7871769ff1c6985b4c7f01048321 ""
   "/usr/share/texlive/texmf-dist/fonts/vf/adobe/sourcecodepro/SourceCodePro-Regular-tosf-t1.vf" 1558300257 1740 9c810b7c14442d885c8a45efcb769939 ""
+  "/usr/share/texlive/texmf-dist/fonts/vf/public/ebgaramond/EBGaramond-Italic-osf-sc-t1.vf" 1679344195 1728 8399008fb6fe6bf75a89dcf3ef089a9e ""
   "/usr/share/texlive/texmf-dist/fonts/vf/public/ebgaramond/EBGaramond-Italic-osf-t1.vf" 1571002637 1716 cc3fb9b75ce0b0d72c1d30b1cf958615 ""
   "/usr/share/texlive/texmf-dist/fonts/vf/public/ebgaramond/EBGaramond-Regular-osf-sc-t1.vf" 1679344195 1728 8afec5988785cbc74d16c7d86bfb0bbd ""
   "/usr/share/texlive/texmf-dist/fonts/vf/public/ebgaramond/EBGaramond-Regular-osf-t1.vf" 1679344195 1720 04d56cff7df2a05f03690fc24907eb3c ""
@@ -261,18 +264,18 @@
   "chapters/conclusion.tex" 1791647889.94949 20 62fe8ebce78c4d50a9606c96530c0c05 ""
   "chapters/conversion.tex" 1791710441.41363 103 16b3da273c290e8556f4aa2552dbfd41 ""
   "chapters/evaluation.tex" 1791710441.43863 44 89caa98ad7bb9ea8b574930874fd2f28 ""
-  "chapters/explicit-effects.tex" 1791711499.26082 76222 0b1aebb3665056d4742915f217d0c556 ""
+  "chapters/explicit-effects.tex" 1791728000.75808 78956 bee80c86c8e5d145f5c580b998410df4 ""
   "chapters/introduction.tex" 1791651661.7272 23 201cf674b7de72b76cc13a78bee7db0c ""
   "config/config.tex" 1791711060.13578 2297 cc5e25bc53f0c14115ba4816011eb05b ""
   "frontmatter.tex" 1791362601.78397 1141 342d45ed0d81369b4782ffa629819ce6 ""
   "logo_fi.pdf" 1791270706.2556 1566 61fe99b6ac986836fac0c1f7d8e6296e ""
   "main.tex" 1791650072.29964 437 3de7c499774a3dc6f8c1dcb8fbc86e68 ""
   "mimosis.cls" 1791270706.2556 6484 80ac3b80dd12692bc28e1114619741ed ""
-  "thesis.aux" 1791711501.23488 31461 637dff93edcd21d76c468ba3cfbf41ea "pdflatex"
-  "thesis.bbl" 1791711393.11057 19284 c04a3298b215aa9eb38e89d8152f6bd8 "bibtex thesis"
-  "thesis.out" 1791711500.66061 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "thesis.run.xml" 1791711501.24494 2578 aa801b2affea73126e3dc5c1a25183c6 "pdflatex"
-  "thesis.toc" 1791711501.24494 2907 5430465dd6efefd7c00299e6480c0484 "pdflatex"
+  "thesis.aux" 1791728002.66047 31743 68d12f96b410d962062249e84b1dddb3 "pdflatex"
+  "thesis.bbl" 1791727973.46576 19284 c04a3298b215aa9eb38e89d8152f6bd8 "bibtex thesis"
+  "thesis.out" 1791728002.10412 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "thesis.run.xml" 1791728002.6692 2578 aa801b2affea73126e3dc5c1a25183c6 "pdflatex"
+  "thesis.toc" 1791728002.6692 2829 43fe6ccc2d142f54204c41b483933ec7 "pdflatex"
   (generated)
   "thesis-blx.bib"
   "thesis.aux"

@@ -15,6 +15,8 @@
 \newcommand{\kif}[3]{\mathsf{if}\ #1\ \mathsf{then}\ #2\ \mathsf{else}\ #3}
 \newcommand{\kret}{\mathsf{return}}
 \newcommand{\ktrap}{\mathsf{trap}}
+\newcommand{\kthrow}{\mathsf{throw}}
+\newcommand{\exn}{\mathsf{exception}}
 \newcommand{\Ret}{\mathsf{ret}}
 \newcommand{\Exc}{\mathsf{exc}}
 \newcommand{\Trap}{\lightning}
@@ -76,9 +78,8 @@ defines partitions and the four partitionings the implementation offers, and
 \Cref{sec:ee-guarantee} proves what the tokens guarantee: an operation leaves
 a partition alone unless it takes its token, and two operations that share no
 token can be swapped. \Cref{sec:ee-license} proves which rewrites the tokens
-license: forwarding a load and removing a store, in a model in which an
-exception ends the program and in Java, and that a finer partitioning licenses
-every rewrite a coarser one does. The next three sections give the conditions
+license: forwarding a load and removing a store, with exceptions as Java has
+them, and that a finer partitioning licenses every rewrite a coarser one does. The next three sections give the conditions
 under which an effect may be left out: initializing a new object
 (\cref{sec:ee-fresh}) and synchronization (\cref{sec:ee-concurrency}), and what
 the same facts guarantee when they go back to Graal as kill sets
@@ -107,11 +108,13 @@ everything that matters for memory. \Cref{fig:ee-syntax} gives its syntax.
  & \mid & h' \coloneqq \setf{f}{P}(h, y, z) & \text{store } z \text{ into field } f \text{ of } y\\
  & \mid & h' \coloneqq \initf{f}{P}(h, y, z) \;\mid\; \initf{f}{}(y, z) & \text{give field } f \text{ of a new } y \text{ its first value}\\
  & \mid & x, h' \coloneqq \newc{C}(h) & \text{allocate an object of class } C\\
- & \mid & \bar h' \coloneqq \guard(\bar h, y) & \text{trap when } y \text{ holds}\\
- & \mid & \bar x, \bar h' \coloneqq m(\bar y, \bar h) & \text{call method } m\\[6pt]
+ & \mid & x, h' \coloneqq \exn(h) & \text{make the exception of a check that failed}\\
+ & \mid & \bar x, e, \bar h' \coloneqq m(\bar y, \bar h) & \text{call } m\text{; } e \text{ is what it threw, or } \nul\\
+ & \mid & \bar h' \coloneqq \guard_b(\bar h, y) & \text{go on in } b \text{, which leaves, when } y \text{ holds}\\[6pt]
 \kappa & ::= & \jump\ b(\bar y) & \text{go on in block } b\\
  & \mid & \kif{y}{b_1}{b_2}\,(\bar y) & \text{branch}\\
- & \mid & \kret(\bar y) \;\mid\; \ktrap(\bar h) & \text{leave the method}\\[6pt]
+ & \mid & \kret(\bar y) \;\mid\; \kthrow(e, \bar h) & \text{leave the method, normally or with } e\\
+ & \mid & \ktrap(\bar h) & \text{stop the program}\\[6pt]
 B & ::= & b(\bar x : \bar \tau) = \iota_1 \ldots \iota_n;\ \kappa & \text{a block}
 \end{array}
 \]
@@ -128,8 +131,10 @@ partition in a set $T_m$, defined in \cref{sec:ee-signatures}. A block
 $b(\bar x : \bar\tau) = \iota_1 \ldots \iota_n;\ \kappa$ binds its parameters
 $\bar x$, runs its instructions in order, and ends with a terminator $\kappa$:
 a jump to another block of the method, a branch to one of two, or leaving the
-method, with $\kret$ or with $\ktrap$. Blocks interact only through their
-parameters, and methods only through calls and memory.
+method: normally with $\kret$, with an exception with $\kthrow$, or by stopping
+the program with $\ktrap$, which is what a deoptimization does in
+ahead-of-time code. Blocks interact only through their parameters, and methods
+only through calls and memory.
 
 This is the shape of Graal IR once it is scheduled: a basic block becomes a
 block, a $\varphi$-function becomes a parameter of its block, and each edge
@@ -145,9 +150,17 @@ A store gives back only the token. An initialization gives a field of an object
 that was just allocated its first value; it takes a token only if its method
 takes the token of that field's partition for another reason
 (\cref{sec:ee-fresh}). An allocation takes the token of the rest of memory,
-$\Rest$, which holds the allocator's state. A guard traps when its condition
-holds, and takes and gives back a token of every partition of its method. A
-call takes and gives back the tokens of the callee's partitions.
+$\Rest$, which holds the allocator's state, and so does $\exn$, which makes the
+exception a failed check throws.
+
+A call takes and gives back the tokens of the callee's partitions. It also gives
+back the exception the callee threw, or $\nul$, and its block ends with a branch
+on it: to the block that handles the exception, or leaves the method with it.
+That is Graal IR's own shape, in which every call has an edge for when it
+throws. A guard abbreviates such a branch, to a block $b$ every path from which
+leaves the method: when its condition holds it goes on in $b$, with the values
+the branch passed. It takes and gives back a token of every partition of its
+method. The rules make guards (\cref{sec:ee-shape}); the translation makes none.
 
 \subsection{Single use}
 
@@ -195,9 +208,9 @@ $h' \coloneqq \move\ h$ & $\Tok{P}$ & $\Tok{P}$ \\
 $x, h' \coloneqq \getf{f}{P}(h, y)$ & $\Tok{P}$, $\mathsf{ref}$ & $\tau_f$, $\Tok{P}$ \\
 $h' \coloneqq \setf{f}{P}(h, y, z)$, $h' \coloneqq \initf{f}{P}(h, y, z)$ & $\Tok{P}$, $\mathsf{ref}$, $\tau_f$ & $\Tok{P}$ \\
 $\initf{f}{}(y, z)$ & $\mathsf{ref}$, $\tau_f$ & nothing \\
-$x, h' \coloneqq \newc{C}(h)$ & $\Tok{\Rest}$ & $\mathsf{ref}$, $\Tok{\Rest}$ \\
-$\bar h' \coloneqq \guard(\bar h, y)$ & $\Tok{S}$, $\mathsf{bool}$ & $\Tok{S}$ \\
-$\bar x, \bar h' \coloneqq m(\bar y, \bar h)$ & $\bar\tau_m$, $\Tok{T_m}$ & $\bar\tau'_m$, $\Tok{T_m}$ \\
+$x, h' \coloneqq \newc{C}(h)$, $x, h' \coloneqq \exn(h)$ & $\Tok{\Rest}$ & $\mathsf{ref}$, $\Tok{\Rest}$ \\
+$\bar x, e, \bar h' \coloneqq m(\bar y, \bar h)$ & $\bar\tau_m$, $\Tok{T_m}$ & $\bar\tau'_m$, $\mathsf{ref}$, $\Tok{T_m}$ \\
+$\bar h' \coloneqq \guard_b(\bar h, y)$ & $\Tok{S}$, $\mathsf{bool}$ & $\Tok{S}$ \\
 \bottomrule
 \end{tabular}
 \caption{The types of instructions. $\tau_f$ is the type of field $f$, and
@@ -212,8 +225,9 @@ takes, besides its values, one token of each partition in $T_m$; every
 instruction is used at its type in \cref{fig:ee-types}, with guards over
 $S = T_m$; the arguments of a jump or a branch have the types of the
 parameters of the blocks it goes to, and the two blocks of a branch take the
-same parameters; and $\kret$ gives back values of types $\bar\tau'_m$ and a
-token of each partition in $T_m$, which $\ktrap$ takes as well.
+same parameters; $\kret$ gives back values of types $\bar\tau'_m$ and a token of
+each partition in $T_m$, $\kthrow$ an exception and the tokens, and $\ktrap$
+takes the tokens.
 \end{definition}
 
 \begin{lemma}[Chains]\label{lem:ee-chains}
@@ -257,31 +271,33 @@ behaves the same.
 
 \begin{figure}[t]
 \begin{lstlisting}[language=ct]
-run = λ p0 p1 p2 h → r hout                          ; ref × ref × ref × heap → int × heap
+run = λ p0 p1 p2 h → r exc hout                     ; ref × ref × ref × heap → int × ref × heap
 (
     ref nil? p0 → v6                                     ; counter == null
     Aliasing_forwardAcrossCallOnOtherObject b1 → kt      ; b1 throws
     Aliasing_forwardAcrossCallOnOtherObject b2 → kf
     Aliasing_forwardAcrossCallOnOtherObject frame_0 → frame
     bool not v6 → cn
-    f_rrrh_ih opt v6 kt → at
-    f_rrrh_ih opt cn kf → af
-    f_rrrh_ih join at af frame → k
-    f_rrrh_ih call k p0 p1 p2 h → r hout
+    f_rrrh_irh opt v6 kt → at
+    f_rrrh_irh opt cn kf → af
+    f_rrrh_irh join at af frame → k
+    f_rrrh_irh call k p0 p1 p2 h → r exc hout
 )
-frame_0 = λ A B x0 x1 x2 h → r hout
+frame_0 = λ A B x0 x1 x2 h → r exc hout
 (
     heap fork h → h_a h_b
-    f_rrrh_ih call A x0 x1 x2 h_a → r_a hout_a
-    f_rrrh_ih call B x0 x1 x2 h_b → r_b hout_b
+    f_rrrh_irh call A x0 x1 x2 h_a → r_a exc_a hout_a
+    f_rrrh_irh call B x0 x1 x2 h_b → r_b exc_b hout_b
     int join r_a r_b → r
+    ref join exc_a exc_b → exc
     heap join hout_a hout_b → hout
 )
 \end{lstlisting}
 \caption{The null check at the start of the running example, with one token
 for all of memory, as the implementation prints it but without the copies of
-values, which $\dup$ makes. \texttt{f\_rrrh\_ih} is the type of a closure that
-takes three references and a token and gives back an \texttt{int} and a token.}
+values, which $\dup$ makes. \texttt{f\_rrrh\_irh} is the type of a closure that
+takes three references and a token and gives back an \texttt{int}, an exception
+and a token.}
 \label{fig:ee-branch}
 \end{figure}
 
@@ -340,19 +356,27 @@ maps variables to values.
 \inferrule*[left=New]{o = \sigma(\alloc)}{\cfg{x, h' \coloneqq \newc{C}(h), \rho, \sigma}
   \Downarrow \cfg{\rho[x \mapsto o,\ h' \mapsto \tok],\ \sigma[\alloc \mapsto o + 1][(o, f) \mapsto 0_f]_{f}}}
 
-\inferrule*[left=Guard]{\rho(y) = \tfalse}{\cfg{\bar h' \coloneqq \guard(\bar h, y), \rho, \sigma}
+\inferrule*[left=OOM]{ }{\cfg{x, h' \coloneqq \newc{C}(h), \rho, \sigma} \Downarrow \Exc(o_{\mathrm{oom}}, \sigma)}
+
+\inferrule*[left=Guard]{\rho(y) = \tfalse}{\cfg{\bar h' \coloneqq \guard_b(\bar h, y), \rho, \sigma}
   \Downarrow \cfg{\rho[\bar h' \mapsto \tok], \sigma}}
 
-\inferrule*[left=Fail]{\rho(y) = \ttrue}{\cfg{\bar h' \coloneqq \guard(\bar h, y), \rho, \sigma} \Downarrow \Trap}
+\inferrule*[left=Leave]{\rho(y) = \ttrue \\ \cfg{b, \rho(\bar y_b), \sigma} \Downarrow r}{\cfg{\bar h' \coloneqq \guard_b(\bar h, y), \rho, \sigma} \Downarrow r}
 
-\inferrule*[left=Call]{\cfg{m, \rho(\bar y), \sigma} \Downarrow \Ret(\bar v, \sigma')}{\cfg{\bar x, \bar h' \coloneqq m(\bar y, \bar h), \rho, \sigma}
-  \Downarrow \cfg{\rho[\bar x \mapsto \bar v,\ \bar h' \mapsto \tok], \sigma'}}
+\inferrule*[left=Call]{\cfg{m, \rho(\bar y), \sigma} \Downarrow \Ret(\bar v, \sigma')}{\cfg{\bar x, e, \bar h' \coloneqq m(\bar y, \bar h), \rho, \sigma}
+  \Downarrow \cfg{\rho[\bar x \mapsto \bar v,\ e \mapsto \nul,\ \bar h' \mapsto \tok], \sigma'}}
 
-\inferrule*[left=Throw]{\cfg{m, \rho(\bar y), \sigma} \Downarrow \Trap}{\cfg{\bar x, \bar h' \coloneqq m(\bar y, \bar h), \rho, \sigma} \Downarrow \Trap}
+\inferrule*[left=Catch]{\cfg{m, \rho(\bar y), \sigma} \Downarrow \Exc(o, \sigma')}{\cfg{\bar x, e, \bar h' \coloneqq m(\bar y, \bar h), \rho, \sigma}
+  \Downarrow \cfg{\rho[\bar x \mapsto \bar 0,\ e \mapsto o,\ \bar h' \mapsto \tok], \sigma'}}
+
+\inferrule*[left=Overflow]{ }{\cfg{\bar x, e, \bar h' \coloneqq m(\bar y, \bar h), \rho, \sigma}
+  \Downarrow \cfg{\rho[\bar x \mapsto \bar 0,\ e \mapsto o_{\mathrm{soe}},\ \bar h' \mapsto \tok], \sigma}}
+
+\inferrule*[left=Stopped]{\cfg{m, \rho(\bar y), \sigma} \Downarrow \Trap}{\cfg{\bar x, e, \bar h' \coloneqq m(\bar y, \bar h), \rho, \sigma} \Downarrow \Trap}
 \\
 \inferrule*[left=Seq]{\cfg{\iota, \rho, \sigma} \Downarrow \cfg{\rho', \sigma'} \\ \cfg{\bar\iota; \kappa, \rho', \sigma'} \Downarrow r}{\cfg{\iota\,\bar\iota; \kappa, \rho, \sigma} \Downarrow r}
 
-\inferrule*[left=Stop]{\cfg{\iota, \rho, \sigma} \Downarrow \Trap}{\cfg{\iota\,\bar\iota; \kappa, \rho, \sigma} \Downarrow \Trap}
+\inferrule*[left=Stop]{\cfg{\iota, \rho, \sigma} \Downarrow r \\ r \text{ is } \Exc(o, \sigma') \text{ or } \Trap}{\cfg{\iota\,\bar\iota; \kappa, \rho, \sigma} \Downarrow r}
 
 \inferrule*[left=Jump]{\cfg{b, \rho(\bar y), \sigma} \Downarrow r}{\cfg{\jump\ b(\bar y), \rho, \sigma} \Downarrow r}
 
@@ -360,40 +384,56 @@ maps variables to values.
 
 \inferrule*[left=Return]{ }{\cfg{\kret(\bar y), \rho, \sigma} \Downarrow \Ret(\rho(\bar y), \sigma)}
 
+\inferrule*[left=Throw]{ }{\cfg{\kthrow(e, \bar h), \rho, \sigma} \Downarrow \Exc(\rho(e), \sigma)}
+
 \inferrule*[left=Trap]{ }{\cfg{\ktrap(\bar h), \rho, \sigma} \Downarrow \Trap}
 
 \inferrule*[left=Block]{b(\bar x : \bar\tau) = \bar\iota; \kappa \\ \cfg{\bar\iota; \kappa, [\bar x \mapsto \bar v], \sigma} \Downarrow r}{\cfg{b, \bar v, \sigma} \Downarrow r}
 \end{mathpar}
-\caption{Evaluation. An outcome $r$ is $\Ret(\bar v, \sigma)$ or $\Trap$. An
-initialization, with a token or without, evaluates as \textsc{Set}; $\dup$,
-$\drop$ and $\move$ only change the environment; \textsc{Null} applies to a
-load, a store and an initialization through $\nul$; $\mathsf{if}$ with
-$\rho(y) = \tfalse$ goes to $b_2$; a method is invoked as its entry block,
-with $\tok$ for each token, $\cfg{m, \bar v, \sigma} \Downarrow r$ if
-$\cfg{b_m, \bar v\,\bar\tok, \sigma} \Downarrow r$, and $\Ret$ gives back
-only the values. $0_f$ is the default value of field $f$, and
-\textsc{New} also sets the header fields.}
+\caption{Evaluation. An outcome $r$ is $\Ret(\bar v, \sigma)$, $\Exc(o, \sigma)$,
+an exception $o$ with the heap the method leaves it in, or $\Trap$. An
+initialization, with a token or without, evaluates as \textsc{Set}, and
+$\exn$ as \textsc{New}, for the class of its exception; $\dup$, $\drop$ and
+$\move$ only change the environment; \textsc{Null} applies to a load, a store
+and an initialization through $\nul$; $\mathsf{if}$ with $\rho(y) = \tfalse$
+goes to $b_2$; a guard passes $b$ the values $\bar y_b$ the branch it abbreviates
+passed; a method is invoked as its entry block, with $\tok$ for each token,
+$\cfg{m, \bar v, \sigma} \Downarrow r$ if $\cfg{b_m, \bar v\,\bar\tok, \sigma}
+\Downarrow r$, and $\Ret$ gives back only the values. $0_f$ is the default value
+of field $f$, \textsc{New} also sets the header fields, and $o_{\mathrm{oom}}$
+and $o_{\mathrm{soe}}$ are an \texttt{OutOfMemoryError} and a
+\texttt{StackOverflowError} the virtual machine makes.}
 \label{fig:ee-semantics}
 \end{figure}
 
 \Cref{fig:ee-semantics} gives the semantics. The relation is defined
-inductively, so an invocation that does not terminate has no outcome.
+inductively, so an invocation that does not terminate has no outcome. An
+invocation leaves its method normally, with $\Ret$, or with an exception, with
+$\Exc$, which carries the heap: a handler up the stack, or the code that prints
+an uncaught exception, may read it. A call catches its callee's exception in
+$e$, and its block branches on $e$. Two rules are there because Java has them:
+any allocation may throw \texttt{OutOfMemoryError} (\textsc{OOM}), and any call
+\texttt{StackOverflowError} (\textsc{Overflow}). Graal IR gives a call an edge
+for its exceptions, which the translation keeps, but an allocation none, so
+the first stays implicit.
+
 Operations on values are total. That is what Graal IR gives us: Native Image
 checks a divisor, an array index, and the receiver of an access explicitly,
-before the operation itself, with a branch to a block that throws, which the
-translation makes a block that traps. Besides $\ktrap$, only guards and
-accesses through $\nul$ trap, and the latter never execute: every access
-comes after the check of its receiver, or Graal knows the receiver is not
-$\nul$.
+before the operation itself, with a branch to a block that makes the exception
+and throws it. So an access never goes through $\nul$ in our programs, and
+\textsc{Null} never applies.
 
 \begin{lemma}[Determinism]\label{lem:ee-determinism}
-For every method $m$, values $\bar v$ and heap $\sigma$ there is at most one
-outcome $r$ with $\cfg{m, \bar v, \sigma} \Downarrow r$.
+Which allocations and calls throw by \textsc{OOM} and \textsc{Overflow}
+determines the outcome: for every method $m$, values $\bar v$, heap $\sigma$ and
+such a choice, there is at most one outcome $r$ with
+$\cfg{m, \bar v, \sigma} \Downarrow r$.
 \end{lemma}
 
 \begin{proof}
-By induction on the derivation: the premises of every rule determine its
-conclusion, and an allocation takes the object $\sigma(\alloc)$.
+By induction on the derivation: once the choice is made, the premises of every
+rule determine its conclusion, and an allocation takes the object
+$\sigma(\alloc)$.
 \end{proof}
 
 \begin{lemma}[Tokens carry nothing]\label{lem:ee-erasure}
@@ -688,18 +728,20 @@ takes \texttt{h\_value} and \texttt{h\_next}, and with one partition it takes
 
 \begin{figure}[tbp]
 \begin{lstlisting}[language=ct]
-b2 = λ p0 p1 p2 h_c h_o h_n → r h_cout h_oout h_nout
+b2 = λ p0 p1 p2 h_c h_o h_n → r exc h_cout h_oout h_nout
 (
     int cons_5 → v11
     heap set_0 h_c p0 v11 → h_c1                         ; counter.value = 5
     Aliasing_countInto run → k13
-    f_rrhh_hh call k13 p1 p2 h_o h_n → h_o1 h_n1         ; countInto(other, list)
-    Aliasing_forwardAcrossCallOnOtherObject b3 → k3
-    f_rhhh_ihhh call k3 p0 h_c1 h_o1 h_n1 → r h_cout h_oout h_nout
+    f_rrhh_rhh call k13 p1 p2 h_o h_n → v17 h_o1 h_n1    ; countInto(other, list)
+    ref nil? v17 → v17_none                              ; did it throw?
+    …                                                    ; b3 if not, b4 if it did
+    f_rrhhh_irhhh call k v17 p0 h_c1 h_o1 h_n1 → r exc h_cout h_oout h_nout
 )
-b3 = λ p0 h_c h_o h_n → r h_cout h_oout h_nout
+b3 = λ v17 p0 h_c h_o h_n → r exc h_cout h_oout h_nout
 (
     heap get_0 h_c p0 → v24 h_c1                         ; return counter.value
+    ref null → exc
     int move v24 → r
     heap move h_c1 → h_cout
     heap move h_o → h_oout
@@ -707,7 +749,8 @@ b3 = λ p0 h_c h_o h_n → r h_cout h_oout h_nout
 )
 \end{lstlisting}
 \caption{The running example under object-field, as the implementation prints
-it but without the copies of values, and with shorter names for the tokens:
+it but without the copies of values or the branch on the exception, and with
+shorter names for the tokens:
 \texttt{h\_c} for \texttt{Counter.value@main:199}, \texttt{h\_o} for
 \texttt{Counter.value@main:206}, and \texttt{h\_n} for \texttt{Link.next}.
 Field 0 is \texttt{Counter.value}.}
@@ -746,7 +789,7 @@ allocation.
 \item An initialization belongs to the allocation of its object, which comes
   before it in the same block (\cref{sec:ee-fresh}). So its object was
   allocated during the invocation, and did not exist in $\sigma$.
-\item An allocation writes $\alloc \in \Rest$, and $\Rest \in W(m)$.
+\item An allocation, or making an exception, writes $\alloc \in \Rest$, and $\Rest \in W(m)$.
 \item A call of $m'$: $m' \in \callees(s)$ by \cref{as:ee-facts}, and $m'$ is
   not opaque, as $m$ is not. $\ell$ exists when the call starts, as it existed
   in $\sigma$, and the call's invocation writes it. Its derivation is a part of
@@ -787,13 +830,15 @@ value in $\sigma_k$ as in $\sigma_{j+1}$.
 
 \begin{proof}
 Let $\ell \in P$ exist in $\sigma_{j+1}$. We show that no step $s_i$,
-$j < i < k$, writes $\ell$. Moves, guards, operations on values, copies and
-loads write nothing. A store or an initialization that takes the token of
+$j < i < k$, writes $\ell$. Moves, operations on values, copies and loads write
+nothing, and so do guards: a guard that holds goes on in a block that leaves
+the method on every path, so the run never reaches $s_k$. A store or an initialization that takes the token of
 another partition $Q$ writes a location of $Q$, by \cref{prop:ee-sound-labels},
 and $Q \cap P = \emptyset$. An initialization that takes no token writes a
 location whose partition is not in $T_m$, by \cref{def:ee-token-form}, so not
-$\ell$, as $P \in T_m$. An allocation that does not take $P$ writes
-$\alloc \notin P$ and fields of an object that did not exist before. A call that
+$\ell$, as $P \in T_m$. An allocation, or the making of an exception, that does not
+take $P$ writes $\alloc \notin P$ and fields of an object that did not exist
+before. A call that
 does not take $P$ calls methods $m'$ with $P \notin T_{m'}$, none of them
 opaque. $\ell$ exists when the call starts, so by \cref{thm:ee-signatures} the
 call writes $\ell$ only if $\ell$ lies in a partition of
@@ -809,10 +854,11 @@ instruction's behaviour depends only on the locations it reads.
 Let $\cfg{\iota, \rho, \sigma} \Downarrow r$, and let $\hat\sigma$ agree with
 $\sigma$ on every location that exists in $\sigma$ and that the step reads,
 and on $\alloc$ if it allocates. Then $\cfg{\iota, \rho, \hat\sigma}
-\Downarrow \hat r$, where $\hat r = \Trap$ if $r = \Trap$, and if
-$r = \cfg{\rho', \sigma'}$, then $\hat r = \cfg{\rho', \hat\sigma'}$ for the
+\Downarrow \hat r$, with the same choice of errors, where $\hat r$ is $r$ with
+the heap $\sigma'$ it leaves, normally or with an exception, replaced by the
 heap $\hat\sigma'$ that agrees with $\sigma'$ on every location the step writes
-or allocates, and with $\hat\sigma$ everywhere else.
+or allocates, and with $\hat\sigma$ everywhere else; $\hat r = \Trap$ if
+$r = \Trap$.
 \end{lemma}
 
 \begin{proof}
@@ -882,10 +928,10 @@ elements. Each swap preserves the normal outcomes by
 \end{proof}
 
 \begin{remark}[Abnormal ends]\label{rem:ee-abnormal}
-The theorem says nothing about traps and nontermination, and cannot. A guard
-takes every token of its method, but a call of a method that touches no memory
-takes none, so the two share no token. If the guard traps and the callee never
-returns, swapping them turns a trap into a program that hangs. No rewrite of
+The theorem says nothing about exceptions and nontermination, and cannot. A
+guard takes every token of its method, but a call of a method that touches no
+memory takes none, so the two share no token. If the guard holds and the callee
+never returns, swapping them turns an exception into a program that hangs. No rewrite of
 this thesis moves an instruction, so none depends on it. A scheduler on the
 token form would need termination, like memory, to be an effect with a
 token.
@@ -915,27 +961,26 @@ earlier step $s_j$ such that
 
 \begin{theorem}[Forwarding]\label{thm:ee-forwarding}
 Replacing a forwardable load $\iota$ by $x \coloneqq \move\ v;\ h' \coloneqq
-\move\ h$ preserves the outcome of the program, in the semantics of
-\cref{fig:ee-semantics} and in Java's (\cref{sec:ee-java}).
+\move\ h$ preserves the outcomes of the program.
 \end{theorem}
 
 \begin{proof}
 Let $p'$ be the program with $\iota$ replaced. We show by induction on
 derivations, in both directions, that every invocation has the same outcome in
-$p$ and in $p'$. Invocations of other methods than $m$ differ only in the
+$p$ and in $p'$, for the same choice of errors. Invocations of other methods than $m$ differ only in the
 invocations they make, so consider one of $m$, and its run in $p$. Up to a step
 $s_k$ that executes $\iota$, $p'$ executes the same steps, with the same
 environments and heaps. At $s_k$, $p$ reads $\sigma_k(o, f)$ with
-$o = \rho_k(y)$. $o \neq \nul$, since $s_j$ accessed it, so $\iota$ does not
-trap. $s_j$ left $\rho_k(v)$ in $(o, f)$, which exists after $s_j$ and lies in
+$o = \rho_k(y)$. $o \neq \nul$, since $s_j$ accessed it, so \textsc{Null} does
+not apply. $s_j$ left $\rho_k(v)$ in $(o, f)$, which exists after $s_j$ and lies in
 $P$, since $\iota$ accesses it (\cref{prop:ee-sound-labels}). By
 \cref{lem:ee-frame}, $\sigma_k(o, f) = \sigma_{j+1}(o, f) = \rho_k(v)$. So $x$
 gets the same value in $p$ and $p'$, and neither changes the heap; from there
 on the runs are the same again.
 \end{proof}
 
-The proof never mentions what happens when something traps: forwarding a load
-does not depend on how exceptions are modelled.
+The proof never mentions exceptions: forwarding happens on the path on which
+nothing was thrown.
 
 \begin{lemma}[Straight tokens]\label{lem:ee-straight}
 Let a load $\iota$ of $f$ through $y$ take a token of $P$ that comes, through
@@ -957,15 +1002,21 @@ load's block as a parameter, and then apply the lemma within the block
 \begin{example}[The running example, forwarded]\label{ex:ee-running-forwarded}
 Under object-field, the rules join the three blocks of
 \cref{fig:ee-running-tokens} into one and turn the null check into a guard on
-each token. The load's token then comes straight from the store, and both go
-through \texttt{counter}, so by \cref{lem:ee-straight} the load is forwardable
-from the stored 5. In the names of \cref{fig:ee-running-tokens}:
+each token, and the branch on the exception \texttt{countInto} gave back into
+a guard too. The load's token then comes from the store, past a guard, and both
+go through \texttt{counter}, so by \cref{lem:ee-straight} the load is
+forwardable from the stored 5. In the names of \cref{fig:ee-running-tokens}:
 \begin{lstlisting}[language=ct]
     heap set_0 h_c_g p0 v11 → h_c1                    ; counter.value = 5
     Aliasing_countInto run → k13
-    f_rrhh_hh call k13 p1 p2 h_o_g h_n_g → h_o1 h_n1  ; countInto(other, list)
+    f_rrhh_rhh call k13 p1 p2 h_o_g h_n_g → v17 h_o1 h_n1   ; countInto(other, list)
+    ref nil? v17 → v17_none
+    bool not v17_none → cn
+    heap guard h_c1 cn → h_c1_g   ; throws               ; leave if countInto threw
+    heap guard h_o1 cn → h_o1_g   ; throws
+    heap guard h_n1 cn → h_n1_g   ; throws
     int move v11 → v24                                ; forwarded Aliasing$Counter.value
-    heap move h_c1 → h_c2
+    heap move h_c1_g → h_c2
 \end{lstlisting}
 Under field and with one partition, the load's token comes from the call, and
 the lemma does not apply.
@@ -985,73 +1036,37 @@ that executes $\iota$ has $o = \rho_j(y) \neq \nul$ and is followed by one of:
 \end{enumerate}
 \end{definition}
 
-In particular, the run does not return between a store that is overwritten and
-the store that overwrites it.
+In particular, the run does not leave the method between a store that is
+overwritten and the store that overwrites it, neither by returning nor with an
+exception. Any call may throw \texttt{StackOverflowError} and any allocation
+\texttt{OutOfMemoryError}, so a call or an allocation between the two stores,
+on any token, keeps the first: in the run in which it throws, the method leaves
+with the first value in $(o, f)$.
 
 \begin{theorem}[Dead stores]\label{thm:ee-dead}
 Removing an overwritten store, that is, replacing it by $h' \coloneqq \move\ h$,
-preserves the outcome of the program in the semantics of
-\cref{fig:ee-semantics}.
+preserves the outcomes of the program.
 \end{theorem}
 
 \begin{proof}
 Let $p'$ be the program without $\iota$, and consider a run of $m$ in $p$ that
-executes $\iota$ at step $s_j$. Up to $s_j$, $p'$ executes the same steps. From
-$s_{j+1}$ on, until the overwrite in case 1, the two runs execute the same
-steps, with heaps that differ at $(o, f)$ alone. For that, it is enough that no
-step between $s_j$ and $s_k$ reads or writes $(o, f)$, since by
-\cref{lem:ee-locality} every such step then does the same in both. A step that
-reads or writes $(o, f)$ takes $P$: a load or a store of it by
-\cref{prop:ee-sound-labels}; a call by \cref{thm:ee-signatures}, since
-$(o, f)$ exists when the call starts. An initialization that takes no token
-belongs to the allocation of its object, and $o$ was allocated before $s_j$.
-In case 1, $s_k$ then stores the same value to $(o, f)$ in both runs, after
-which their heaps are equal, and the rest of the runs are the same. In case 2,
-both runs end with $\Trap$, or neither ends. The converse is symmetric.
+executes $\iota$ at step $s_j$, and the run in $p'$ with the same choice of
+errors. Up to $s_j$, $p'$ executes the same steps. From $s_{j+1}$ on, until the
+overwrite in case 1, the two runs execute the same steps, with heaps that differ
+at $(o, f)$ alone. For that, it is enough that no step between $s_j$ and $s_k$
+reads or writes $(o, f)$, since by \cref{lem:ee-locality} every such step then
+does the same in both. A step that reads or writes $(o, f)$ takes $P$: a load or
+a store of it by \cref{prop:ee-sound-labels}; a call by \cref{thm:ee-signatures},
+since $(o, f)$ exists when the call starts. An initialization that takes no
+token belongs to the allocation of its object, and $o$ was allocated before
+$s_j$. In case 1, $s_k$ then stores the same value to $(o, f)$ in both runs,
+after which their heaps are equal, and the rest of the runs are the same. In
+case 2, both runs end with $\Trap$, or neither ends. Neither run leaves the
+method between $s_j$ and $s_k$, so no outcome, normal or exceptional, carries a
+heap in which the two differ. The converse is symmetric.
 \end{proof}
 
-The second case is where the model of exceptions comes in. In the semantics of
-\cref{fig:ee-semantics}, a path that throws ends the program with $\Trap$,
-which carries no heap, so nothing reads the store on it: this is the \emph{trap
-model}. It is how the translation sees a path that throws, since it turns every
-block from which every path throws into a trap (\cref{chap:conversion}).
-
-\subsection{In Java}\label{sec:ee-java}
-
-In Java an exception does not end the program. A handler up the stack may catch
-it and read memory, and so may the code that prints an uncaught exception's
-message. The \emph{Java model} changes the semantics in two ways:
-\begin{itemize}
-\item a guard that holds, an access through $\nul$ and $\ktrap$ give an exception
-  $\Exc(\sigma)$, which carries the heap, and a call passes on the exception
-  its callee gives;
-\item any call may throw \texttt{StackOverflowError}, and any allocation
-  \texttt{OutOfMemoryError}, so a call or an allocation may give
-  $\Exc(\sigma)$ at any time, before it does anything.
-\end{itemize}
-The semantics is no longer deterministic, and the outcome of an invocation is
-the set of the outcomes $\Ret(\bar v, \sigma)$ and $\Exc(\sigma)$ it may give.
-
-\begin{definition}[Overwritten in Java]\label{def:ee-overwritten-java}
-A store is \emph{overwritten in Java} if it is overwritten by the first case of
-\cref{def:ee-overwritten} alone, and no step strictly between $s_j$ and $s_k$
-may throw: none is a call, an allocation, a guard or an access through $\nul$.
-\end{definition}
-
-\begin{theorem}[Dead stores in Java]\label{thm:ee-dead-java}
-Removing a store that is overwritten in Java preserves the outcomes of the
-program in the Java model.
-\end{theorem}
-
-\begin{proof}
-As for \cref{thm:ee-dead}, the two runs differ at $(o, f)$ alone between $s_j$
-and $s_k$. No step there may throw, so no exception carries a heap in which the
-two differ: every exception is thrown before $s_j$ or after $s_k$, where the
-heaps agree. A run that enters the window either reaches $s_k$ in both programs
-or runs forever in both.
-\end{proof}
-
-\begin{example}[Legal in Java, or only in the trap model]\label{ex:ee-java}
+\begin{example}[Dead, and not dead]\label{ex:ee-java}
 In \texttt{deadStorePastOtherObject} of \texttt{Aliasing},
 \begin{lstlisting}[language=Java]
 int seen = other.other;
@@ -1063,19 +1078,21 @@ under object-field the load of \texttt{other.value} takes the token of
 \texttt{other}'s counters, so the first store's token goes straight to the
 second store. Apart from arithmetic, only the load comes between the two
 stores, and its receiver was checked for $\nul$ before the first store, by the
-load of \texttt{other.other}. So nothing between them may throw, and the store
-is dead in Java. In \texttt{deadStoreReadInArm} of \texttt{Examples}, once the load in a
-branch arm takes the value of the first store, the second store overwrites it,
-and the call \texttt{length(list)} comes between them. Under field the call
-takes only the token of \texttt{Link.next}, so the store is overwritten, but the
-call may throw \texttt{StackOverflowError}, and a handler could see the first
-value: the store is dead in the trap model only.
+load of \texttt{other.other}. So the method cannot leave between them, and the
+first store is dead. In \texttt{deadStoreReadInArm} of \texttt{Examples}, once
+the load in a branch arm takes the value of the first store, the second store
+overwrites it, and the call \texttt{length(list)} comes between them. Under
+field the call takes only the token of \texttt{Link.next}, but it may throw
+\texttt{StackOverflowError}, and its exception goes to a block that leaves the
+method with it: a handler up the stack could read the first value, so the
+store is not dead.
 \end{example}
 
-The implementation removes a store in Java only if nothing between it and its
-overwrite may throw, on any token: a call, an allocation, a division, a guard or
-a trap (\cref{chap:analysis}). Those are the stores it gives Native Image to
-remove. The trap model's are only counted.
+A simpler model, in which a path that throws ends the program and nothing reads
+the heap after it, would make that store dead, and six more of
+\texttt{Examples}. That is not Java, so the token form makes exceptional paths
+explicit, as Graal IR does (\cref{chap:conversion}), and the conditions below
+follow tokens into them.
 
 \subsection{Finer partitions license more}\label{sec:ee-monotone}
 
@@ -1086,28 +1103,29 @@ tokens.
 In the token form of a method, a load is \emph{straight} if it satisfies the
 condition of \cref{lem:ee-straight}. A store of $f$ through $y$ that takes $P$
 is \emph{statically overwritten} if every \emph{$P$-path} from it ends at a store
-of $f$ through $y$, or at a $\ktrap$. A $P$-path follows the control flow from
-the store: within a block to the next instruction that takes $P$ and is not a
-move or a guard, or to the terminator; through a jump or either arm of a branch
-to the start of the next block, following $y$ into the parameter it is passed
-to. It ends there, or at a $\kret$. A path that comes back to a block it went
-through, with the token and $y$ in the same parameters, is cut. A store is
-\emph{statically overwritten in Java} if, moreover, no $P$-path ends at a
-$\ktrap$ or goes through a guard, and none of the instructions the paths go
-past may throw.
+of $f$ through $y$, or at a $\ktrap$, and no path goes through a guard or past
+an allocation, on any token. A $P$-path follows the control flow from the store:
+within a block to the next instruction that takes $P$ and is not a move or a
+guard, or to the terminator; through a jump or either arm of a branch to the
+start of the next block, following $y$ into the parameter it is passed to. It
+ends there, or where the method leaves, at a $\kret$ or a $\kthrow$. A path that
+comes back to a block it went through, with the token and $y$ in the same
+parameters, is cut. A call between the store and the overwrite needs no rule of
+its own: its block branches on its exception, and a path into the block that
+throws it ends at a $\kthrow$.
 \end{definition}
 
 A run that executes a statically overwritten store follows one of the
 $P$-paths of the store. By \cref{lem:ee-chains}, the steps in which it takes
 $P$ are the instructions on that path. A run that goes around a cut loop forever takes $P$
-in no step after the store. So a statically overwritten store whose receiver
-is never $\nul$ is overwritten, and in Java too.
+in no step after the store. A guard that holds, or an allocation that throws,
+is the only way out of a path that the paths themselves don't show. So a
+statically overwritten store whose receiver is never $\nul$ is overwritten.
 
 \begin{theorem}[Monotonicity]\label{thm:ee-monotone}
 Let $\Pi' \sqsubseteq \Pi$ be two of the four partitionings. Every load that is
 straight under $\Pi$ is straight under $\Pi'$, and every store statically
-overwritten under $\Pi$, in the trap model or in Java, is statically
-overwritten under $\Pi'$.
+overwritten under $\Pi$ is statically overwritten under $\Pi'$.
 \end{theorem}
 
 \begin{proof}
@@ -1134,9 +1152,9 @@ For a store, the $P'$-paths and the $P$-paths follow the same control flow,
 and on each, the instructions that take $P'$ are among those that take $P$. The
 first one that is not a move or a guard on a $P$-path is a store of $f$ through
 $y$, which takes $P'$ too, so it is the first on the $P'$-path as well; or the
-path reaches a $\ktrap$ or is cut, and so does the $P'$-path. The conditions
-added in Java do not depend on the partitioning: guards take every token of
-their method under both.
+path reaches a $\ktrap$ or is cut, and so does the $P'$-path. Where a path may
+leave the method, at a guard, an allocation, a $\kret$ or a $\kthrow$, does not
+depend on the partitioning: guards take every token of their method under both.
 \end{proof}
 
 The theorem is about the conditions. The rules apply them in some order,
@@ -1148,10 +1166,14 @@ peel under a finer one. So the implementation is not monotone by construction,
 and we checked that it is on the programs of this thesis. \Cref{tab:ee-monotone}
 shows, for each program, what the rules leave under the four partitionings,
 all from the export with allocation sites, so that the program is the same
-under each. In no method does a finer partitioning leave more stores or more
-loads than a coarser one, in the whole method or in its loops, and every store
-that is dead in Java under a coarser partitioning is dead under a finer one.
-A check of the test suite does the same on the three programs it uses.
+under each. In no method does a finer partitioning keep a store or a load that
+a coarser one removes, counted by where it is in the bytecode, or keep more of
+them in its loops, and every store dead under a coarser partitioning is dead
+under a finer one. Counted in the code, one method keeps a store more under
+field than with one heap: \texttt{forwardAcrossIterationsPeeled}, whose loop
+field lets the rules peel. Peeling copies the loop's store, and both copies
+stay, since the call in the loop may throw before the next iteration overwrites
+them. A check of the test suite does the same on the three programs it uses.
 
 \begin{table}[t]
 \centering
@@ -1160,15 +1182,15 @@ A check of the test suite does the same on the three programs it uses.
 Program & Methods & none & field & object & object-field \\
 \midrule
 \texttt{Aliasing} & 14 & 18/15 & 18/15 & 17/12 & 17/12 \\
-\texttt{Examples} & 41 & 51/37 & 44/29 & 45/29 & 44/29 \\
+\texttt{Examples} & 41 & 52/37 & 51/29 & 52/29 & 51/29 \\
 \texttt{Signatures} & 18 & 10/10 & 10/6 & 10/6 & 10/6 \\
 Are We Fast Yet & 370 & 223/345 & 223/308 & 223/321 & 223/308 \\
-the native-image driver & 427 & 209/675 & 209/656 & 209/665 & 209/656 \\
+the native-image driver & 436 & 266/714 & 266/695 & 266/704 & 266/695 \\
 \bottomrule
 \end{tabular}
 \caption{The field stores and loads the rules leave in the translated methods,
-under each partitioning, on the export with allocation sites. No method keeps
-more under a finer partitioning than under a coarser one.}
+under each partitioning, on the export with allocation sites. No method keeps a
+store or a load under a finer partitioning that a coarser one removes.}
 \label{tab:ee-monotone}
 \end{table}
 
@@ -1185,8 +1207,8 @@ Each of the following changes preserves the outcome of the program, and for
 every partition $P$, the sequence of steps that take $P$ other than moves and
 guards, with their values:
 \begin{enumerate}
-\item a branch to a block that traps on every path becomes a guard on each token
-  and a jump to the other block;
+\item a branch to a block every path from which leaves the method becomes a
+  guard that goes there, on each token, and a jump to the other block;
 \item a block that only one jump reaches joins the block that jumps;
 \item a parameter of a block for which every jump and branch passes the same
   value as for another parameter is replaced by that one;
@@ -1200,9 +1222,8 @@ guards, with their values:
 \end{lemma}
 
 \begin{proof}[Proof sketch]
-In (1), the block that traps ends the run with $\Trap$ after no step that
-touches memory, and the guard does too, at the same point; otherwise both go on
-in the other block. Changes (2)--(6) rename and copy blocks: every run of the
+A guard abbreviates the branch it replaces, so (1) changes nothing but how the
+program is written. Changes (2)--(6) rename and copy blocks: every run of the
 new program executes the same instructions, in the same order and with the same
 values, as a run of the old one, and the other way round.
 \end{proof}
@@ -1241,6 +1262,12 @@ because the partition is not one of the method's; \cref{thm:ee-independence},
 because nothing else in the method or its callees touches the partition; and
 \cref{thm:ee-dead}, because the stored object was allocated before the store.
 \end{proof}
+
+The exception a failed check makes is a new object too. The facts leave its
+allocation out, as Graal's do, so the implementation gives $\exn$ no token,
+where the core language gives it $\Rest$. Nothing before can have seen the
+exception; only the order in which objects are allocated could tell, which no
+rewrite of this thesis changes.
 
 This is also why \cref{lem:ee-frame} is about the locations that exist after
 the earlier step. A callee may allocate an object, initialize a field of it in
@@ -1395,8 +1422,7 @@ Signatures (\ref{thm:ee-signatures}) & sound points-to and facts & the frame, in
 Frame (\ref{lem:ee-frame}) & signatures & forwarding, dead stores \\
 Independence (\ref{thm:ee-independence}) & frame, locality & that tokens order what must be ordered \\
 Forwarding (\ref{thm:ee-forwarding}) & frame & the rules' forwarding \\
-Dead stores (\ref{thm:ee-dead}) & frame, the trap model & the rules' dead stores \\
-Dead stores in Java (\ref{thm:ee-dead-java}) & nothing between may throw & the stores Native Image removes \\
+Dead stores (\ref{thm:ee-dead}) & frame, the method can't leave in between & the rules' dead stores, which Native Image removes \\
 Monotonicity (\ref{thm:ee-monotone}) & refinement & choosing a partitioning \\
 Fresh objects (\ref{prop:ee-fresh}) & Graal's commits & signatures without initializations \\
 Thread-local partitions (\ref{prop:ee-thread-local}) & no data races, a thread-escape analysis & not implemented \\
@@ -1420,8 +1446,8 @@ take for granted:
   list the virtual machine's locations a method writes only for the kill sets,
   and not the ones it reads. No rewrite moves a call, so none depends on it.
 \item \emph{Independence holds for normal outcomes only.} Tokens do not order a
-  guard that may trap before a call that may not return. No rewrite moves an
-  instruction, so none depends on it.
+  guard that may leave the method before a call that may not return. No rewrite
+  moves an instruction, so none depends on it.
 \item \emph{Monotonicity holds of the conditions, not of the rules by
   construction}, since peeling is bounded by a number of instructions that
   grows with the number of tokens. It holds on every program of this thesis,
