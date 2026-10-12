@@ -1,4 +1,14 @@
-"""Graal IR → Cthulhu transformation."""
+""" Graal IR → Cthulhu transformation 
+
+    The translation works as follows:
+    Each method becomes a Cthulhu structure, basic block becomes a λ, a branch an
+    `opt`/`join` pair with a frame that forks every token, and a loop a λ that jumps
+    back to itself. Every memory operation takes the token of its partition and
+    gives the next one. An exception is control flow, as in Graal IR: a method
+    gives back the exception it threw, and its caller branches on it.
+
+
+"""
 
 import re
 from itertools import count
@@ -26,11 +36,11 @@ COMPARISON = {
 CONVERSIONS = {"Narrow", "SignExtend", "ZeroExtend", "FloatConvert", "Reinterpret"}
 NUMBERS = {"int", "long", "float", "double"}
 
-#: What escape analysis made virtual: described, and made by a CommitAllocation.
+# What escape analysis made virtual: described, and made by a CommitAllocation.
 VIRTUAL = {"VirtualInstance", "VirtualArray", "VirtualBoxing"}
 
-#: Nodes that touch memory in a way the dialect has no operation for. Each becomes a call to
-#: an external that takes every token of the method: the method's signature covers the node.
+# Nodes that touch memory in a way the dialect has no operation for. Each becomes a call to
+# an external that takes every token of the method: the method's signature covers the node.
 OPAQUE = {"EnsureClassInitialized", "MarkStaticFinalFieldInitialized", "PureBox", "AllocatingBox", "CopyOf",
           "CopyOfRange",
           "ArrayEquals", "ArrayRegionEquals", "ArrayRegionEqualsWithMask", "ArrayCompareTo", "ArrayRegionCompareTo",
@@ -44,6 +54,10 @@ ENDS = {"If", "Return", "Unwind"}
 
 CALLS = {"Invoke", "InvokeWithException"}
 
+# Where an exception enters the block its exception edge leads to. 
+# Its value is a parameter of that block's λ.
+CAUGHT = "ExceptionObject"
+
 _DESCRIPTOR = {"Z": "int", "B": "int", "C": "int", "S": "int", "I": "int", "J": "long", "F": "float", "D": "double"}
 
 
@@ -56,9 +70,7 @@ def structure_name(method: str) -> str:
 
 
 def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
-    """A token name per partition: `h` for all of memory, `h_rest` for memory
-    no field names, `h_int_arr` for an array kind, otherwise `h_` and the
-    field's last name, `h_value`, qualified as far as it takes to tell them apart."""
+    """A token name per heap partition"""
     names = {p: "h" if p == "heap" else "h_rest" for p in partitions if p in ("heap", REST)}
     names |= {p: "h_" + p[:-2] + "_arr" for p in partitions if p.endswith("[]")}
     parts = {p: re.split(r"[.$]", p) for p in partitions if p not in names}
@@ -97,6 +109,7 @@ def return_type(descriptor: str) -> str | None:
     result = descriptor[descriptor.index(")") + 1:]
     if result == "V":
         return None
+
     return "ref" if result[0] in "L[" else _DESCRIPTOR[result]
 
 
@@ -106,10 +119,9 @@ class Translation:
         self.graphs = graphs
         self.effects = effects or no_analysis()
         self.token_names = token_names(self.effects.partitions)
-        # A call names its callee by name and descriptor, which tells overloads apart.
         self.keys = {graph.name + graph.descriptor: key for key, graph in graphs.items()}
         self.program = Program()
-        self.refused: dict[str, str] = {}
+        self.refused: dict[str, str] = {} # Refused node x reason for refusal
 
     def translate(self, keys: list[str]) -> Program:
         calls: dict[str, str] = {}
@@ -158,9 +170,6 @@ class MethodTranslation:
         self.params = parameter_types(graph.descriptor, graph.static)
         result = return_type(graph.descriptor)
 
-        # A constructor returns its receiver, now initialized, and every later
-        # use of the object takes that: nothing can publish the object before
-        # the constructor, and its final fields, are done.
         self.constructor = graph.name.endswith(".<init>")
         self.receiver = next((n.id for n in self.nodes.values() if n.op == "Parameter" and n.index == 0), None)
         if self.constructor:
@@ -170,10 +179,12 @@ class MethodTranslation:
         # A virtual object goes by the name of the AllocatedObject that gives it out.
         self.allocated = {n.virtual if n.virtual is not None else n.inputs[0]: n.id for n in self.nodes.values() if
                           n.op == "AllocatedObject"}
+
         self.block_of = {n.id: b.id for b in graph.blocks.values() for n in b.nodes}
         self.token = {p: translation.token_names[p] for p in translation.effects.tokens(graph.name + graph.descriptor)}
         self.tokens = list(self.token.values())
-        self.outs = ([("r", result)] if result else []) + [(f"{t}out", "heap") for t in self.tokens]
+
+        self.outs = ([("r", result)] if result else []) + [("exc", "ref")] + [(f"{t}out", "heap") for t in self.tokens]
         self.out_types = [t for _, t in self.outs]
         self.calls: dict[str, str] = {}  # the structures this method calls, and the methods they stand for
         self.frames: dict[str, Lambda] = {}
@@ -187,39 +198,43 @@ class MethodTranslation:
         node = self.nodes[self.value(node_id)]
         if node.type == "void" and node.op not in VIRTUAL:
             raise Unsupported(f"{node.op} as a value, which the export gives no type")
+
         if node.op in VIRTUAL:
             return f"v{self.allocated.get(node.id, node.id)}"
+
         if node.id in self.renamed:
             return self.renamed[node.id]
+
         return f"p{node.index}" if node.op == "Parameter" else f"v{node.id}"
 
     def type_of(self, node_id: int) -> str:
         return _type(self.nodes[self.value(node_id)])
 
     def successors(self, block: Block) -> list[Edge]:
-        return [e for e in block.succs if e.label != "exception"]
+        return list(block.succs)
+
+    def _every_path(self, seed: set[int]) -> set[int]:
+        """Every path which ends in seed."""
+        found = set(seed)
+        changed = True
+        while changed:
+            changed = False
+            for b in self.g.blocks.values():
+                if b.id not in found and b.succs and all(e.to in found for e in b.succs):
+                    found.add(b.id)
+                    changed = True
+        return found
 
     def _analyse(self) -> None:
         blocks = self.g.blocks
+        self.stops = self._every_path({b.id for b in blocks.values() if b.exit not in (None, "return", "unwind")})
+        self.throws = self._every_path({b.id for b in blocks.values() if b.exit == "unwind"} | self.stops)
 
-        # A block is doomed if every path from it throws or depotimizes
-        doomed = {b.id for b in blocks.values() if b.exit is not None and b.exit != "return"}
-        changed = True
-
-        while changed:
-            changed = False
-            for b in blocks.values():
-                succ = self.successors(b)
-                if b.id not in doomed and succ and all(e.to in doomed for e in succ):
-                    doomed.add(b.id)
-                    changed = True
-        self.doomed = doomed
-
-        # Find reachable blocks along normal edges
+        # Find reachable blocks (along exception edges too)
         reached, work = {self.g.entry}, [self.g.entry]
         while work:
             b = blocks[work.pop()]
-            if b.id in doomed:
+            if b.id in self.stops:
                 continue
 
             for e in self.successors(b):
@@ -227,9 +242,17 @@ class MethodTranslation:
                     reached.add(e.to)
                     work.append(e.to)
 
-        for b in reached - doomed:
-            if any(e.label == "exception" and e.to not in doomed for e in blocks[b].succs):
-                raise Unsupported(f"exception handler (a caught exception) for bci {blocks[b].end.get('bci')}")
+        # A node that may throw ends its block, with an edge to where the exception goes, which
+        # starts by taking the exception: the value that node gives back besides its own.
+        self.caught: dict[int, int] = {}
+        for b in reached - self.stops:
+            for e in blocks[b].succs:
+                if e.label == "exception":
+                    first = blocks[e.to].nodes[0] if blocks[e.to].nodes else None
+                    if first is None or first.op != CAUGHT:
+                        raise Unsupported(
+                            f"an exception edge to a block that doesn't take the exception, bci {blocks[b].end.get('bci')}")
+                    self.caught[b] = first.id
 
         self.order = [b for b in blocks if b in reached]  # Keep the rpo order of blocks
 
@@ -244,7 +267,7 @@ class MethodTranslation:
         while changed:
             changed = False
             for b in reversed(self.order):
-                if b in doomed:
+                if b in self.stops:
                     continue
                 out = set()
 
@@ -256,14 +279,20 @@ class MethodTranslation:
                     live[b] = new
                     changed = True
 
-        # Determine the node ids of parameters the blocks (their respective lambdas) receive
+        # Determine the node ids of parameters the blocks receive.
         self.param_ids: dict[int, list[int]] = {}
         for b in self.order:
             block = blocks[b]
-            if b not in doomed and block.end.get("node") == "IfNode":
+            if b in self.stops:
+                continue
+            if block.end.get("node") == "IfNode":
                 true, false = self._branches(block)
                 union = sorted(live[true] | live[false])
                 self.param_ids[true] = self.param_ids[false] = union
+            elif b in self.caught:
+                normal, exceptional = self._outcomes(block)
+                union = [self.caught[b]] + sorted((live[normal] | live[exceptional]) - {self.caught[b]})
+                self.param_ids[normal] = self.param_ids[exceptional] = union
 
         for b in self.order:
             if b != self.g.entry and b not in self.param_ids:
@@ -272,8 +301,10 @@ class MethodTranslation:
 
     def _defs_and_uses(self, block: Block) -> tuple[set[int], set[int]]:
         defs, uses = set(), set()
+        if block.id in self.caught:
+            defs.add(self.caught[block.id])
         for n in block.nodes:
-            if n.op == "ValuePhi":
+            if n.op in ("ValuePhi", CAUGHT):
                 defs.add(n.id)
                 continue
 
@@ -282,8 +313,6 @@ class MethodTranslation:
 
             for i in (*n.inputs, *n.args):
                 v = self.value(i)
-                # A virtual object, or a node with no value such as the commit an
-                # allocated object comes from, is nothing a block passes on.
                 if v not in defs and not (
                         v in self.nodes and (self.nodes[v].op in VIRTUAL or self.nodes[v].type == "void")):
                     uses.add(v)
@@ -292,7 +321,7 @@ class MethodTranslation:
                 defs.add(n.id)
 
         if self.constructor and block.exit == "return" and self.receiver not in defs:
-            uses.add(self.receiver)  # a constructor returns it
+            uses.add(self.receiver)
 
         for e in self.successors(block):  # the phi values this block passes on
             for n in self.g.blocks[e.to].nodes:
@@ -304,11 +333,17 @@ class MethodTranslation:
         return defs, uses
 
     def _phis(self, block_id: int) -> set[int]:
-        return {n.id for n in self.g.blocks[block_id].nodes if n.op == "ValuePhi"}
+        """The values a block's predecessors give it on the edge: its phis, and an exception."""
+        return {n.id for n in self.g.blocks[block_id].nodes if n.op in ("ValuePhi", CAUGHT)}
 
     def _branches(self, block: Block) -> tuple[int, int]:
         labels = {e.label: e.to for e in self.successors(block)}
         return labels["true"], labels["false"]
+
+    def _outcomes(self, block: Block) -> tuple[int, int]:
+        """Where a block whose last node may throw goes on: normal and exceptional flow."""
+        labels = {e.label: e.to for e in self.successors(block)}
+        return labels["normal"], labels["exception"]
 
     def structure(self) -> Structure:
         if self.constructor and self.receiver is None:
@@ -317,7 +352,9 @@ class MethodTranslation:
         structure = Structure(self.name, note=self.g.name)
 
         for b in self.order:
-            lam = self._trap(b) if b in self.doomed else self._block(b)
+            lam = self._trap(b) if b in self.stops else self._block(b)
+            if b in self.throws and b not in self.stops:
+                lam.note = "throws: every path from here leaves the method with an exception"
             structure.lambdas.append(lam)
 
         structure.lambdas.extend(self.frames.values())
@@ -337,7 +374,7 @@ class MethodTranslation:
 
     def _trap(self, block_id: int) -> Lambda:
         lam = Lambda(self._lambda_name(block_id), self._lambda_params(block_id), list(self.outs),
-                     note="traps: every path from here throws")
+                     note="traps: every path from here deoptimizes, which stops the program")
 
         for t in self.tokens:
             lam.body.append(Instr("heap", "trap", [t]))
@@ -354,6 +391,8 @@ class MethodTranslation:
         self.body = lam.body
         self.current = {t: t for t in self.tokens}  # each token's version so far in this λ
         self.versions = {t: count(1) for t in self.tokens}
+        self.throwing = next((n.id for n in reversed(block.nodes) if n.op in CALLS or n.op in OPAQUE), None) \
+            if block_id in self.caught else None
 
         for n in block.nodes:
             self._node(n)
@@ -378,7 +417,7 @@ class MethodTranslation:
 
     def _node(self, n: Node) -> None:
         op, v, t = n.op, f"v{n.id}", _type(n)
-        if op in ("Parameter", "ValuePhi") or op in ALIASES or op in ENDS:
+        if op in ("Parameter", "ValuePhi", CAUGHT) or op in ALIASES or op in ENDS:
             return
 
         if op == "Constant":
@@ -406,10 +445,10 @@ class MethodTranslation:
         elif op in ("LoadHub", "GetClass", "LoadArrayComponentHub"):  # a class, which never changes
             self._emit("ref", "hub", [self.ref(n.inputs[0])], [v], ["ref"])
 
-        elif op == "Unbox":  # reads a box's value, which never changes
+        elif op == "Unbox":
             self._emit("ref", f"unbox_{t}", [self.ref(n.inputs[0])], [v], [t])
 
-        elif op == "IntegerTest":  # (x & y) == 0
+        elif op == "IntegerTest": 
             x, y = n.inputs[:2]
             t_in = self.type_of(x)
             self._emit(t_in, "and", [self.ref(x), self.ref(y)], [f"{v}_and"], [t_in])
@@ -417,7 +456,7 @@ class MethodTranslation:
             self._emit(t_in, "eq?", [f"{v}_and", f"{v}_zero"], [v], ["bool"])
 
         elif op == "ShortCircuitOr":
-            if len(n.negated) != 2:  # an export from before the flags
+            if len(n.negated) != 2:
                 raise Unsupported(op)
             sides = []
             for side, negated in zip(n.inputs[:2], n.negated):
@@ -484,8 +523,10 @@ class MethodTranslation:
         elif op in CALLS:
             self._call(n)
 
-        elif op in ("BytecodeException", "ExceptionObject"):
-            raise Unsupported(f"exception handler (a caught exception) for bci {n.bci}")
+        elif op == "BytecodeException":
+            # A check failed, of a receiver, an index, a divisor or a cast: a new exception, which
+            # nothing else has seen. The facts give it no effect, as Native Image's analysis does.
+            self._emit("ref", "exception", [], [v], ["ref"], note="a check failed")
 
         elif op == "FinalFieldBarrier" and self.constructor:
             pass  # ordered by the receiver the constructor returns
@@ -500,6 +541,7 @@ class MethodTranslation:
             partition = self.t.effects.partition(n.field, None if n.receivers is None else frozenset(n.receivers))
         except ValueError as e:  # objects the facts don't list together
             raise Unsupported(str(e)) from e
+
         before, after = self._advance(self._token_for(partition, n.field))
         static = "static" if (n.op == "LoadField" and not n.inputs) or (
                 n.op == "StoreField" and len(n.inputs) == 1) else ""
@@ -516,8 +558,10 @@ class MethodTranslation:
             partition = self.t.effects.partition(n.kind, None if n.receivers is None else frozenset(n.receivers))
         except ValueError as e:  # objects the facts don't list together
             raise Unsupported(str(e)) from e
+
         before, after = self._advance(self._token_for(partition, n.kind))
         ins = [before, *(self.ref(i) for i in n.inputs)]
+
         if n.op == "LoadIndexed":
             self._emit("heap", f"aget_{_element(n.kind)}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.kind,
                        at=n.at or "")
@@ -545,12 +589,14 @@ class MethodTranslation:
                 self._emit("int", f"cons_{o.length}", [], [f"{name}_len"], ["int"])
                 self._emit("heap", f"newarray_{_element(o.kind)}", [before, f"{name}_len"], [name, after],
                            ["ref", "heap"], note=o.kind)
+
         start = 0
         for o in objects:
             size = o.length if o.op == "VirtualArray" else len(o.fields)
             name = self.ref(o.id)
             given = self.nodes.get(self.allocated.get(o.id))
             receivers = frozenset(given.receivers) if given is not None and given.receivers is not None else None
+            
             for i, value in enumerate(n.entries[start:start + size]):
                 field = o.fields[i] if o.op != "VirtualArray" else o.kind
                 partition = self._initialized(field, receivers)
@@ -558,7 +604,9 @@ class MethodTranslation:
                 # the object is new, and the facts leave initializing it out.
                 if value is None or partition not in self.token:
                     continue
+
                 before, after = self._advance(self.token[partition])
+                
                 if o.op != "VirtualArray":
                     k = self.t.program.field_index(field, self.type_of(value))
                     self._emit("heap", f"init_{k}", [before, name, self.ref(value)], [after], ["heap"], note=field)
@@ -586,13 +634,24 @@ class MethodTranslation:
         result = None if n.type == "void" else _type(n)
         values = [i for i in n.inputs if self.nodes[self.value(i)].op not in VIRTUAL and self.type_of(i) != "void"]
         heaps = ["heap"] * len(self.tokens)
-        ftype = function_type([self.type_of(i) for i in values] + heaps, ([result] if result else []) + heaps)
+        thrown = self._thrown(n) if n.id == self.throwing else []  # one that Graal says may throw
+        ftype = function_type([self.type_of(i) for i in values] + heaps,
+                              ([result] if result else []) + [t for _, t in thrown] + heaps)
+        
         versions = [self._advance(t) for t in self.tokens]
         k = self._continuation(n.id)
+        
         self._emit(structure, "run", [], [k], [ftype])
         self._emit(ftype, "call", [k, *(self.ref(i) for i in values), *(before for before, _ in versions)],
-                   ([f"v{n.id}"] if result else []) + [after for _, after in versions],
-                   ([result] if result else []) + heaps, note=n.op)
+                   ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions],
+                   ([result] if result else []) + [t for _, t in thrown] + heaps, note=n.op)
+
+    def _thrown(self, n: Node) -> list[tuple[str, str]]:
+        """The exception the node that ends the block gives back, as the block's exception edge
+        names it: the value the handler takes."""
+        if n.id != self.throwing:
+            raise Unsupported(f"{n.op} at bci {n.bci} whose exception goes nowhere: Graal leaves it implicit")
+        return [(self.ref(self.caught[self.block_id]), "ref")]
 
     def _call(self, n: Node) -> None:
         if len(n.callees) > 1:
@@ -606,25 +665,33 @@ class MethodTranslation:
             self.calls[structure] = callee
 
         # The callee gets the tokens of its own signature, a dispatch those of every
-        # target; a call the analysis did not resolve gets all of them.
+        # target. A call the analysis found no target for gets every token of the method:
+        # all of them, as the method then touches everything, unless the image's analysis
+        # found the call dead, when it never runs.
         if n.flow == "ok":
             wanted = set().union(*(self.t.effects.tokens(c) for c in n.callees))
             partitions = [p for p in self.t.effects.partitions if p in wanted]
         else:
-            partitions = self.t.effects.partitions
+            partitions = [p for p in self.t.effects.partitions if p in self.token]
+
         tokens = [self._token_for(p, f"the call to {callee}") for p in partitions]
         heaps = ["heap"] * len(tokens)
-        constructs = ".<init>(" in callee  # gives back the object it initialized
+        constructs = ".<init>(" in callee
+
         result = "ref" if constructs else None if n.type == "void" else _type(n)
+        thrown = self._thrown(n)
         arg_types = [self.type_of(a) for a in n.args]
-        ftype = function_type(arg_types + heaps, ([result] if result else []) + heaps)
+        
+        out_types = ([result] if result else []) + [t for _, t in thrown] + heaps
+        ftype = function_type(arg_types + heaps, out_types)
         versions = [self._advance(t) for t in tokens]
-        outs = ([f"v{n.id}"] if result else []) + [after for _, after in versions]
+        
+        outs = ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions]
         k = self._continuation(n.id)
         self._emit(structure, "run", [], [k], [ftype])
 
         self._emit(ftype, "call", [k, *(self.ref(a) for a in n.args), *(before for before, _ in versions)], outs,
-                   ([result] if result else []) + heaps, note=callee)
+                   out_types, note=callee)
         if constructs:
             self.renamed[self.value(n.args[0])] = f"v{n.id}"
 
@@ -637,21 +704,39 @@ class MethodTranslation:
         if block.end.get("node") == "IfNode":
             if_node = next(n for n in block.nodes if n.op == "If")
             true, false = self._branches(block)
-            self._branch(if_node.inputs[0], true, false)
+            self._branch(self.ref(if_node.inputs[0]), true, false)
+
+        elif block.id in self.caught:
+            # The node that ends the block gave back an exception, null when it didn't throw: go
+            # on normally, or where the exception goes, which takes it.
+            normal, exceptional = self._outcomes(block)
+            exception = self.ref(self.caught[block.id])
+            self._emit("ref", "nil?", [exception], [f"{exception}_none"], ["bool"])
+            self._branch(f"{exception}_none", normal, exceptional)
 
         elif block.exit == "return":
             ret = next(n for n in block.nodes if n.op == "Return")
-            if self.constructor:
-                self._emit("ref", "move", [self.ref(self.receiver)], ["r"], ["ref"])
-            elif ret.inputs:
-                self._emit(self.outs[0][1], "move", [self.ref(ret.inputs[0])], ["r"], [self.outs[0][1]])
-            for t in self.tokens:
-                self._emit("heap", "move", [self.current[t]], [f"{t}out"], ["heap"])
+            result = self.ref(self.receiver) if self.constructor else self.ref(ret.inputs[0]) if ret.inputs else None
+            self._emit("ref", "null", [], ["exc"], ["ref"])
+            self._leave(result)
+
+        elif block.exit == "unwind":  # the method throws: its caller gets the exception
+            unwind = next(n for n in block.nodes if n.op == "Unwind")
+            self._emit("ref", "move", [self.ref(unwind.inputs[0])], ["exc"], ["ref"])
+            self._leave(None)
 
         elif len(succ) == 1:
             self._jump(block.id, succ[0].to)
         else:
             raise Unsupported(f"block ending in {block.end.get('node')}")
+
+    def _leave(self, result: str | None) -> None:
+        """Gives the caller the result, nothing when the method throws, and every token."""
+        if self.outs[0][0] == "r":
+            t = self.outs[0][1]
+            self._emit(t, "move", [result], ["r"], [t]) if result else self._emit(t, "bot", [], ["r"], [t])
+        for t in self.tokens:
+            self._emit("heap", "move", [self.current[t]], [f"{t}out"], ["heap"])
 
     def _jump(self, src: int, dst: int) -> None:
         phis = {n.id: dict(n.phi) for n in self.g.blocks[dst].nodes if n.op == "ValuePhi"}
@@ -661,11 +746,10 @@ class MethodTranslation:
         self._emit(ftype, "call", [f"k{dst}", *args, *(self.current[t] for t in self.tokens)],
                    [n for n, _ in self.outs], self.out_types)
 
-    def _branch(self, cond: int, true: int, false: int) -> None:
+    def _branch(self, c: str, true: int, false: int) -> None:
         params = self._lambda_params(true)
         ftype = function_type([t for _, t in params], self.out_types)
         frame = self._frame(ftype, params)
-        c = self.ref(cond)
         self._emit(self.name, self._lambda_name(true), [], ["kt"], [ftype])
         self._emit(self.name, self._lambda_name(false), [], ["kf"], [ftype])
         self._emit(self.name, frame.name, [], ["frame"], [frame_type(ftype)])
