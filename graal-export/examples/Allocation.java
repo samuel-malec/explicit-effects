@@ -1,4 +1,3 @@
-/** Allocation on both sides of a call that collects: the control for the VM state in kill sets. */
 public class Allocation {
 
     static final class Box {

@@ -43,7 +43,7 @@ public class Aliasing {
 
     // The load reads another object, so the first store is dead. Reading
     // other.other first checks other for null, so nothing between the two
-    // stores can throw: legal in Java, not only under the trap model.
+    // stores can throw: legal in Java
     static int deadStorePastOtherObject(Counter counter, Counter other) {
         int seen = other.other;
         counter.value = 1;
@@ -61,9 +61,7 @@ public class Aliasing {
         return seen;
     }
 
-    // Each iteration stores to another object, so the load takes the 1 stored
-    // before the loop. The call keeps Graal from forwarding the load before
-    // the analysis.
+    // Each iteration stores to another object, so the load takes the 1 stored  before the loop. 
     static int forwardIntoLoopPastOtherObject(Counter counter, Counter other, Link list, int times) {
         counter.value = 1;
         int sum = 0;
