@@ -1,4 +1,4 @@
-"""Determine, what locations can each method may write to
+"""What each method, or anything it calls, may write: the kill set of a call to it, for Graal.
 
 Usage:
     uv run python -m effects.kills graal-native/out/examples.json -o graal-native/out/examples.kills
@@ -9,18 +9,20 @@ Usage:
 import argparse
 import json
 import sys
-from collections import defaultdict
 from pathlib import Path
 
 from graal.graal_import import PointsToFacts
 
-from .signatures import PARTITIONERS, REST, accesses, analyse
+from .signatures import PARTITIONERS, REST, accesses, analyse, callees_of, close_over_callees, reaching
 
 ANY = "any"
 INIT = "init"
 
 
 def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tuple[str, ...]]:
+    """Method → the partitions it may write, a field's own name where the
+    partition is all of the field, `init` if it allocates, and the VM's state it
+    writes; `any` if it reaches something the facts can't say anything about."""
     effects = analyse(facts, PARTITIONERS[partition](facts))
     part, rest = effects.partition, effects.partition(REST)
     methods = facts.methods
@@ -30,29 +32,10 @@ def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tup
                for kind, field, receivers in accesses(e) if kind == "write"}
         written[m] = own | set(e.get("vmWrites", ())) | ({INIT} if e.get("allocates") else set())
 
-    unknown = {m for m, e in methods.items()
-               if e.get("unknown") or e.get("unresolved") or any(c not in methods for c in e.get("callees", ()))}
-    callers: dict[str, set[str]] = defaultdict(set)
-    for m, e in methods.items():
-        for callee in e.get("callees", ()):
-            callers[callee].add(m)
-    work = list(unknown)
-    while work:
-        for caller in callers[work.pop()]:
-            if caller not in unknown:
-                unknown.add(caller)
-                work.append(caller)
-
-    changed = True
-    while changed:
-        changed = False
-        for m, e in methods.items():
-            if m in unknown:
-                continue
-            more = set().union(*(written[c] for c in e.get("callees", ()))) - written[m]
-            if more:
-                written[m] |= more
-                changed = True
+    callees = callees_of(facts)
+    unknown = reaching(callees, {m: m for m, e in methods.items()
+                                 if e.get("unknown") or e.get("unresolved") or any(c not in methods for c in callees[m])})
+    close_over_callees(callees, written)
     return {m: ANY if m in unknown else tuple(sorted(written[m])) for m in sorted(methods)}
 
 

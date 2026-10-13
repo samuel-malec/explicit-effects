@@ -218,6 +218,43 @@ def no_analysis() -> Effects:
     return Effects(one_heap, {}, ("heap",))
 
 
+def callees_of(facts: PointsToFacts) -> dict[str, set[str]]:
+    """Each method, and the methods it may call."""
+    return {m: set(e.get("callees", ())) for m, e in facts.methods.items()}
+
+
+def close_over_callees(callees: dict[str, set[str]], *sets: dict[str, set[str]]) -> None:
+    """Add to each method's set what the sets of the methods it calls, directly
+    or not, hold: in place, for each of `sets`."""
+    changed = True
+    while changed:
+        changed = False
+        for m, cs in callees.items():
+            for of in sets:
+                more = set().union(*(of.get(c, set()) for c in cs)) - of[m]
+                if more:
+                    of[m] |= more
+                    changed = True
+
+
+def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, str]:
+    """The roots, and each method that calls one, directly or not, with what
+    the root it reaches says."""
+    callers: dict[str, set[str]] = {}
+    for m, cs in callees.items():
+        for callee in cs:
+            callers.setdefault(callee, set()).add(m)
+
+    found, work = dict(roots), list(roots)
+    while work:
+        callee = work.pop()
+        for caller in callers.get(callee, ()):
+            if caller not in found:
+                found[caller] = found[callee]
+                work.append(caller)
+    return found
+
+
 def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
     program = facts.fields.keys()  # the fields of the classes under analysis
 
@@ -230,19 +267,8 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
     writes = {m: {part(f, r) for kind, f, r in touched[m] if kind == "write"} | (
         {part(REST)} if e.get("allocates") else set())
               for m, e in methods.items()}
-    callees = {m: set(e.get("callees", ())) for m, e in methods.items()}
-
-    changed = True
-    while changed:
-        changed = False
-        for m in methods:
-            r, w = set(reads[m]), set(writes[m])
-            for callee in callees[m]:
-                r |= reads.get(callee, set())
-                w |= writes.get(callee, set())
-            if r != reads[m] or w != writes[m]:
-                reads[m], writes[m] = r, w
-                changed = True
+    callees = callees_of(facts)
+    close_over_callees(callees, reads, writes)
 
     # What makes a method touch everything, and every method that reaches it too.
     why: dict[str, str] = {}
@@ -256,19 +282,7 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
             why[m] = f"{m}: {e['unknown'][0]}"
         elif e.get("unknownReads"):  # may read anything, so it takes every token
             why[m] = f"{m}: {e['unknownReads'][0]}"
-
-    callers: dict[str, set[str]] = {}
-    for m, cs in callees.items():
-        for callee in cs:
-            callers.setdefault(callee, set()).add(m)
-
-    work = list(why)
-    while work:
-        callee = work.pop()
-        for caller in callers.get(callee, ()):
-            if caller not in why:
-                why[caller] = why[callee]
-                work.append(caller)
+    why = reaching(callees, why)
 
     everything = {p for m in methods for p in reads[m] | writes[m]} | {part(REST)}
     signatures = {m: Signature(frozenset(reads[m]), frozenset(writes[m]), m in why, why.get(m, "")) for m in methods}
