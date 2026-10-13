@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 
 LINEAR = frozenset({"heap"})
 
+# How code leaves the method: with an exception and every token, or by stopping the program.
+THROWS, TRAPS = "throws", "traps"
+
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
 
 
@@ -30,14 +33,18 @@ class Instr:
     ins: list[str] = field(default_factory=list)
     outs: list[str] = field(default_factory=list)
     out_types: list[str] = field(default_factory=list)
-    note: str = ""
+    note: str = ""  # a comment for the reader, which nothing reads back
     at: str = ""  # where in the bytecode it came from, as graal-export names a position
+    field: str = ""  # the field a field access reads or writes
+    exit: str = ""  # how a guard leaves the method: THROWS or TRAPS
 
     def text(self) -> str:
         line = " ".join([self.type, self.op, *self.ins])
         if self.outs:
-            line += " → " + " ".join(self.outs)
-        return line + (f"   ; {self.note}" if self.note else "")
+            line += " →  " + " ".join(self.outs)
+        # A call's note is its callee, which the closure's structure already names.
+        comment = "" if self.op == "call" else self.note or self.field or self.exit
+        return line + (f"   ; {comment}" if comment else "")
 
 
 @dataclass
@@ -46,7 +53,7 @@ class Lambda:
     params: list[tuple[str, str]]  # (name, type)
     outs: list[tuple[str, str]]  # (name, type)
     body: list[Instr] = field(default_factory=list)
-    note: str = ""
+    exit: str = ""  # THROWS or TRAPS when every path from the λ leaves the method that way
 
     @property
     def function_type(self) -> str:
@@ -113,8 +120,10 @@ def to_text(program: Program) -> str:
 
             params = " ".join(name for name, _ in lam.params)
             outs = " ".join(name for name, _ in lam.outs)
-            types = (" × ".join(t for _, t in lam.params) or "∅") + " → " + (" × ".join(t for _, t in lam.outs) or "∅")
-            lines.append(f"    {lam.name} = λ {params} → {outs}   ; {types}" + (f"; {lam.note}" if lam.note else ""))
+            types = (" × ".join(t for _, t in lam.params) or "∅") + " →  " + (" × ".join(t for _, t in lam.outs) or "∅")
+            # Feel free to comment out the following line to obtain the in/out param types, but note that the output gets really bloated really quickly
+            # lines.append(f"    {lam.name} = λ {params} → {outs}   ; {types}" + (f"; {lam.exit}" if lam.exit else ""))
+            lines.append(f"    {lam.name} = λ {params} →  {outs} " + (f"; {lam.exit}" if lam.exit else ""))
             lines.append("    (")
 
             for instr in lam.body:
