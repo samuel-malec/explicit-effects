@@ -1,29 +1,6 @@
 """Representation of Graal IR structures alongside the points-to information needed for analyis."""
 
-import json
 from dataclasses import dataclass
-from pathlib import Path
-
-
-@dataclass(frozen=True)
-class Op:
-    kind: str
-    node: int
-    bci: int
-    field: str | None = None
-    obj: int | None = None
-    value: int | None = None
-    target: str | None = None
-    callees: tuple[str, ...] = ()
-    flow: str | None = None
-    exception_edge: bool = False
-
-    @property
-    def resolved(self) -> bool:
-        return self.kind != "invoke" or self.flow == "ok"
-
-    def same_location(self, other: "Op") -> bool:
-        return self.field == other.field and self.obj == other.obj
 
 
 @dataclass(frozen=True)
@@ -41,7 +18,6 @@ class Node:
     target: str | None = None
     callees: tuple[str, ...] = ()
     flow: str | None = None
-    exception_edge: bool = False
     phi: tuple[tuple[int, int], ...] = ()
     receivers: tuple[str, ...] | None = None  # what a field or array access may touch, None when unknown
     at: str | None = None  # where a field or array access is: method, bci, and the calls it was inlined through
@@ -65,8 +41,6 @@ class Edge:
 @dataclass(frozen=True)
 class Block:
     id: int
-    preds: tuple[int, ...]
-    ops: tuple[Op, ...]
     succs: tuple[Edge, ...]
     exit: str | None  # "return", "unwind", "deopt", ...
     end: dict  # how the block ends, {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
@@ -80,32 +54,7 @@ class Graph:
     unsupported: tuple[str, ...]
     entry: int
     blocks: dict[int, Block]
-    values: dict[int, str]
     static: bool = False
-
-    @property
-    def supported(self) -> bool:
-        return not self.unsupported
-
-    def describe(self, value: int | None) -> str:
-        if value is None:
-            return "static"
-        return self.values.get(value, f"#{value}")
-
-
-def _op(raw: dict) -> Op:
-    return Op(
-        kind=raw["kind"],
-        node=raw["node"],
-        bci=raw["bci"],
-        field=raw.get("field"),
-        obj=raw.get("object"),
-        value=raw.get("value"),
-        target=raw.get("target"),
-        callees=tuple(raw.get("callees", ())),
-        flow=raw.get("flow"),
-        exception_edge=raw.get("exception_edge", False),
-    )
 
 
 def _node(raw: dict) -> Node:
@@ -123,7 +72,6 @@ def _node(raw: dict) -> Node:
         target=raw.get("target"),
         callees=tuple(raw.get("callees", ())),
         flow=raw.get("flow"),
-        exception_edge=raw.get("exception_edge", False),
         phi=tuple((e["block"], e["value"]) for e in raw.get("from", ())),
         receivers=tuple(raw["receivers"]) if raw.get("receivers") is not None else None,
         at=raw.get("at"),
@@ -139,13 +87,12 @@ def _node(raw: dict) -> Node:
     )
 
 
-def _graph(raw: dict) -> Graph:
+def parse_graph(raw: dict) -> Graph:
+    """A method's graph, as graal-export writes it."""
     blocks = {}
     for b in raw.get("blocks", ()):
         blocks[b["id"]] = Block(
             id=b["id"],
-            preds=tuple(b["preds"]),
-            ops=tuple(_op(o) for o in b["ops"]),
             succs=tuple(Edge(e["to"], e["label"]) for e in b["succs"]),
             exit=b["exit"],
             end=b.get("end", {}),
@@ -157,6 +104,5 @@ def _graph(raw: dict) -> Graph:
         unsupported=tuple(raw["unsupported"]),
         entry=raw.get("entry", 0),
         blocks=blocks,
-        values={int(k): v for k, v in raw.get("values", {}).items()},
         static=raw.get("static", False),
     )

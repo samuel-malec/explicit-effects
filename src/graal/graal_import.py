@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .graal_ir import Graph, _graph
+from .graal_ir import Graph, parse_graph
 
 
 @dataclass
@@ -28,7 +28,7 @@ def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
     if "graphs" not in data:
         raise ValueError(f"{path} has no graphs - it was written with DUMP_JSON, not DUMP_IR")
 
-    graphs = [_graph(g) for g in data["graphs"]]
+    graphs = [parse_graph(g) for g in data["graphs"]]
     counts: dict[str, int] = {}
 
     for g in graphs:
