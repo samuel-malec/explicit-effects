@@ -18,7 +18,7 @@ from effects.signatures import PARTITIONERS, analyse, no_analysis
 from graal.graal_import import load
 from graal2ct.translate import Translation, structure_name
 
-from . import memory
+from . import memory, tokens
 
 HEADER = re.compile(r"([\w$]+\.[\w$<>]+)\((.*)\)")
 ROW = re.compile(r"\s+(bytecode|inlining|no inline|graal|kills|objects|decisions)\s+calls \d+\s+writes (.+?)\s+reads (.+)")
@@ -89,7 +89,7 @@ def accesses(program, in_loops: bool = False) -> dict[str, tuple[int, int]]:
     for s in program.structures:
         kept = looping(s) if in_loops else {lam.name for lam in s.lambdas}
         kinds = Counter(m.group(1) for lam in s.lambdas if lam.name in kept for i in lam.body
-                        if i.type == "heap" and (m := memory.ACCESS.fullmatch(i.op)))
+                        if i.type == "heap" and (m := tokens.ACCESS.fullmatch(i.op)))
         counts[s.name] = (kinds["set"], kinds["get"])
     return counts
 

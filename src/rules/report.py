@@ -22,7 +22,7 @@ from graal.graal_import import load
 from graal2ct.translate import Translation, structure_name
 
 from . import memory
-from .compare import MODES, accesses, looping, probe_name, read_probe
+from .compare import MODES, accesses, probe_name, read_probe
 
 # A refusal's reason
 REASONS = [

@@ -5,6 +5,15 @@ loads and removes dead stores, and it reads the order of memory operations
 off the tokens alone. [`compare.py`](compare.py) puts what the rules leave
 next to what Graal leaves.
 
+| Module | What it holds |
+| --- | --- |
+| [`memory.py`](memory.py) | `apply`: the order the rules run in |
+| [`shape.py`](shape.py) | guards, joining blocks, merging parameters (step 1 and 2 below) |
+| [`forward.py`](forward.py) | forwarding within a λ, into branch arms and across merges |
+| [`loops.py`](loops.py) | forwarding into loops, and out of them by peeling |
+| [`stores.py`](stores.py) | dead stores |
+| [`tokens.py`](tokens.py) | reading the token form: where a token came from, a branch's shape |
+
 ```bash
 uv run graal2ct graal-export/out/examples.json --partition field --rules
 ```

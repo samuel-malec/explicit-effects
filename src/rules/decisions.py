@@ -12,7 +12,7 @@ from effects.signatures import PARTITIONERS, analyse
 from graal.graal_import import load
 from graal2ct.translate import Translation
 
-from . import memory
+from . import memory, tokens
 
 
 def dead_stores(export: Path, partition: str = "field") -> list[str]:
@@ -20,8 +20,8 @@ def dead_stores(export: Path, partition: str = "field") -> list[str]:
     facts, graphs = load(export)
     program = Translation(graphs, analyse(facts, PARTITIONERS[partition](facts))).translate(sorted(graphs))
     done = memory.apply(program, forward=False)
-    left = {f"{i.at}\t{i.note}" for s in program.structures for lam in s.lambdas for i in lam.body
-            if (m := memory.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
+    left = {f"{i.at}\t{i.field}" for s in program.structures for lam in s.lambdas for i in lam.body
+            if (m := tokens.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
     return sorted(set(done.dead) - left)
 
 
