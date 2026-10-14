@@ -5,12 +5,20 @@ import re
 from pathlib import Path
 
 from cthu import parser, prelude
-from cthu.ir import Instr, Program, to_text
+from cthu.ir import Instr, Lambda, Program, to_text
 from cthu.lexer import ParseError
 from cthu.ssu import LinearityError, check, linearize
-from cthu.ir import Lambda
-from effects.signatures import (PARTITIONERS, REST, accesses, analyse, by_field, by_object, by_object_field, no_analysis,
-                                one_heap)
+from effects.signatures import (
+    PARTITIONERS,
+    REST,
+    accesses,
+    analyse,
+    by_field,
+    by_object,
+    by_object_field,
+    no_analysis,
+    one_heap,
+)
 from graal.graal_import import load
 from graal.graal_ir import Node
 from graal2ct.translate import Translation
@@ -138,9 +146,9 @@ def check_exceptions_are_control_flow() -> None:
     defs = {o: i for i in caller.body for o in i.outs}
     arms = [defs[defs[a].ins[1]].op for a in defs[branch.ins[0]].ins[:2]]  # the opts' closures: normal, exceptional
     handler = lambdas[arms[1]]
-    assert handler.params[0] == (exception, "ref") and handler.note.startswith("throws"), (arms, handler.params)
+    assert handler.params[0] == (exception, "ref") and handler.exit == "throws", (arms, handler.params)
 
-    throwing = {l.name for l in s.lambdas if l.note.startswith("throws")}
+    throwing = {l.name for l in s.lambdas if l.exit == "throws"}
     made = next(l.name for l in s.lambdas if "ref exception" in ops(l))
     leaves = next(l for l in s.lambdas if any(i.op == "move" and i.outs == ["exc"] for i in l.body))
     assert {made, handler.name, leaves.name} == throwing, (made, handler.name, leaves.name, throwing)
@@ -170,7 +178,7 @@ def check_handlers_translate() -> None:
     program = translation.translate([key])
     assert not translation.refused and caught.op == "ExceptionObject", translation.refused
     body = lam(program, "Examples_length", f"b{handler}")
-    assert not body.note.startswith("throws") and "ref null" in ops(body) and "int move" in ops(body), (body.note, ops(body))
+    assert body.exit != "throws" and "ref null" in ops(body) and "int move" in ops(body), (body.exit, ops(body))
     assert not check(program) and not prelude.check(program, prelude.load())
     print("ok   a handler translates: one that returns gives back a null exception")
 

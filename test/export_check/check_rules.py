@@ -7,7 +7,7 @@ from cthu.ssu import check
 from effects.signatures import PARTITIONERS, analyse, no_analysis
 from graal.graal_import import load
 from graal2ct.translate import Translation
-from rules import memory
+from rules import memory, shape, stores, tokens
 from rules.compare import accesses, looping
 from rules.decisions import dead_stores
 
@@ -91,7 +91,7 @@ def check_shape() -> None:
     s = structure(program, "Examples_forwardAcrossWritingCall")
     assert {"b1", "b2", "b3"} <= set(writing) and [l.name for l in s.lambdas] == ["run"], (writing, s.lambdas)
     guards = [i for i in s.lambdas[0].body if i.op == "guard"]
-    assert len(guards) == 6 and all(g.note == "throws" for g in guards), guards
+    assert len(guards) == 6 and all(g.exit == "throws" for g in guards), guards
     null = origin(s.lambdas[0], guards[0].ins[1])  # it leaves when counter is null, as the arm did
     assert null.op == "nil?" and null.ins[0].split("_")[0] == "p0", null
     thrown = origin(s.lambdas[0], guards[3].ins[1])  # it leaves when the call gave back an exception
@@ -340,23 +340,23 @@ def check_dead_stores() -> None:
     def between(op: str, how: str = "") -> Structure:
         s = structure(translate(EXAMPLES, "field"), "Examples_deadStoreOtherField")
         for lam in s.lambdas:
-            memory._unshare(lam)
-        memory._guard_exits(s)
-        memory._fuse(s)
-        memory._remove_unreferenced(s)
+            shape.unshare(lam)
+        shape.guard_exits(s)
+        shape.fuse(s)
+        shape.remove_unreferenced(s)
         body = s.lambdas[0].body
-        first = next(n for n, i in enumerate(body) if i.op.startswith("set_") and i.note.endswith(".value"))
-        other = next(i for i in body if i.op.startswith("set_") and i.note.endswith(".other"))
+        first = next(n for n, i in enumerate(body) if i.op.startswith("set_") and i.field.endswith(".value"))
+        other = next(i for i in body if i.op.startswith("set_") and i.field.endswith(".other"))
         cond = next(i for i in body if i.op == "guard").ins[1]
-        made = Instr("heap", "guard", [other.ins[0], cond], ["h_other_2"], ["heap"], note=how) if op == "guard" else \
+        made = Instr("heap", "guard", [other.ins[0], cond], ["h_other_2"], ["heap"], exit=how) if op == "guard" else \
             Instr("heap", op, [other.ins[0]], ["v_new", "h_other_2"], ["ref", "heap"])
         body.insert(first + 1, made)
         other.ins[0] = "h_other_2"
         return s
 
-    assert memory._remove_dead_stores(between("guard", "throws")) == []
-    assert len(memory._remove_dead_stores(between("guard", "traps"))) == 1
-    assert memory._remove_dead_stores(between("new_0")) == []
+    assert stores.remove_dead_stores(between("guard", "throws")) == []
+    assert len(stores.remove_dead_stores(between("guard", "traps"))) == 1
+    assert stores.remove_dead_stores(between("new_0")) == []
     print("ok   a store every path overwrites goes, unless something that may throw comes first: three per field,"
           " the same without forwarding, which rules.decisions gives Graal by where they are")
 
@@ -368,14 +368,14 @@ def leaving_arm(how: str, noted: bool = False) -> Program:
     branch to it."""
     program = translate(EXAMPLES, "field")
     s = structure(program, "Examples_deadStoreOneArm")
-    arm = next(l for l in s.lambdas if l.name.startswith("b") and len(l.params) == 2 and not l.note
+    arm = next(l for l in s.lambdas if l.name.startswith("b") and len(l.params) == 2 and not l.exit
                and not any(i.op.startswith("set_") for i in l.body))
     (obj, _), (token, _), (exc, _), (out, _) = *arm.params, *arm.outs
     leave = ([Instr("ref", "exception", [], [exc], ["ref"]), Instr("heap", "move", [token], [out], ["heap"])]
              if how == "throws" else
              [Instr("heap", "trap", [token]), Instr("ref", "bot", [], [exc], ["ref"]), Instr("heap", "bot", [], [out], ["heap"])])
     arm.body = [Instr("ref", "drop", [obj]), *leave]
-    arm.note = f"{how}: every path from here leaves" if noted else ""
+    arm.exit = how if noted else ""
     assert not check(program), check(program)
     return program
 
@@ -422,15 +422,15 @@ def check_finer_partitions_leave_no_more() -> None:
     under the finer. Each finer partitioning leaves fewer somewhere."""
     def kept(program: Program) -> dict[str, set[str]]:
         """Structure → where the stores and loads are that some copy of is left."""
-        return {s.name: {f"{m.group(1)} {i.at}\t{i.note}" for lam in s.lambdas for i in lam.body
-                         if i.type == "heap" and (m := memory.ACCESS.fullmatch(i.op)) and m.group(1) in ("get", "set")}
+        return {s.name: {f"{m.group(1)} {i.at}\t{i.field}" for lam in s.lambdas for i in lam.body
+                         if i.type == "heap" and (m := tokens.ACCESS.fullmatch(i.op)) and m.group(1) in ("get", "set")}
                 for s in program.structures}
 
     def java_dead(path: Path, partition: str) -> set[str]:
         program = translate(path, partition)
         done = memory.apply(program, forward=False)
-        left = {f"{i.at}\t{i.note}" for s in program.structures for lam in s.lambdas for i in lam.body
-                if (m := memory.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
+        left = {f"{i.at}\t{i.field}" for s in program.structures for lam in s.lambdas for i in lam.body
+                if (m := tokens.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
         return set(done.dead) - left
 
     finer = [("field", "none"), ("object", "none"), ("object-field", "field"), ("object-field", "object")]

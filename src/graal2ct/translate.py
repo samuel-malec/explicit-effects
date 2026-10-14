@@ -6,17 +6,15 @@
     back to itself. Every memory operation takes the token of its partition and
     gives the next one. An exception is control flow, as in Graal IR: a method
     gives back the exception it threw, and its caller branches on it.
-
-
 """
 
 import re
 from itertools import count
 
-from cthu.ir import Instr, Lambda, Program, Structure, frame_type, function_type
+from cthu.ir import THROWS, TRAPS, Instr, Lambda, Program, Structure, frame_type, function_type
 from cthu.ssu import linearize
 from effects.signatures import REST, Effects, no_analysis
-from graal.graal_ir import Block, Edge, Graph, Node
+from graal.graal_ir import Block, Graph, Node
 
 ARITHMETIC = {
     "Add": "add", "Sub": "sub", "Mul": "mul", "SignedDiv": "div", "SignedRem": "rem",
@@ -54,8 +52,6 @@ ENDS = {"If", "Return", "Unwind"}
 
 CALLS = {"Invoke", "InvokeWithException"}
 
-# Where an exception enters the block its exception edge leads to. 
-# Its value is a parameter of that block's λ.
 CAUGHT = "ExceptionObject"
 
 _DESCRIPTOR = {"Z": "int", "B": "int", "C": "int", "S": "int", "I": "int", "J": "long", "F": "float", "D": "double"}
@@ -121,7 +117,7 @@ class Translation:
         self.token_names = token_names(self.effects.partitions)
         self.keys = {graph.name + graph.descriptor: key for key, graph in graphs.items()}
         self.program = Program()
-        self.refused: dict[str, str] = {} # Refused node x reason for refusal
+        self.refused: dict[str, str] = {}  # each method refused, and why
 
     def translate(self, keys: list[str]) -> Program:
         calls: dict[str, str] = {}
@@ -155,9 +151,8 @@ class Translation:
 
         return self.program
 
-    def callee_structure(self, method: str) -> tuple[str, bool]:
-        key = self.keys.get(method)
-        return structure_name(key or method), key is None
+    def callee_structure(self, method: str) -> str:
+        return structure_name(self.keys.get(method) or method)
 
 
 class MethodTranslation:
@@ -175,7 +170,7 @@ class MethodTranslation:
         if self.constructor:
             result = "ref"
 
-        self.renamed: dict[int, str] = {}  # objects a constructor call has initialized, in the current λ
+        self.renamed: dict[int, str] = {}  # objects a constructor call has initialized, in the block being translated
         # A virtual object goes by the name of the AllocatedObject that gives it out.
         self.allocated = {n.virtual if n.virtual is not None else n.inputs[0]: n.id for n in self.nodes.values() if
                           n.op == "AllocatedObject"}
@@ -188,6 +183,13 @@ class MethodTranslation:
         self.out_types = [t for _, t in self.outs]
         self.calls: dict[str, str] = {}  # the structures this method calls, and the methods they stand for
         self.frames: dict[str, Lambda] = {}
+
+        # The block being translated, which _block sets up for _node, _end and what they call.
+        self.block_id = graph.entry
+        self.body: list[Instr] = []  # the λ's instructions so far
+        self.current: dict[str, str] = {}  # each token's version so far in this λ
+        self.versions: dict[str, count] = {}  # the numbers each token's next versions get
+        self.throwing: int | None = None  # the node that ends the block and may throw, if any
 
     def value(self, node_id: int) -> int:
         while node_id in self.alias:
@@ -210,19 +212,18 @@ class MethodTranslation:
     def type_of(self, node_id: int) -> str:
         return _type(self.nodes[self.value(node_id)])
 
-    def successors(self, block: Block) -> list[Edge]:
-        return list(block.succs)
-
     def _every_path(self, seed: set[int]) -> set[int]:
-        """Every path which ends in seed."""
+        """The blocks from which every path ends in a block of seed, seed included."""
         found = set(seed)
         changed = True
+
         while changed:
             changed = False
             for b in self.g.blocks.values():
                 if b.id not in found and b.succs and all(e.to in found for e in b.succs):
                     found.add(b.id)
                     changed = True
+
         return found
 
     def _analyse(self) -> None:
@@ -237,7 +238,7 @@ class MethodTranslation:
             if b.id in self.stops:
                 continue
 
-            for e in self.successors(b):
+            for e in b.succs:
                 if e.to not in reached:
                     reached.add(e.to)
                     work.append(e.to)
@@ -271,7 +272,7 @@ class MethodTranslation:
                     continue
                 out = set()
 
-                for e in self.successors(blocks[b]):
+                for e in blocks[b].succs:
                     out |= live[e.to] - self._phis(e.to)
                 new = uses[b] | (out - defs[b])
 
@@ -323,7 +324,7 @@ class MethodTranslation:
         if self.constructor and block.exit == "return" and self.receiver not in defs:
             uses.add(self.receiver)
 
-        for e in self.successors(block):  # the phi values this block passes on
+        for e in block.succs:  # the phi values this block passes on
             for n in self.g.blocks[e.to].nodes:
                 if n.op == "ValuePhi":
                     v = self.value(dict(n.phi)[block.id])
@@ -337,12 +338,12 @@ class MethodTranslation:
         return {n.id for n in self.g.blocks[block_id].nodes if n.op in ("ValuePhi", CAUGHT)}
 
     def _branches(self, block: Block) -> tuple[int, int]:
-        labels = {e.label: e.to for e in self.successors(block)}
+        labels = {e.label: e.to for e in block.succs}
         return labels["true"], labels["false"]
 
     def _outcomes(self, block: Block) -> tuple[int, int]:
         """Where a block whose last node may throw goes on: normal and exceptional flow."""
-        labels = {e.label: e.to for e in self.successors(block)}
+        labels = {e.label: e.to for e in block.succs}
         return labels["normal"], labels["exception"]
 
     def structure(self) -> Structure:
@@ -354,7 +355,7 @@ class MethodTranslation:
         for b in self.order:
             lam = self._trap(b) if b in self.stops else self._block(b)
             if b in self.throws and b not in self.stops:
-                lam.note = "throws: every path from here leaves the method with an exception"
+                lam.exit = THROWS
             structure.lambdas.append(lam)
 
         structure.lambdas.extend(self.frames.values())
@@ -373,8 +374,8 @@ class MethodTranslation:
         return [(self.ref(i), self.type_of(i)) for i in self.param_ids[block_id]] + tokens
 
     def _trap(self, block_id: int) -> Lambda:
-        lam = Lambda(self._lambda_name(block_id), self._lambda_params(block_id), list(self.outs),
-                     note="traps: every path from here deoptimizes, which stops the program")
+        # Every path from here deoptimizes, which stops the program: ahead-of-time code never comes back.
+        lam = Lambda(self._lambda_name(block_id), self._lambda_params(block_id), list(self.outs), exit=TRAPS)
 
         for t in self.tokens:
             lam.body.append(Instr("heap", "trap", [t]))
@@ -401,8 +402,8 @@ class MethodTranslation:
         return lam
 
     def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "",
-              at: str = "") -> None:
-        self.body.append(Instr(type_, op, ins, outs, out_types, note, at))
+              at: str = "", field: str = "") -> None:
+        self.body.append(Instr(type_, op, ins, outs, out_types, note, at, field))
 
     def _advance(self, token: str) -> tuple[str, str]:
         """The token's current version, and its next, which becomes current."""
@@ -548,10 +549,10 @@ class MethodTranslation:
         ins = [before, *(self.ref(i) for i in n.inputs)]
 
         if n.op == "LoadField":
-            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.field,
+            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], field=n.field,
                        at=n.at or "")
         else:
-            self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], note=n.field, at=n.at or "")
+            self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], field=n.field, at=n.at or "")
 
     def _array(self, n: Node) -> None:
         try:
@@ -609,7 +610,7 @@ class MethodTranslation:
                 
                 if o.op != "VirtualArray":
                     k = self.t.program.field_index(field, self.type_of(value))
-                    self._emit("heap", f"init_{k}", [before, name, self.ref(value)], [after], ["heap"], note=field)
+                    self._emit("heap", f"init_{k}", [before, name, self.ref(value)], [after], ["heap"], field=field)
                 else:
                     self._emit("int", f"cons_{i}", [], [f"{name}_at{i}"], ["int"])
                     self._emit("heap", f"aset_{_element(o.kind)}", [before, name, f"{name}_at{i}", self.ref(value)],
@@ -661,7 +662,7 @@ class MethodTranslation:
             self.calls[structure] = f"one of {', '.join(n.callees)}"
         else:
             callee = n.callees[0] if n.callees else n.target
-            structure, _ = self.t.callee_structure(callee)
+            structure = self.t.callee_structure(callee)
             self.calls[structure] = callee
 
         # The callee gets the tokens of its own signature, a dispatch those of every
@@ -700,7 +701,6 @@ class MethodTranslation:
         return f"k{node_id}" if node_id not in self.g.blocks else f"kc{node_id}"
 
     def _end(self, block: Block) -> None:
-        succ = self.successors(block)
         if block.end.get("node") == "IfNode":
             if_node = next(n for n in block.nodes if n.op == "If")
             true, false = self._branches(block)
@@ -725,8 +725,8 @@ class MethodTranslation:
             self._emit("ref", "move", [self.ref(unwind.inputs[0])], ["exc"], ["ref"])
             self._leave(None)
 
-        elif len(succ) == 1:
-            self._jump(block.id, succ[0].to)
+        elif len(block.succs) == 1:
+            self._jump(block.id, block.succs[0].to)
         else:
             raise Unsupported(f"block ending in {block.end.get('node')}")
 
@@ -734,7 +734,10 @@ class MethodTranslation:
         """Gives the caller the result, nothing when the method throws, and every token."""
         if self.outs[0][0] == "r":
             t = self.outs[0][1]
-            self._emit(t, "move", [result], ["r"], [t]) if result else self._emit(t, "bot", [], ["r"], [t])
+            if result:
+                self._emit(t, "move", [result], ["r"], [t])
+            else:
+                self._emit(t, "bot", [], ["r"], [t])
         for t in self.tokens:
             self._emit("heap", "move", [self.current[t]], [f"{t}out"], ["heap"])
 
