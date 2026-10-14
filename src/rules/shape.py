@@ -1,7 +1,14 @@
-"""Rules that change the shape of a program, not what it does: a branch to
-an arm that leaves the method becomes guards, and a λ that one jump reaches
-joins the λ that jumps, so that the code is straight-line and the other rules
-can follow a token from one operation to the next."""
+"""Rules that change the shape of a Cthu program
+
+Since exceptions split control flow, many memory operations lose the explicit
+data dependencies that were obvious if the control flow would be trivial.
+We attempt to simplify the control flow by recognizing common safe patterns, 
+where a possible simplification is possible.
+
+We focus on the following situations:
+    a branch to an arm that leaves the method becomes guards, and a λ that one jump reaches
+    joins the λ that jumps, so that the code is straight-line and the other rules
+    can follow a token from one operation to the next."""
 
 from dataclasses import replace
 

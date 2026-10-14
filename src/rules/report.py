@@ -1,4 +1,4 @@
-"""What the translation and the rules make of a whole program.
+"""Report what the translation and the rules produced.
 
 Usage:
     uv run python -m rules.report graal-export/out/awfy.json graal-export/out/awfy.allocsens.json

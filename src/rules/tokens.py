@@ -1,6 +1,6 @@
 """Reading the token form: which instruction made a token, what a field
 access touches, the shape of a branch or a jump, and small builders the rules
-share. Nothing here rewrites a program."""
+share."""
 
 import re
 from dataclasses import dataclass, replace

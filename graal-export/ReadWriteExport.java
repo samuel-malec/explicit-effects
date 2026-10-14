@@ -85,8 +85,6 @@ public class ReadWriteExport {
     public static void main(String[] args) {
         PointsToAnalyzer analyzer = PointsToAnalyzer.createAnalyzer(args);
         analyzer.run();
-        // Through Object, so that verifying this class doesn't load the standalone
-        // analysis: a native-image build has none, and exports its own.
         PointsToAnalysis bb = (PointsToAnalysis) (Object) analyzer.getResultAnalysis();
         export(bb, analyzer.getResultUniverse(), System.getProperty("dump.json", ""), System.getProperty("dump.ir", ""), System.out);
     }

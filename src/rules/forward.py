@@ -1,6 +1,7 @@
-"""Load forwarding: a load whose token comes straight from a store or a
-load of the same field of the same object takes that value. Within a λ, into
-branch arms, and across merges, by splitting the merge."""
+"""Perform Load forwarding trasnformation
+
+A load whose token comes straight from a store or a
+load of the same field of the same object takes that value."""
 
 from cthu.ir import Instr, Lambda, Structure, frame_type
 

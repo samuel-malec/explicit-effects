@@ -137,12 +137,14 @@ decisions: the one rule we saw Graal remove a dead store with wants the two
 stores adjacent (finding 1). [`rules.decisions`](../src/rules/decisions.py) gives those
 decisions, and the feature removes each such store before Graal compiles.
 Three conditions decide which stores go:
-- **Legal in Java.** The rules' dead stores rely on the trap model: a path
-  that throws reads nothing. In a compiled Java program an exception can leave
-  the method, and a handler up the stack can read the store. So the decisions
-  run the rules in Java (`memory.apply(java=True)`). A store goes only if
-  nothing between it and its overwrite may throw, on any token: a call, a
-  guard, a trap, an allocation, a division.
+- **Legal in Java.** In a compiled Java program an exception can leave the
+  method, and a handler up the stack can read the store. Since step 10 the
+  token form says so itself: an exception is control flow, and a path that
+  throws leaves the method with every token, as a return does. So a store goes
+  only if nothing between it and its overwrite may throw, on any token: a call,
+  a check that fails, an allocation. Until then the rules assumed that a path
+  that throws ends the program, and the decisions ran them in a separate Java
+  mode.
 - **Without forwarding.** A store can be dead only because the rules took away
   the load that read it, as in `deadStoreReadAfterMerge`. Graal keeps that
   load unless it forwards it itself, and it would then read stale memory. So
@@ -266,22 +268,23 @@ multi-kill path ran in real compilations.
 | `deadStoreOtherObject` | 3/1 | **2/1** | 2/1 |
 | `deadStoreBothArms` | 3/0 | **2/0** | 2/0 |
 
-- **The six others our rules remove need the trap model,** so they stay in the
-  image:
+- **The six others our rules removed needed the trap model,** so they stay in
+  the image:
   - `deadStoreReadInArm` and `deadStoreReadInLoop`, one each;
   - `forwardAcrossIterations` and `forwardAcrossIterationsPeeled`, two each.
 
   In each, `length(list)` comes between the two stores and may throw
-  `StackOverflowError`. Sending them would need exceptions modelled: an
-  exceptional exit that reads every token.
+  `StackOverflowError`. Since step 10, which models exceptions as control flow,
+  the rules don't remove them either.
 - **Java mode misses one store that is legal.** In `deadStoreReadAfterMerge`,
   a null check stands between the two stores. It repeats a check already made
   on that path, but the rules don't know that. Graal removes one of the two
   stores on its own anyway: 1/1 in every image.
-- **What is left between the image and our rules** (78/42 against 66/39):
-  - **12 stores:** six are the stores above, which need the trap model. The
-    other six are copies Graal's loop peeling makes, one in each of six loop
-    methods.
+- **What is left between the image and our rules** (78/42 against 66/39, at
+  step 5):
+  - **12 stores:** six are the stores above, which needed the trap model and
+    which, since step 10, our rules keep too. The other six are copies Graal's
+    loop peeling makes, one in each of six loop methods.
   - **3 loads:**
     - two are peeled copies, in `hoistLoadOutOfLoopControl` and
       `hoistLoadOutOfLoopListControl`;
@@ -464,3 +467,16 @@ behind calls to callees that allocate. One load is left between the best image
 and our rules: Graal's peeling copies two, and the closed world removes one the
 rules keep. Are We Fast Yet, and what still makes a call kill everything, are
 in [`programs/README.md`](../programs/README.md#precise-kill-sets-step-7).
+
+## Exceptions as control flow (step 10)
+
+Step 10 translates exceptions as Graal IR has them: a call gives back its
+exception and branches on it, and a path that throws leaves the method with
+every token ([`src/graal2ct/README.md`](../src/graal2ct/README.md#exceptions)).
+The decisions were already Java's, so nothing here changes: `rules.decisions`
+gives the same dead stores for `Examples`, `Aliasing` and `Signatures` as
+before, and the images built with them stand. What changes is the rules' own
+column: the six stores above that needed the trap model, and one more in
+`deadStoreReadAfterMerge`, now stay, so on the 50 methods `make compare`
+translates the rules leave 75/42 per field and 74/39 with objects told apart,
+where they left 68/42 and 67/39.
