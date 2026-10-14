@@ -119,21 +119,20 @@ def _cycle(signatures: dict[str, Signature], start: str) -> list[str] | None:
 
 def check(program: Program, prelude: Prelude) -> list[str]:
     errors = [f"prelude: {e}" for e in prelude.errors]
-    lambdas = {(s.name, lam.name): lam for s in program.structures for lam in s.lambdas}
-    externals = set(program.externals)
+    expected = _Expected(program, prelude)
 
     for s in program.structures:
         for lam in s.lambdas:
             types = dict(lam.params)
 
             for instr in lam.body:
-                expected = _expected(instr, program, prelude, lambdas, externals)
+                wanted = expected(instr)
                 given = ([types.get(name, "?") for name in instr.ins], list(instr.out_types))
 
-                if isinstance(expected, str):
-                    errors.append(f"{s.name}.{lam.name}: {instr.text()}: {expected}")
-                elif given != expected:
-                    errors.append(f"{s.name}.{lam.name}: {instr.text()}: takes {_show(expected)}, given {_show(given)}")
+                if isinstance(wanted, str):
+                    errors.append(f"{s.name}.{lam.name}: {instr.text()}: {wanted}")
+                elif given != wanted:
+                    errors.append(f"{s.name}.{lam.name}: {instr.text()}: takes {_show(wanted)}, given {_show(given)}")
                 types.update(zip(instr.outs, instr.out_types))
 
             for name, t in lam.outs:
@@ -143,61 +142,92 @@ def check(program: Program, prelude: Prelude) -> list[str]:
     return errors
 
 
-def _expected(instr: Instr, program: Program, prelude: Prelude,
-              lambdas: dict[tuple[str, str], Lambda], externals: set[str]) -> OpType | str:
-    """The types `instr` must take and give, or why it has none."""
-    t, op = instr.type, instr.op
-    if t in prelude.structures:
-        if op in prelude.structures[t]:
-            return prelude.structures[t][op]
+_CONS = re.compile(r"cons_m?\d+")
+_CONST = re.compile(r"const_(\d+)")
+_UNBOX = re.compile(r"unbox_(int|long|float|double)")
+_INSTANCEOF = re.compile(r"instanceof_(\d+)")
+_FIELD = re.compile(r"(get|set|init|getstatic|setstatic|new)_(\d+)")
+_ARRAY = re.compile(r"(aget|aset|newarray)_(\w+)")
 
-        if t in CONSTANTS and re.fullmatch(r"cons_m?\d+", op):
+
+class _Expected:
+    """The types each instruction must take and give, or why it has none. What
+    one function type or one λ allows is worked out once: a program has many
+    instructions of each."""
+
+    def __init__(self, program: Program, prelude: Prelude):
+        self.program, self.prelude = program, prelude
+        self.lambdas = {(s.name, lam.name): lam for s in program.structures for lam in s.lambdas}
+        self.externals = set(program.externals)
+        self.fields = list(program.fields.values())
+        self.functions: dict[str, dict[str, OpType]] = {}  # function type → its operations
+        self.closures: dict[tuple[str, str], OpType | str] = {}  # (structure, λ) → what taking it as a closure is
+
+    def __call__(self, instr: Instr) -> OpType | str:
+        t, op = instr.type, instr.op
+        if t in self.prelude.structures:
+            return self._builtin(t, op)
+
+        if (t, op) in self.lambdas:
+            if (t, op) not in self.closures:
+                self.closures[t, op] = self._closure(op, self.lambdas[t, op])
+            return self.closures[t, op]
+
+        if op == "run" and t in self.externals:
+            return [], list(instr.out_types)  # an external is typed by the calls to it
+
+        function = parse_function_type(t)
+        if function:
+            if t not in self.functions:
+                self.functions[t] = self.prelude.operations(FUNCTION[0], _function_arguments(t, *function))
+            return self.functions[t].get(op, f"a function has no {op}")
+
+        return f"no structure {t}"
+
+    def _builtin(self, t: str, op: str) -> OpType | str:
+        """An operation of one of the prelude's structures, or of its numbered families."""
+        program = self.program
+        if op in self.prelude.structures[t]:
+            return self.prelude.structures[t][op]
+
+        if t in CONSTANTS and _CONS.fullmatch(op):
             return [], [t]
 
-        if constant := re.fullmatch(r"const_(\d+)", op):
+        if constant := _CONST.fullmatch(op):
             k = int(constant.group(1))
             if k >= len(program.constants) or program.constants[k][0] != t:
                 return f"no {t} constant {k}"
             return [], [t]
 
-        if t == "ref" and (box := re.fullmatch(r"unbox_(int|long|float|double)", op)):
+        if t == "ref" and (box := _UNBOX.fullmatch(op)):
             return ["ref"], [box.group(1)]
 
-        if t == "ref" and (test := re.fullmatch(r"instanceof_(\d+)", op)):
+        if t == "ref" and (test := _INSTANCEOF.fullmatch(op)):
             return (["ref"], ["bool"]) if int(test.group(1)) < len(program.classes) else f"no class {test.group(1)}"
 
-        memory = re.fullmatch(r"(get|set|init|getstatic|setstatic|new)_(\d+)", op)
+        memory = _FIELD.fullmatch(op)
         if t == MEMORY and memory:
-            return _memory(memory.group(1), int(memory.group(2)), program)
+            return _memory(memory.group(1), int(memory.group(2)), self.fields, len(program.classes))
 
-        array = re.fullmatch(r"(aget|aset|newarray)_(\w+)", op)
+        array = _ARRAY.fullmatch(op)
         if t == MEMORY and array and array.group(2) in ARRAYS:
             element = ARRAYS[array.group(2)]
-            return \
-            {"aget": ([MEMORY, "ref", "int"], [element, MEMORY]), "aset": ([MEMORY, "ref", "int", element], [MEMORY]),
-             "newarray": ([MEMORY, "int"], ["ref", MEMORY])}[array.group(1)]
+            return {"aget": ([MEMORY, "ref", "int"], [element, MEMORY]),
+                    "aset": ([MEMORY, "ref", "int", element], [MEMORY]),
+                    "newarray": ([MEMORY, "int"], ["ref", MEMORY])}[array.group(1)]
 
         return f"{t} has no {op}"
 
-    if (t, op) in lambdas:
-        lam = lambdas[(t, op)]
+    @staticmethod
+    def _closure(op: str, lam: Lambda) -> OpType | str:
+        """Taking one of the program's λs as a closure: a frame, whose first
+        two parameters are its arms, or any other λ."""
         arms = [pt for _, pt in lam.params if parse_function_type(pt)]
         if not arms:
             return [], [lam.function_type]
         if len(arms) != 2 or arms[0] != arms[1]:
             return f"frame {op} takes arms {' and '.join(arms)}, not two of one type"
         return [], [frame_type(arms[0])]
-
-    if op == "run" and t in externals:
-        return [], list(instr.out_types)  # an external is typed by the calls to it
-
-    function = parse_function_type(t)
-
-    if function:
-        ops = prelude.operations(FUNCTION[0], _function_arguments(t, *function))
-        return ops.get(op, f"a function has no {op}")
-
-    return f"no structure {t}"
 
 
 def _function_arguments(t: str, ins: list[str], outs: list[str]) -> list:
@@ -207,11 +237,11 @@ def _function_arguments(t: str, ins: list[str], outs: list[str]) -> list:
     return [t, stck, bool_, ins, outs, frame_type(t)]
 
 
-def _memory(kind: str, k: int, program: Program) -> OpType | str:
+def _memory(kind: str, k: int, fields: list[str], classes: int) -> OpType | str:
+    """A field access or an allocation: `fields` are the program's field types, in order."""
     if kind == "new":
-        return ([MEMORY], ["ref", MEMORY]) if k < len(program.classes) else f"no class {k}"
+        return ([MEMORY], ["ref", MEMORY]) if k < classes else f"no class {k}"
 
-    fields = list(program.fields.values())
     if k >= len(fields):
         return f"no field {k}"
 

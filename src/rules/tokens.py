@@ -3,9 +3,11 @@ access touches, the shape of a branch or a jump, and small builders the rules
 share."""
 
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from cthu.ir import Instr, Lambda, Structure, function_type
+
+ENTRY = "run"  # the λ a method starts in: a closure of it is a call of the method itself
 
 ACCESS = re.compile(r"(get|set|init)(static)?_(\d+)")  # init: a new object's field, as escape analysis left it
 
@@ -58,7 +60,7 @@ def _trace(lam: Lambda, token: str, loads: bool = False) -> tuple[Instr | None, 
     made it, None if no instruction of the λ did, and its name there."""
     defs = {out: i for i in lam.body for out in i.outs}
     while (d := defs.get(token)) is not None and d.type == "heap" and (
-            d.op in ("move", "guard") or loads and (a := field_access(d)) is not None and a[0] == "get"):
+            d.op in ("move", "guard") or (loads and (a := field_access(d)) is not None and a[0] == "get")):
         token = d.ins[0]
     return d, token
 
@@ -94,7 +96,40 @@ def value_of(access: Instr) -> str:
 
 
 def copy_instr(i: Instr) -> Instr:
-    return replace(i, ins=list(i.ins), outs=list(i.outs), out_types=list(i.out_types))
+    return i.renamed(list(i.ins), list(i.outs))
+
+
+class Closures:
+    """Where each of a method's λs is taken as a closure: the (λ, instruction)
+    of each place, in program order. It describes the program as it was when
+    made, so a rule makes it again after it changes which λ takes which."""
+
+    def __init__(self, s: Structure):
+        self.places: dict[str, list[tuple[Lambda, Instr]]] = {}
+        for lam in s.lambdas:
+            for i in lam.body:
+                if i.type == s.name:
+                    self.places.setdefault(i.op, []).append((lam, i))
+        self._calls: dict[str, set[str]] | None = None
+
+    def of(self, name: str) -> list[tuple[Lambda, Instr]]:
+        return self.places.get(name, [])
+
+    def reached_from(self, name: str) -> set[str]:
+        """The λs that λ `name` can get to by taking closures, through others;
+        itself only if it is on a loop."""
+        if self._calls is None:
+            self._calls = {}
+            for target, places in self.places.items():
+                for lam, _ in places:
+                    self._calls.setdefault(lam.name, set()).add(target)
+        seen, work = set(), [name]
+        while work:
+            for n in self._calls.get(work.pop(), ()):
+                if n not in seen:
+                    seen.add(n)
+                    work.append(n)
+        return seen
 
 
 @dataclass
@@ -109,17 +144,15 @@ class Branch:
     call: Instr
 
 
-def branch_into(s: Structure, name: str) -> Branch | None:
+def branch_into(s: Structure, name: str, closures: Closures | None = None) -> Branch | None:
     """The branch whose arm λ `name` is, if it is the only place that takes
     either arm."""
-    def places(n: str) -> list[tuple[Lambda, Instr]]:
-        return [(lam, i) for lam in s.lambdas for i in lam.body if i.type == s.name and i.op == n]
-
-    taken = places(name)
+    closures = closures or Closures(s)
+    taken = closures.of(name)
     if len(taken) != 1:
         return None
     branch = branch_at(s, taken[0][0])
-    if branch is None or name not in {r.op for r in branch.refs} or any(len(places(r.op)) != 1 for r in branch.refs):
+    if branch is None or name not in {r.op for r in branch.refs} or any(len(closures.of(r.op)) != 1 for r in branch.refs):
         return None
     return branch
 
@@ -151,16 +184,14 @@ def arms_of(defs: dict[str, Instr], join: Instr | None, structure: str) -> tuple
     return opts, refs
 
 
-def jump_sites(s: Structure, name: str) -> list[tuple[Lambda, Instr, Instr]] | None:
+def jump_sites(s: Structure, name: str, closures: Closures | None = None) -> list[tuple[Lambda, Instr, Instr]] | None:
     """Each (λ, closure, jump) that jumps to λ `name`, if only jumps reach it."""
     sites = []
-    for lam in s.lambdas:
-        for i in lam.body:
-            if i.type == s.name and i.op == name:
-                jump = lam.body[-1]
-                if jump.op != "call" or jump.ins[:1] != i.outs or jump.outs != [n for n, _ in lam.outs]:
-                    return None
-                sites.append((lam, i, jump))
+    for lam, i in (closures or Closures(s)).of(name):
+        jump = lam.body[-1]
+        if jump.op != "call" or jump.ins[:1] != i.outs or jump.outs != [n for n, _ in lam.outs]:
+            return None
+        sites.append((lam, i, jump))
     return sites
 
 
@@ -171,31 +202,28 @@ def jump_to(s: Structure, target: Lambda, args: list[str], k: str) -> list[Instr
             Instr(ftype, "call", [k, *args], [n for n, _ in target.outs], [t for _, t in target.outs])]
 
 
-def in_loop(s: Structure, name: str, sites: list[tuple[Lambda, Instr, Instr]]) -> bool:
+def in_loop(s: Structure, name: str, sites: list[tuple[Lambda, Instr, Instr]], closures: Closures | None = None) -> bool:
     """Whether one of the λs that jump to `name` is reachable from it."""
-    refs = {lam.name: {i.op for i in lam.body if i.type == s.name} for lam in s.lambdas}
-    seen, work = set(), [name]
-    while work:
-        for n in refs.get(work.pop(), ()):
-            if n not in seen:
-                seen.add(n)
-                work.append(n)
-    return any(lam.name in seen for lam, _, _ in sites)
+    reached = (closures or Closures(s)).reached_from(name)
+    return any(lam.name in reached for lam, _, _ in sites)
 
 
 def only_jumps(s: Structure, lam: Lambda) -> bool:
     """Whether the λ does nothing but jump to another of the method's λs."""
     ref, jump = lam.body if len(lam.body) == 2 else (None, None)
-    return (ref is not None and ref.type == s.name and ref.op != "run" and jump.op == "call"
+    return (ref is not None and ref.type == s.name and ref.op != ENTRY and jump.op == "call"
             and jump.ins[:1] == ref.outs and jump.outs == [n for n, _ in lam.outs])
 
 
-def calls_into(s: Structure, lam: Lambda) -> list[list[str]] | None:
+def calls_into(s: Structure, lam: Lambda, closures: Closures | None = None) -> list[list[str]] | None:
     """What each place that calls the λ passes it, if only jumps or one branch do."""
-    sites = jump_sites(s, lam.name) if lam.name != "run" else None
+    if lam.name == ENTRY:
+        return None
+    closures = closures or Closures(s)
+    sites = jump_sites(s, lam.name, closures)
     if sites:
         return [jump.ins[1:] for _, _, jump in sites]
-    branch = branch_into(s, lam.name) if lam.name != "run" else None
+    branch = branch_into(s, lam.name, closures)
     return [branch.call.ins[1:]] if branch else None
 
 

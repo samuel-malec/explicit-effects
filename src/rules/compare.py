@@ -14,6 +14,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from cthu.ir import Program, Structure
 from effects.signatures import PARTITIONERS, analyse, no_analysis
 from graal.graal_import import load
 from graal2ct.translate import Translation, structure_name
@@ -83,7 +84,7 @@ def probe_name(name: str, descriptor: str) -> str:
     return f"{name}({', '.join(params)})"
 
 
-def accesses(program, in_loops: bool = False) -> dict[str, tuple[int, int]]:
+def accesses(program: Program, in_loops: bool = False) -> dict[str, tuple[int, int]]:
     """Structure → (stores, loads) left in it, or only those in its loops."""
     counts = {}
     for s in program.structures:
@@ -94,10 +95,10 @@ def accesses(program, in_loops: bool = False) -> dict[str, tuple[int, int]]:
     return counts
 
 
-def looping(s) -> set[str]:
+def looping(s: Structure) -> set[str]:
     """The λs on a loop: those that jump or branch, through others of the
     method's λs, back to themselves. A call of the method itself isn't a loop."""
-    refs = {lam.name: {i.op for i in lam.body if i.type == s.name and i.op != "run"} for lam in s.lambdas}
+    refs = {lam.name: {i.op for i in lam.body if i.type == s.name and i.op != tokens.ENTRY} for lam in s.lambdas}
     found = set()
     for start in refs:
         seen, work = set(), list(refs[start])

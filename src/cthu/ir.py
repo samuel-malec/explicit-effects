@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cache
 
 LINEAR = frozenset({"heap"})
 
@@ -6,6 +7,7 @@ LINEAR = frozenset({"heap"})
 THROWS, TRAPS = "throws", "traps"
 
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
+_TYPES = {code: t for t, code in _TYPE_CODES.items()}
 
 
 def function_type(params: list[str], outs: list[str]) -> str:
@@ -19,11 +21,18 @@ def frame_type(function: str) -> str:
 
 
 def parse_function_type(name: str) -> tuple[list[str], list[str]] | None:
-    types = {code: t for t, code in _TYPE_CODES.items()}
+    """The parameter and result types of a function type, `f_rh_ih`, None if
+    `name` is no function type. The lists are the caller's to keep."""
+    parsed = _parse_function_type(name)
+    return None if parsed is None else (list(parsed[0]), list(parsed[1]))
+
+
+@cache
+def _parse_function_type(name: str) -> tuple[tuple[str, ...], tuple[str, ...]] | None:
     parts = name[2:].split("_")
-    if not name.startswith("f_") or len(parts) != 2 or not all(c in types for c in "".join(parts)):
+    if not name.startswith("f_") or len(parts) != 2 or not all(c in _TYPES for c in "".join(parts)):
         return None
-    return [types[c] for c in parts[0]], [types[c] for c in parts[1]]
+    return tuple(_TYPES[c] for c in parts[0]), tuple(_TYPES[c] for c in parts[1])
 
 
 @dataclass
@@ -37,6 +46,11 @@ class Instr:
     at: str = ""  # where in the bytecode it came from, as graal-export names a position
     field: str = ""  # the field a field access reads or writes
     exit: str = ""  # how a guard leaves the method: THROWS or TRAPS
+
+    def renamed(self, ins: list[str], outs: list[str]) -> "Instr":
+        copy = object.__new__(Instr)
+        copy.__dict__.update(self.__dict__, ins=ins, outs=outs, out_types=list(self.out_types))
+        return copy
 
     def text(self) -> str:
         line = " ".join([self.type, self.op, *self.ins])
@@ -74,26 +88,37 @@ class Program:
     classes: list[str] = field(default_factory=list)  # `class` declarations: new_i, instanceof_i
     constants: list[tuple[str, str]] = field(default_factory=list)  # `constant T "what"` declarations: const_i
     externals: dict[str, str] = field(default_factory=dict)  # external functions called from the analyzed code
+    # Where each field, class and constant is in the declarations above, so that numbering one stays cheap.
+    _indices: dict[tuple, int] = field(default_factory=dict, init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        self._indices.update({("field", name): i for i, name in enumerate(self.fields)})
+        self._indices.update({("class", name): i for i, name in enumerate(self.classes)})
+        self._indices.update({("constant", *c): i for i, c in enumerate(self.constants)})
 
     def field_index(self, name: str, type_: str) -> int:
         if self.fields.setdefault(name, type_) != type_:
             raise ValueError(f"field {name} is both {self.fields[name]} and {type_}")
-        return list(self.fields).index(name)
+        return self._indices.setdefault(("field", name), len(self.fields) - 1)
 
     def class_index(self, name: str) -> int:
-        if name not in self.classes:
+        if ("class", name) not in self._indices:
+            self._indices["class", name] = len(self.classes)
             self.classes.append(name)
-        return self.classes.index(name)
+        return self._indices["class", name]
 
     def constant_index(self, type_: str, what: str) -> int:
         """A constant other than an int, a long or null: an object, a string, a float."""
         what = what.replace('"', "'").replace("\n", " ")
-        if (type_, what) not in self.constants:
+        if ("constant", type_, what) not in self._indices:
+            self._indices["constant", type_, what] = len(self.constants)
             self.constants.append((type_, what))
-        return self.constants.index((type_, what))
+        return self._indices["constant", type_, what]
 
 
-def to_text(program: Program) -> str:
+def to_text(program: Program, types: bool = False) -> str:
+    """The program as graal.ct text. With `types`, each λ's line also gives
+    its parameter and result types, which makes the text much longer."""
     lines = []
     for i, (name, type_) in enumerate(program.fields.items()):
         lines.append(f'field {type_} "{name}"   ; get_{i}, set_{i}')
@@ -120,10 +145,11 @@ def to_text(program: Program) -> str:
 
             params = " ".join(name for name, _ in lam.params)
             outs = " ".join(name for name, _ in lam.outs)
-            types = (" × ".join(t for _, t in lam.params) or "∅") + " →  " + (" × ".join(t for _, t in lam.outs) or "∅")
-            # Feel free to comment out the following line to obtain the in/out param types, but note that the output gets really bloated really quickly
-            # lines.append(f"    {lam.name} = λ {params} → {outs}   ; {types}" + (f"; {lam.exit}" if lam.exit else ""))
-            lines.append(f"    {lam.name} = λ {params} →  {outs} " + (f"; {lam.exit}" if lam.exit else ""))
+            if types:
+                signature = (" × ".join(t for _, t in lam.params) or "∅") + " → " + (" × ".join(t for _, t in lam.outs) or "∅")
+                lines.append(f"    {lam.name} = λ {params} →  {outs}   ; {signature}" + (f"; {lam.exit}" if lam.exit else ""))
+            else:
+                lines.append(f"    {lam.name} = λ {params} →  {outs} " + (f"; {lam.exit}" if lam.exit else ""))
             lines.append("    (")
 
             for instr in lam.body:

@@ -34,6 +34,8 @@ def main() -> int:
                              "per set of objects the points-to facts tell apart; object-field: per field of such a set")
     parser.add_argument("--rules", action="store_true",
                         help="then forward loads and remove dead stores, and list what they did")
+    parser.add_argument("--types", action="store_true",
+                        help="give each λ's parameter and result types too, which makes the text much longer")
     args = parser.parse_args()
 
     facts, graphs = load(args.dump)
@@ -42,7 +44,7 @@ def main() -> int:
     translation = Translation(graphs, effects)
     program = translation.translate(keys)
     rewrites = memory.apply(program) if args.rules else None
-    text = to_text(program)
+    text = to_text(program, types=args.types)
 
     if args.out:
         args.out.write_text(text + "\n")

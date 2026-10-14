@@ -24,16 +24,13 @@ from graal2ct.translate import Translation, structure_name
 from . import memory
 from .compare import MODES, accesses, probe_name, read_probe
 
-# A refusal's reason
+# Refusals worth grouping under one name: the translator names a node it can't take by
+# its class without `Node`, and the exporter gives the reasons it refuses a whole graph.
 REASONS = [
     (r"allocation after escape analysis", "allocation after escape analysis"),
-    (r"call to .* with \d+ targets", "a call with several targets"),
-    (r"(Load|Store)IndexedNode|AccessIndexed", "an array element access"),
-    (r"exception handler", "a caught exception"),
-    (r"Monitor(Enter|Exit)Node", "a monitor"),
+    (r"^Monitor(Enter|Exit)$", "a monitor"),
     (r"ordered \(volatile\)", "a volatile access"),
     (r"no graph", "no graph (native or abstract)"),
-    (r"constant ", "a constant other than an int or null"),
 ]
 
 

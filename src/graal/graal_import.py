@@ -14,6 +14,13 @@ class PointsToFacts:
     fields: dict[str, dict] = field(default_factory=dict)  # what fields are reachable (read/written)
 
 
+def load_facts(path: str | Path) -> PointsToFacts:
+    """Only the facts of an export, without reading its graphs: what the kill
+    sets need, from an export of any size."""
+    data = json.loads(Path(path).read_text())
+    return PointsToFacts(data.get("methods", {}), data.get("fields", {}))
+
+
 def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
     path = Path(path)
     if not path.exists():

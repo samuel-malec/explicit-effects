@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import NoReturn
 
 from .lexer import Category, ParseError, Token, tokenize
 
@@ -75,7 +76,7 @@ class _Parser:
             self.fail(f"expected {repr(text) if text else category.value}, found {self.peek() or 'the end'}")
         return token
 
-    def fail(self, message: str, token: Token | None = None):
+    def fail(self, message: str, token: Token | None = None) -> NoReturn:
         token = token or self.peek() or (self.tokens[-1] if self.tokens else Token(Category.EOL, "", 1, 1))
         raise ParseError(token.line, token.column, message)
 

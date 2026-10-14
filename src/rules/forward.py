@@ -1,4 +1,4 @@
-"""Perform Load forwarding trasnformation
+"""Perform Load forwarding transformation
 
 A load whose token comes straight from a store or a
 load of the same field of the same object takes that value."""
@@ -6,7 +6,9 @@ load of the same field of the same object takes that value."""
 from cthu.ir import Instr, Lambda, Structure, frame_type
 
 from .tokens import (
+    ENTRY,
     Branch,
+    Closures,
     branch_into,
     copy_instr,
     field_access,
@@ -58,8 +60,9 @@ def forward_into_arms(s: Structure) -> list[str]:
     same object gave the token, takes that access's value as a parameter."""
     forwarded = []
     while True:
+        closures = Closures(s)
         for arm in s.lambdas:
-            found = next(((load, f) for load in arm.body if (f := _from_above(s, arm, load))), None)
+            found = next(((load, f) for load in arm.body if (f := _from_above(s, arm, load, closures))), None)
             if found:
                 load, (value, hops) = found
                 thread(s, value, hops, load)
@@ -69,7 +72,7 @@ def forward_into_arms(s: Structure) -> list[str]:
             return forwarded
 
 
-def _from_above(s: Structure, arm: Lambda, load: Instr) -> tuple[str, list[tuple[Branch, Lambda]]] | None:
+def _from_above(s: Structure, arm: Lambda, load: Instr, closures: Closures) -> tuple[str, list[tuple[Branch, Lambda]]] | None:
     """The value the load reads, in the λ above the branches it is in, and each
     (branch, arm on the way) from there down to the load's λ."""
     a = field_access(load)
@@ -81,7 +84,7 @@ def _from_above(s: Structure, arm: Lambda, load: Instr) -> tuple[str, list[tuple
 
     while token is not None and all(lam is not l for _, l in hops):
         names = [n for n, _ in lam.params]
-        branch = branch_into(s, lam.name)
+        branch = branch_into(s, lam.name, closures)
         if branch is None or (obj is not None and obj not in names):
             return None
 
@@ -133,9 +136,10 @@ def split_merge(s: Structure) -> str | None:
     and say which load. Only a merge that jumps reach, outside a loop, with
     nothing before the load but what passes the token on or can't throw: that
     much the copy repeats."""
+    closures = Closures(s)
     for merge in s.lambdas:
-        sites = jump_sites(s, merge.name) if merge.name != "run" else None
-        if not sites or len(sites) < 2 or in_loop(s, merge.name, sites):
+        sites = jump_sites(s, merge.name, closures) if merge.name != ENTRY else None
+        if not sites or len(sites) < 2 or in_loop(s, merge.name, sites, closures):
             continue
         params = [n for n, _ in merge.params]
         for at, load in enumerate(merge.body):

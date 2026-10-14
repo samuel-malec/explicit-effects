@@ -7,13 +7,12 @@ Usage:
 """
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
-from graal.graal_import import PointsToFacts
+from graal.graal_import import PointsToFacts, load_facts
 
-from .signatures import PARTITIONERS, REST, accesses, analyse, callees_of, close_over_callees, reaching
+from .signatures import PARTITIONERS, REST, accesses, callees_of, close_over_callees, program_partition, reaching
 
 ANY = "any"
 INIT = "init"
@@ -23,8 +22,8 @@ def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tup
     """Method → the partitions it may write, a field's own name where the
     partition is all of the field, `init` if it allocates, and the VM's state it
     writes; `any` if it reaches something the facts can't say anything about."""
-    effects = analyse(facts, PARTITIONERS[partition](facts))
-    part, rest = effects.partition, effects.partition(REST)
+    part = program_partition(facts, PARTITIONERS[partition](facts))
+    rest = part(REST)
     methods = facts.methods
     written: dict[str, set[str]] = {}
     for m, e in methods.items():
@@ -41,7 +40,7 @@ def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tup
 
 def partitioned(facts: PointsToFacts, partition: str) -> dict[tuple[str, str], str]:
     """(position, field) → partition, for each access the facts list where it is."""
-    part = analyse(facts, PARTITIONERS[partition](facts)).partition
+    part = program_partition(facts, PARTITIONERS[partition](facts))
     return {(a["at"], a["field"]): part(field, receivers)
             for e in facts.methods.values()
             for a, (_, field, receivers) in zip(e.get("accesses", ()), accesses(e))
@@ -56,8 +55,7 @@ def main() -> int:
     parser.add_argument("--accesses", type=Path, help="where to write each access's partition")
     args = parser.parse_args()
 
-    data = json.loads(args.export.read_text())
-    facts = PointsToFacts(data.get("methods", {}), data.get("fields", {}))
+    facts = load_facts(args.export)
     written = kills(facts, args.partition)
     args.out.write_text("".join(f"{m}\t{w if w == ANY else ','.join(w)}\n" for m, w in written.items()))
     narrowed = [w for w in written.values() if w != ANY]

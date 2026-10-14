@@ -9,12 +9,13 @@ from cthu.ir import Instr, Lambda, Structure
 from .forward import thread
 from .shape import merge_same_params
 from .tokens import (
+    ENTRY,
     Branch,
+    Closures,
     branch_into,
     copy_instr,
     field_access,
     fresh,
-    in_loop,
     jump_sites,
     jump_to,
     names_in,
@@ -41,16 +42,18 @@ class _Loop:
     entries: list[tuple[Lambda, Instr, Instr]]
 
 
-def _loop(s: Structure, header: Lambda) -> _Loop | None:
+def _loop(s: Structure, header: Lambda, closures: Closures | None = None) -> _Loop | None:
     """The loop that `header` begins, if it has that shape."""
-    sites = jump_sites(s, header.name) if header.name != "run" else None
-    back = [site for site in sites or () if in_loop(s, header.name, [site])]
+    closures = closures or Closures(s)
+    sites = jump_sites(s, header.name, closures) if header.name != ENTRY else None
+    reached = closures.reached_from(header.name) if sites else set()
+    back = [site for site in sites or () if site[0].name in reached]
 
     if len(back) != 1:
         return None
     
     body, ref, jump = back[0]
-    branch = branch_into(s, body.name)
+    branch = branch_into(s, body.name, closures)
     entries = [site for site in sites if site is not back[0]]
     
     if branch is None or branch.parent is not header or not entries:
@@ -125,8 +128,9 @@ def forward_into_loops(s: Structure) -> list[str]:
     takes as a loop-carried phi."""
     forwarded = []
     while True:
+        closures = Closures(s)
         for header in s.lambdas:
-            loop = _loop(s, header)
+            loop = _loop(s, header, closures)
             found = [(c.load, c.back, known) for c in (_carried(loop) if loop else ())
                      if not c.settles and (known := _known_on_entry(loop, c.load, c.token, c.obj)) is not None]
             if found:
@@ -148,8 +152,9 @@ def hoist_out_of_loop(s: Structure) -> str | None:
     leaves too: the first iteration is peeled before, after which the object's
     parameter and the one it settles on are one. Only a loop whose header and
     body are short, since the copies repeat them; say which load left."""
+    closures = Closures(s)
     for header in s.lambdas:
-        loop = _loop(s, header)
+        loop = _loop(s, header, closures)
         if loop is None or len(header.body) + len(loop.body.body) > PEEL:
             continue
         found = next((c for c in _carried(loop) if c.settles or _known_on_entry(loop, c.load, c.token, c.obj) is None), None)

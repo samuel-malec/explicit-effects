@@ -10,11 +10,9 @@ We focus on the following situations:
     joins the λ that jumps, so that the code is straight-line and the other rules
     can follow a token from one operation to the next."""
 
-from dataclasses import replace
-
 from cthu.ir import LINEAR, Instr, Lambda, Structure
 
-from .tokens import branch_at, calls_into, fresh, is_pure, names_in, types_in
+from .tokens import ENTRY, Closures, branch_at, calls_into, fresh, is_pure, names_in, types_in
 
 
 def unshare(lam: Lambda) -> None:
@@ -64,7 +62,7 @@ def guard_exits(s: Structure) -> None:
 def remove_unreferenced(s: Structure) -> None:
     while True:
         used = {i.op for lam in s.lambdas for i in lam.body if i.type == s.name}
-        unused = {lam.name for lam in s.lambdas if lam.name != "run" and lam.name not in used}
+        unused = {lam.name for lam in s.lambdas if lam.name != ENTRY and lam.name not in used}
         if not unused:
             return
         s.lambdas = [lam for lam in s.lambdas if lam.name not in unused]
@@ -73,61 +71,87 @@ def remove_unreferenced(s: Structure) -> None:
 def fuse(s: Structure) -> None:
     """Inline each block that only one jump reaches into the λ that jumps:
     straight-line code, which Graal splits into blocks at every call, becomes
-    one λ again. A merge, a loop header and a branch's arms stay λs."""
-    while True:
-        refs: dict[str, list[tuple[Lambda, Instr]]] = {}
-        for lam in s.lambdas:
-            for i in lam.body:
-                if i.type == s.name:
-                    refs.setdefault(i.op, []).append((lam, i))
+    one λ again. A merge, a loop header and a branch's arms stay λs.
 
-        for target in s.lambdas:
-            places = refs.get(target.name, [])
-            if target.name == "run" or len(places) != 1:
-                continue
+    One pass in program order is enough: inlining a block moves the closures
+    it takes into the λ that jumped to it, which leaves whether any other block
+    can be inlined as it was."""
+    closures = Closures(s)
+    n = 0
+    while n < len(s.lambdas):
+        target = s.lambdas[n]
+        places = closures.of(target.name)
+        if target.name != ENTRY and len(places) == 1 and _jumps_only_to(*places[0], target):
             lam, ref = places[0]
-            jump = lam.body[-1]
-            outs = [n for n, _ in lam.outs]
-            if lam is target or jump.op != "call" or jump.ins[:1] != ref.outs or jump.outs != outs \
-                    or [n for n, _ in target.outs] != outs:
-                continue
-            _inline(lam, ref, jump, target)
-            s.lambdas.remove(target)
-            break
+            copies = _inline(lam, ref, lam.body[-1], target)
+            del s.lambdas[n], closures.places[target.name]
+            for old, new in zip(target.body, copies):  # the closures the block took are now the λ's
+                if old.type == s.name:
+                    taken = closures.places[old.op]
+                    taken[next(k for k, (_, i) in enumerate(taken) if i is old)] = (lam, new)
         else:
-            return
+            n += 1
 
 
-def _inline(lam: Lambda, ref: Instr, jump: Instr, target: Lambda) -> None:
-    """Replace the jump at the end of `lam` with the body of `target`."""
+def _jumps_only_to(lam: Lambda, ref: Instr, target: Lambda) -> bool:
+    """Whether `lam` ends by jumping through closure `ref` to `target`, which
+    gives what `lam` gives."""
+    jump = lam.body[-1]
+    outs = [n for n, _ in lam.outs]
+    return lam is not target and jump.op == "call" and jump.ins[:1] == ref.outs and jump.outs == outs \
+        and [n for n, _ in target.outs] == outs
+
+
+def _inline(lam: Lambda, ref: Instr, jump: Instr, target: Lambda) -> list[Instr]:
+    """Replace the jump at the end of `lam` with the body of `target`, and
+    give the copies of target's instructions, in order."""
     names = {p: a for (p, _), a in zip(target.params, jump.ins[1:])}
     outs = {n for n, _ in target.outs}
 
     def rename(n: str) -> str:
         return names.get(n, n if n in outs else f"{n}_{target.name}")
 
-    lam.body = [i for i in lam.body if i is not ref and i is not jump]
-    lam.body += [replace(i, ins=[rename(n) for n in i.ins], outs=[rename(n) for n in i.outs], out_types=list(i.out_types))
-                 for i in target.body]
+    copies = [i.renamed([rename(n) for n in i.ins], [rename(n) for n in i.outs]) for i in target.body]
+    lam.body = [i for i in lam.body if i is not ref and i is not jump] + copies
+    return copies
 
 
 def merge_same_params(s: Structure) -> None:
     """Two parameters of a λ that every place calling it passes the same value
     for are one: the later is replaced by the earlier in its body. Only a λ
-    that jumps or one branch call."""
+    that jumps or one branch call. Renaming changes no closure, so the closures
+    are found once; it can make two arguments of a call the same, so the λs
+    are looked at again after each."""
+    closures = Closures(s)
     while True:
         for lam in s.lambdas:
-            calls, names = calls_into(s, lam), [n for n, _ in lam.params]
-            used = {n for i in lam.body for n in i.ins}
-            pair = next(((x, y) for y in range(len(names)) for x in range(y)
-                         if calls and names[y] in used and lam.params[x][1] == lam.params[y][1] != "heap"
-                         and all(args[x] == args[y] for args in calls)), None)
+            pair = _same_params(s, lam, closures)
             if pair:
+                x, y = (lam.params[k][0] for k in pair)
                 for i in lam.body:
-                    i.ins = [names[pair[0]] if n == names[pair[1]] else n for n in i.ins]
+                    i.ins = [x if n == y else n for n in i.ins]
                 break
         else:
             return
+
+
+def _same_params(s: Structure, lam: Lambda, closures: Closures) -> tuple[int, int] | None:
+    """The first two parameters of the λ, other than tokens, that every place
+    calling it passes the same value for, the later one used in its body."""
+    calls = calls_into(s, lam, closures)
+    if not calls:
+        return None
+    first: dict[tuple[str, ...], int] = {}  # (type, what each call passes) → the first parameter it is
+    used = None
+    for y, (name, t) in enumerate(lam.params):
+        if t == "heap":
+            continue
+        x = first.setdefault((t, *(args[y] for args in calls)), y)
+        if x != y:
+            used = used if used is not None else {n for i in lam.body for n in i.ins}
+            if name in used:
+                return x, y
+    return None
 
 
 def drop_unused(lam: Lambda) -> None:

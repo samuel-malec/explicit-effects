@@ -18,8 +18,9 @@
     by default, by allocation site with -H:AnalysisContextSensitivity=allocsens.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Protocol
+from typing import Protocol
 
 from graal.graal_import import PointsToFacts
 
@@ -224,17 +225,58 @@ def callees_of(facts: PointsToFacts) -> dict[str, set[str]]:
 
 
 def close_over_callees(callees: dict[str, set[str]], *sets: dict[str, set[str]]) -> None:
-    """Add to each method's set what the sets of the methods it calls, directly
-    or not, hold: in place, for each of `sets`."""
-    changed = True
-    while changed:
-        changed = False
-        for m, cs in callees.items():
-            for of in sets:
-                more = set().union(*(of.get(c, set()) for c in cs)) - of[m]
-                if more:
-                    of[m] |= more
-                    changed = True
+    for group in _components(callees):
+        members = set(group)
+        called = {c for m in group for c in callees[m] if c not in members}
+        for of in sets:
+            joined = set().union(*(of.get(m, ()) for m in group), *(of.get(c, ()) for c in called))
+            for m in group:
+                of[m] |= joined
+
+
+def _components(callees: dict[str, set[str]]) -> list[list[str]]:
+    index: dict[str, int] = {}
+    low: dict[str, int] = {}
+    stack: list[str] = []
+    on_stack: set[str] = set()
+    components: list[list[str]] = []
+
+    def visit(m: str) -> None:
+        index[m] = low[m] = len(index)
+        stack.append(m)
+        on_stack.add(m)
+
+    for root in callees:
+        if root in index:
+            continue
+        visit(root)
+        work = [(root, iter(callees[root]))]
+        while work:
+            m, children = work[-1]
+            for c in children:
+                if c not in callees:
+                    continue
+                if c not in index:
+                    visit(c)
+                    work.append((c, iter(callees[c])))
+                    break
+                if c in on_stack:
+                    low[m] = min(low[m], index[c])
+            else:
+                work.pop()
+                if work:
+                    caller = work[-1][0]
+                    low[caller] = min(low[caller], low[m])
+                if low[m] == index[m]:
+                    group = []
+                    while True:
+                        member = stack.pop()
+                        on_stack.discard(member)
+                        group.append(member)
+                        if member == m:
+                            break
+                    components.append(group)
+    return components
 
 
 def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, str]:
@@ -255,12 +297,19 @@ def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, s
     return found
 
 
-def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
+def program_partition(facts: PointsToFacts, partition: Partitioner) -> Partitioner:
+    """The partitioning for the program's own fields and for array kinds; any
+    other field, the platform's, is in the rest of memory."""
     program = facts.fields.keys()  # the fields of the classes under analysis
 
     def part(field: str, receivers: Receivers = None) -> str:
         return partition(field, receivers) if field in program or field.endswith("[]") else partition(REST)
 
+    return part
+
+
+def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
+    part = program_partition(facts, partition)
     methods = facts.methods
     touched = {m: accesses(e) for m, e in methods.items()}
     reads = {m: {part(f, r) for kind, f, r in touched[m] if kind == "read"} for m in methods}
