@@ -9,7 +9,7 @@ If you are new to the problem, these two posts are the gentlest introduction:
 - [Side-effect analysis](https://samuel-malec.github.io/blog/2026/08/17/side-effect-analysis/intro)
 - [Graal's memory model](https://samuel-malec.github.io/blog/2026/09/27/graal-memory/intro)
 
-## What's where
+## Repository Structure
 
 ```
 explicit-effects/
