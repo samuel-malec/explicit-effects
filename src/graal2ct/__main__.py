@@ -1,7 +1,7 @@
 """Compiler Driver of Graal -> Cthu pipeline
 
 Usage:
-    cd graal-export && ./build.sh examples/Examples.java && \\
+    cd graal-export && ./build.sh corpus/Examples.java && \\
         DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
     uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
     uv run graal2ct graal-export/out/examples.json --partition field

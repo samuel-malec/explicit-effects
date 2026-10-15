@@ -88,7 +88,6 @@ class Program:
     classes: list[str] = field(default_factory=list)  # `class` declarations: new_i, instanceof_i
     constants: list[tuple[str, str]] = field(default_factory=list)  # `constant T "what"` declarations: const_i
     externals: dict[str, str] = field(default_factory=dict)  # external functions called from the analyzed code
-    # Where each field, class and constant is in the declarations above, so that numbering one stays cheap.
     _indices: dict[tuple, int] = field(default_factory=dict, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:

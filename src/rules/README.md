@@ -26,7 +26,7 @@ The listings below show λs the way the rules see them: without `dup` and
 `drop`, so each value has one name. The printed program has them back. A
 suffix such as `_b3` on a name says that the instruction came from block `b3`
 when that block joined the λ. Every example is a method of
-`graal-export/examples/Examples.java`.
+`graal-export/corpus/Examples.java`.
 
 ## In what order
 

@@ -28,7 +28,7 @@ from .compare import MODES, accesses, probe_name, read_probe
 # its class without `Node`, and the exporter gives the reasons it refuses a whole graph.
 REASONS = [
     (r"allocation after escape analysis", "allocation after escape analysis"),
-    (r"^Monitor(Enter|Exit)$", "a monitor"),
+    (r"^Monitor", "a monitor"),
     (r"ordered \(volatile\)", "a volatile access"),
     (r"no graph", "no graph (native or abstract)"),
 ]

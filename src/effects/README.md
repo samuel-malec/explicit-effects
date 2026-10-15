@@ -78,7 +78,7 @@ Two consequences for the code:
 - **`Examples` and `Signatures` can't be the fixture for object
   partitions.** Their allocation-site exports are over 11 MB each. The fixture is
   a separate program instead,
-  [`Aliasing.java`](../../graal-export/examples/Aliasing.java), whose
+  [`Aliasing.java`](../../graal-export/corpus/Aliasing.java), whose
   allocation-site export is 122 KB (`test/data/aliasing.json`).
 
 ### 2. A method is analysed once for all its callers
