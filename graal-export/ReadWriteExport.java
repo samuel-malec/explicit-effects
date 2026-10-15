@@ -61,15 +61,13 @@ public class ReadWriteExport {
     private static final String[] PLATFORM = {
                     "java.", "javax.", "jdk.", "sun.", "com.sun.",
                     "com.oracle.", "org.graalvm.",
-                    // the JDK's own packages outside java.*: security (GSS-API),
-                    // XML signatures, DOM and SAX
                     "org.ietf.", "org.jcp.", "org.w3c.", "org.xml.",
     };
 
     static boolean isUnderAnalysis(String className) {
         String filter = System.getProperty("dump.filter", "");
         if (filter.equals("*")) {
-            return true;   // report everything, platform code included
+            return true;
         }
         if (!filter.isEmpty()) {
             return className.startsWith(filter);
@@ -221,8 +219,7 @@ public class ReadWriteExport {
             }
 
             // The call graph, points-to resolved: a virtual call yields every
-            // target the analysis considers possible, not just the declared
-            // one. 
+            // target the analysis considers possible, not just the declared one. 
             for (InvokeTypeFlow invoke : graph.getInvokes()) {
                 for (AnalysisMethod callee : invoke.getOriginalCallees()) {
                     String target = GraphExport.methodKey(callee);
@@ -325,11 +322,13 @@ public class ReadWriteExport {
                     TreeMap<String, TreeSet<String>> vmWrites,
                     TreeMap<String, TreeSet<String>> unknownReads,
                     TreeMap<String, TreeSet<String>> dead) {
+
         Set<String> allMethods = new TreeSet<>(methods);
         allMethods.addAll(callees.keySet());
         StringBuilder sb = new StringBuilder();
         sb.append("  \"methods\": {\n");
         boolean firstMethod = true;
+
         for (String m : allMethods) {
             if (!firstMethod) {
                 sb.append(",\n");
@@ -350,8 +349,10 @@ public class ReadWriteExport {
             }
             sb.append("}");
         }
+
         sb.append("\n  },\n  \"fields\": {\n");
         boolean firstField = true;
+
         for (var e : fields.entrySet()) {
             if (!firstField) {
                 sb.append(",\n");

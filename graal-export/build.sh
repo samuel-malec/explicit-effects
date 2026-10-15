@@ -10,7 +10,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 SOURCES=("$@")
 if [[ ${#SOURCES[@]} -eq 0 ]]; then
-    SOURCES=("$HERE/examples/Examples.java")
+    SOURCES=("$HERE/corpus/Examples.java")
 fi
 
 rm -rf "$HERE/classes"

@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Export the examples, examples/: each example is a program of its own,
+# exported on its own, so that the analysis sees only that example. The examples
+# in package objects are exported with allocation sites as well.
+#
+#   ./suite.sh                                 # every example whose export is older than its source
+#   ./suite.sh forwarding.AcrossCall NullCheck # these examples, by class or package.class
+#
+# Writes out/suite/<package>.<Class>.json, and <package>.<Class>.allocsens.json for
+# package objects. examples/README.md says in which order to read them.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+
+SUITE="$HERE/examples"
+OUT="$HERE/out/suite"
+CLASSES="$OUT/classes"
+mkdir -p "$OUT"
+
+# The exporter itself, compiled as build.sh compiles it, without touching the
+# classes/ directory that build.sh and run-dump.sh use for single examples.
+if [[ ! -f "$HERE/ReadWriteExport.class" || "$HERE/ReadWriteExport.java" -nt "$HERE/ReadWriteExport.class"
+      || "$HERE/GraphExport.java" -nt "$HERE/ReadWriteExport.class" ]]; then
+    if ! javac -cp "$CP" --upgrade-module-path="$UPGRADE_MP" --module-path="$MODULE_PATH" \
+            --add-modules="$ADD_MODULES,jdk.graal.compiler,jdk.graal.compiler.options" \
+            "${EXPORTS[@]}" @"$HERE/exports.args" \
+            -d "$HERE" "$HERE/ReadWriteExport.java" "$HERE/GraphExport.java"; then
+        echo "error: compiling the exporter failed" >&2
+        exit 1
+    fi
+fi
+
+# Every example at once: they are small, and each is self-contained.
+rm -rf "$CLASSES"
+mapfile -t SOURCES < <(find "$SUITE" -name "*.java" | sort)
+if ! javac -XDstringConcat=inline -d "$CLASSES" "${SOURCES[@]}"; then
+    echo "error: compiling the suite failed" >&2
+    exit 1
+fi
+
+export_one() {  # source, entry class, export, extra options
+    local source=$1 entry=$2 json=$3
+    shift 3
+    if [[ -f "$json" && "$json" -nt "$source" && "$json" -nt "$HERE/ReadWriteExport.class" ]]; then
+        return 0
+    fi
+    if TARGET_CP="$CLASSES" DUMP_IR="$json" "$HERE/run-dump.sh" "$entry" "$@" > "${json%.json}.txt" 2>&1; then
+        echo "exported $(basename "$json")"
+    else
+        echo "error: exporting $entry failed, see ${json%.json}.txt" >&2
+        return 1
+    fi
+}
+
+status=0
+for source in "${SOURCES[@]}"; do
+    package=$(basename "$(dirname "$source")")
+    class=$(basename "$source" .java)
+    if [[ $# -gt 0 ]]; then
+        wanted=false
+        for name in "$@"; do
+            [[ "$name" == "$class" || "$name" == "$package.$class" || "$name" == "$package" ]] && wanted=true
+        done
+        $wanted || continue
+    fi
+    export_one "$source" "$package.$class" "$OUT/$package.$class.json" || status=1
+    if [[ $package == objects ]]; then
+        export_one "$source" "$package.$class" "$OUT/$package.$class.allocsens.json" \
+            -H:AnalysisContextSensitivity=allocsens || status=1
+    fi
+done
+exit $status
