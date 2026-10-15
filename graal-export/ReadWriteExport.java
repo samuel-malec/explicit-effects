@@ -1,6 +1,7 @@
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,6 +105,8 @@ public class ReadWriteExport {
      */
     public static void export(PointsToAnalysis bb, AnalysisUniverse universe, String jsonPath, String irPath, PrintStream report, boolean compiled) {
         PrintStream out = report != null ? report : new PrintStream(OutputStream.nullOutputStream());
+        // Before any name is made: names are keys, and the keys decide the order things are written in.
+        GraphExport.nameHiddenClasses(universe.getTypes(), out);
         TreeMap<String, TreeSet<String>> reads = new TreeMap<>();
         TreeMap<String, TreeSet<String>> writes = new TreeMap<>();
         TreeMap<String, TreeSet<String>> callees = new TreeMap<>();
@@ -209,7 +212,7 @@ public class ReadWriteExport {
             for (TypeFlow<?> flow : graph.flows()) {
                 if (flow instanceof AccessFieldTypeFlow access) {
                     AnalysisField field = access.field();
-                    String fq = field.getDeclaringClass().toJavaName(true) + "." + field.getName();
+                    String fq = GraphExport.fieldName(field);
                     if (flow instanceof LoadFieldTypeFlow) {
                         reads.computeIfAbsent(name, k -> new TreeSet<>()).add(fq);
                     } else if (flow instanceof StoreFieldTypeFlow) {
@@ -266,11 +269,10 @@ public class ReadWriteExport {
         out.println("=== reachable fields ===");
         TreeMap<String, boolean[]> fields = new TreeMap<>();
         for (AnalysisField f : universe.getFields()) {
-            String owner = f.getDeclaringClass().toJavaName(true);
-            if (!isUnderAnalysis(owner)) {
+            if (!isUnderAnalysis(f.getDeclaringClass().toJavaName(true))) {
                 continue;
             }
-            fields.put(owner + "." + f.getName(), new boolean[]{f.isRead(), f.isWritten()});
+            fields.put(GraphExport.fieldName(f), new boolean[]{f.isRead(), f.isWritten()});
         }
         for (var e : fields.entrySet()) {
             out.printf("  %-30s read=%-6s written=%s%n",
@@ -296,14 +298,20 @@ public class ReadWriteExport {
         }
 
         if (!irPath.isEmpty()) {
-            List<Map<String, Object>> graphs = new ArrayList<>();
+            // In the order they are written, which numbers the object constants (GraphExport.ObjectNames).
+            List<PointsToAnalysisMethod> methods = new ArrayList<>();
             for (AnalysisMethod method : universe.getMethods()) {
                 if (method.isReachable() && method instanceof PointsToAnalysisMethod ptm && ptm.getTypeFlow().flowsGraphCreated() &&
                                 isUnderAnalysis(method.getDeclaringClass().toJavaName(true))) {
-                    graphs.add(GraphExport.export(bb, ptm));
+                    methods.add(ptm);
                 }
             }
-            graphs.sort((a, b) -> (a.get("name") + " " + a.get("descriptor")).compareTo(b.get("name") + " " + b.get("descriptor")));
+            methods.sort(Comparator.comparing(method -> GraphExport.methodName(method) + " " + GraphExport.stable(method.getSignature().toMethodDescriptor())));
+            GraphExport.ObjectNames objectNames = new GraphExport.ObjectNames(bb);
+            List<Map<String, Object>> graphs = new ArrayList<>();
+            for (PointsToAnalysisMethod method : methods) {
+                graphs.add(GraphExport.export(bb, method, objectNames));
+            }
             write(irPath, "{\n" + facts + ",\n  \"graphs\": " + GraphExport.toJson(graphs, 1) + "\n}\n");
             out.println();
             out.println("wrote " + graphs.size() + " graphs to " + irPath);

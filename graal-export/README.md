@@ -8,19 +8,29 @@ It runs on the standalone points-to analyzer `com.oracle.graal.pointsto.standalo
 ## Example Usage
 
 ```bash
-./build.sh corpus/Examples.java [ more.java ... ]
-DUMP_IR=out/examples.json ./run-dump.sh Examples
+./build.sh examples/conversion/Class.java && DUMP_IR=out/conversion.Class.json ./run-dump.sh conversion.Class
 ```
 
 ## Output
 Each method is exported as a json dictionary, which consists of the necessary information
 for further analysis, such as its name and descriptors and most importantly it's control flow graph
-obtained by Graal's API that yields a valid schedule corresponding to the sea of nodes representation.
-Each basic block has its predecessors, successors and individual Graal IR nodes that comprise it.
+obtained by Graal's API that yields a valid schedule corresponding to the sea of nodes representation. 
 
-Each field and array access, on its node in the graph and in the `accesses` of
-the program's methods' facts, lists the objects its receiver may point to
-(`receivers`), or null when the analysis can't say. 
+## Seeing the exported graph in IGV
+
+Add Graal's dump options, with a method filter of the form `Class.method`:
+
+```bash
+TARGET_CP=out/suite/classes DUMP_IR=out/nullcheck.json \
+    ./run-dump.sh conversion.NullCheck -H:Dump=:1 -H:MethodFilter=NullCheck.demo -H:DumpPath=$PWD/out/igv
+```
+
+Each method gets three files in `out/igv/`: `PointsToAnalysisMethod:<id>[…].bgv`,
+`…_1.bgv` and `…_2.bgv`. They are the analysis's decode, the exporter's decode for
+the facts, and the exporter's decode for the graph. The last one ends with the graph
+titled **Exported to JSON**: exactly what the JSON holds, with its schedule. Its node
+ids are the JSON's ids, which `uv run python -m graal.show` prints. Open it in IGV
+(`mx igv`, then File → Open). `-H:Dump=:2` adds a graph after each cleanup phase.
 
 
 ## Printing the allocation sites
