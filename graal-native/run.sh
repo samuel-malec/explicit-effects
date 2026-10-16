@@ -24,12 +24,12 @@
 # A fourth image (decisions) also removes the stores our rules find dead in Java.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
-EXAMPLE=${1:?usage: run.sh <a class of graal-export/examples, or a program of programs/>}
+EXAMPLE=${1:?usage: run.sh <a class of graal-export/corpus, or a program of programs/>}
 PROGRAM="$REPO/programs/$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')"
 NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${SPLIT:+-split}${DEAD:+-dead}${ALLOCSENS:+-allocsens}${TAG:+-$TAG}
 OUT="$HERE/out/$NAME"
 MAIN=$EXAMPLE
-SOURCES=("$EXPORTER/examples/$EXAMPLE.java")
+SOURCES=("$EXPORTER/corpus/$EXAMPLE.java")
 if [[ -f "$HERE/Run$EXAMPLE.java" ]]; then
     MAIN=Run$EXAMPLE
     SOURCES+=("$HERE/Run$EXAMPLE.java")
