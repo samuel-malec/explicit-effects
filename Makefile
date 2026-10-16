@@ -1,8 +1,8 @@
-# Export the examples with Native Image's points-to analysis, refresh the test
-# fixtures from them, and run the checks.
+# Export the corpus programs (graal-export/corpus/) with Native Image's points-to
+# analysis, refresh the test fixtures from them, and run the checks.
 #
 #   make              refresh test/data, then run the checks
-#   make export       export every example to graal-export/out/<name>.json
+#   make export       export every corpus program to graal-export/out/<name>.json
 #   make translate    translate every export to graal-export/out/<name>.ct
 #   make compare      the stores and loads the rules leave next to what Graal leaves
 #   make native       the round trip: Native Image with the kills our tool computes
@@ -12,8 +12,10 @@
 #   make awfy-layouts why the narrowed images ran slower: counters across method alignments
 #   make test-data    refresh test/data/examples.json, signatures.json and aliasing.json
 #   make check        run the checks (uv run pytest)
+#   make suite        export the examples (graal-export/examples/), one program per example,
+#                     and check each still shows what its comment says
 #
-# An export is redone when its example or the exporter changes; after
+# An export is redone when its program or the exporter changes; after
 # rebuilding the graal tree, force it with make -B. GRAAL_HOME is passed on to
 # graal-export/env.sh. Each export's analysis report is saved next to it, in
 # graal-export/out/<name>.txt.
@@ -43,18 +45,18 @@ NATIVE_DIR := graal-native
 NATIVE := $(NATIVE_DIR)/out
 EXPORTER := $(addprefix $(EXPORT)/,ReadWriteExport.java GraphExport.java build.sh run-dump.sh env.sh exports.args)
 TRANSLATOR := $(wildcard src/*/*.py) src/cthu/graal.ct
-EXAMPLES := $(basename $(notdir $(wildcard $(EXPORT)/examples/*.java)))
+CORPUS := $(basename $(notdir $(wildcard $(EXPORT)/corpus/*.java)))
 FIXTURES := examples signatures aliasing
 COMPARED := Examples Signatures Aliasing
 
 lower = $(shell echo '$(1)' | tr '[:upper:]' '[:lower:]')
-EXPORTS := $(foreach e,$(EXAMPLES),$(OUT)/$(call lower,$(e)).json)
+EXPORTS := $(foreach e,$(CORPUS),$(OUT)/$(call lower,$(e)).json)
 
 PARTITION ?= none
 CT := $(if $(filter none,$(PARTITION)),,.$(PARTITION)).ct
 SOURCE := $(if $(filter object%,$(PARTITION)),.allocsens)
 
-.PHONY: all export translate compare native awfy native-awfy awfy-layouts driver test-data check
+.PHONY: all export translate compare native awfy native-awfy awfy-layouts driver test-data check suite
 # build.sh recompiles the one classes/ directory that every export analyses.
 .NOTPARALLEL:
 .DELETE_ON_ERROR:
@@ -113,12 +115,12 @@ awfy-layouts:
 
 $(OUT)/awfy.json: $(AWFY_SOURCES) $(EXPORTER)
 	$(AWFY)/build.sh
-	cd $(EXPORT) && ./build.sh examples/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
 	cd $(EXPORT) && TARGET_CP=$(CURDIR)/$(AWFY)/classes DUMP_IR=out/awfy.json ./run-dump.sh Awfy -H:-UsePredicates > out/awfy.txt
 
 $(OUT)/awfy.allocsens.json: $(AWFY_SOURCES) $(EXPORTER)
 	$(AWFY)/build.sh
-	cd $(EXPORT) && ./build.sh examples/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
 	cd $(EXPORT) && TARGET_CP=$(CURDIR)/$(AWFY)/classes DUMP_IR=out/awfy.allocsens.json \
 		./run-dump.sh Awfy -H:AnalysisContextSensitivity=allocsens > out/awfy.allocsens.txt
 
@@ -134,22 +136,27 @@ driver: $(OUT)/driver.json $(OUT)/driver.allocsens.json
 	uv run python -m rules.report $^
 
 $(OUT)/driver.json: $(EXPORTER)
-	cd $(EXPORT) && ./build.sh examples/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
 	cd $(EXPORT) && $(DRIVER) DUMP_IR=out/driver.json ./run-dump.sh com.oracle.svm.driver.NativeImage -H:-UsePredicates > out/driver.txt
 
 $(OUT)/driver.allocsens.json: $(EXPORTER)
-	cd $(EXPORT) && ./build.sh examples/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
 	cd $(EXPORT) && $(DRIVER) DUMP_IR=out/driver.allocsens.json \
 		./run-dump.sh com.oracle.svm.driver.NativeImage -H:AnalysisContextSensitivity=allocsens > out/driver.allocsens.txt
 
 # What Graal leaves of each method's field accesses, from its own test harness.
-$(OUT)/probe.txt: graal-probe/MemoryProbe.java graal-probe/run.sh $(COMPARED:%=$(EXPORT)/examples/%.java)
+$(OUT)/probe.txt: graal-probe/MemoryProbe.java graal-probe/run.sh $(COMPARED:%=$(EXPORT)/corpus/%.java)
 	./graal-probe/run.sh $(COMPARED) > $@
 
 test-data: $(FIXTURES:%=test/data/%.json)
 
 check:
 	uv run pytest
+
+# graal-export/suite re-exports only the examples whose source changed.
+suite:
+	$(EXPORT)/suite
+	uv run pytest test/export_check/check_suite.py
 
 # The object partitions' fixture needs allocation sites. Its main prints
 # nothing, which keeps the export small.
@@ -162,18 +169,18 @@ test/data/%.json: $(OUT)/%.json
 $(OUT)/%$(CT): $(OUT)/%$(SOURCE).json $(TRANSLATOR)
 	uv run graal2ct $< --partition $(PARTITION) -o $@
 
-# out/examples.json from examples/Examples.java, analysed from its main, and
+# out/examples.json from corpus/Examples.java, analysed from its main, and
 # out/examples.allocsens.json with allocation sites.
 define export_rule
-$(OUT)/$(call lower,$(1)).json: $(EXPORT)/examples/$(1).java $(EXPORTER)
-	cd $(EXPORT) && ./build.sh examples/$(1).java > /dev/null
+$(OUT)/$(call lower,$(1)).json: $(EXPORT)/corpus/$(1).java $(EXPORTER)
+	cd $(EXPORT) && ./build.sh corpus/$(1).java > /dev/null
 	cd $(EXPORT) && mkdir -p out && DUMP_IR=out/$(call lower,$(1)).json ./run-dump.sh $(1) > out/$(call lower,$(1)).txt
 	@tail -n 1 $(OUT)/$(call lower,$(1)).txt
 
-$(OUT)/$(call lower,$(1)).allocsens.json: $(EXPORT)/examples/$(1).java $(EXPORTER)
-	cd $(EXPORT) && ./build.sh examples/$(1).java > /dev/null
+$(OUT)/$(call lower,$(1)).allocsens.json: $(EXPORT)/corpus/$(1).java $(EXPORTER)
+	cd $(EXPORT) && ./build.sh corpus/$(1).java > /dev/null
 	cd $(EXPORT) && mkdir -p out && DUMP_IR=out/$(call lower,$(1)).allocsens.json \
 		./run-dump.sh $(1) -H:AnalysisContextSensitivity=allocsens > out/$(call lower,$(1)).allocsens.txt
 	@tail -n 1 $(OUT)/$(call lower,$(1)).allocsens.txt
 endef
-$(foreach e,$(EXAMPLES),$(eval $(call export_rule,$(e))))
+$(foreach e,$(CORPUS),$(eval $(call export_rule,$(e))))

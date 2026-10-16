@@ -21,6 +21,8 @@ explicit-effects/
 │   └── rules/         # rewrites on the token form (load forwarding, dead stores) and the comparison with Graal
 ├── test/              # example exports and the checks
 ├── graal-export/      # exports Graal IR and points-to facts from Native Image's standalone analysis
+│   ├── examples/      # forty one-concept programs to learn the pipeline from
+│   └── corpus/        # the programs the checks, make compare and the round trip are built from
 ├── graal-probe/       # measures what Graal itself does to the examples' loads and stores
 ├── graal-native/      # the round trip: Native Image compiles with the kill sets our tool computes
 ├── programs/          # whole programs: Are We Fast Yet and the native-image driver
@@ -45,12 +47,17 @@ cd graal/substratevm && JAVA_HOME=~/.mx/jdks/labsjdk-ce-latest-jvmci-25.4-b23_am
 
 Once the submodule is built, the scripts use it. Until then, or whenever `GRAAL_HOME` is set, they use that tree instead.
 
+## Learning the pipeline
+
+[`graal-export/examples/`](graal-export/examples/) holds forty small programs, one concept each: how each Graal IR construct becomes the token form, what the translation refuses, and each optimization next to a control that must stop it.
+Each example's comment says what to look for. `make suite` exports them all and checks that each still shows what its comment says.
+
 ## Trying it out
 
 Export the examples, translate one method, then run the rules on all of them:
 
 ```bash
-cd graal-export && ./build.sh examples/Examples.java && \
+cd graal-export && ./build.sh corpus/Examples.java && \
     DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
 uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
 uv run graal2ct graal-export/out/examples.json --partition field
@@ -82,6 +89,7 @@ You rarely need to run the steps above by hand:
 | `make native` | Builds each example as a native image four times and checks each against the JVM. See below. |
 | `make awfy`, `make driver` | Run the export and the rules on whole programs (`programs/README.md`). |
 | `make native-awfy` | The timed round trip on Are We Fast Yet. |
+| `make suite` | Exports the example suite, one program per example, and checks that each still shows what its comment says. |
 
 The four images `make native` builds are:
 
