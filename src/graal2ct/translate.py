@@ -255,7 +255,7 @@ class MethodTranslation:
                             f"an exception edge to a block that doesn't take the exception, bci {blocks[b].end.get('bci')}")
                     self.caught[b] = first.id
 
-        self.order = [b for b in blocks if b in reached]  # Keep the rpo order of blocks
+        self.order = [b for b in blocks if b in reached]
 
         # Find which values must come to a block from a different block
         defs, uses = {}, {}
@@ -656,7 +656,7 @@ class MethodTranslation:
 
     def _call(self, n: Node) -> None:
         if len(n.callees) > 1:
-            # A dispatch to one of several targets: an external, which may do what any of them does.
+            # A dispatch to one of several targets
             callee = n.target
             structure = structure_name("dispatch " + n.target)
             self.calls[structure] = f"one of {', '.join(n.callees)}"
