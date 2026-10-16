@@ -1,4 +1,4 @@
-""" Import a json file which contains Graal IR annotated with points-to information """
+"""Import a graal-export file which contains Graal IR annotated with points-to information."""
 
 import json
 from dataclasses import dataclass, field
@@ -9,14 +9,12 @@ from .graal_ir import Graph, parse_graph
 
 @dataclass
 class PointsToFacts:
-    methods: dict[str, dict] = field(
-        default_factory=dict)  # What fields does a method read/write, keyed by name + descriptor
-    fields: dict[str, dict] = field(default_factory=dict)  # what fields are reachable (read/written)
+    methods: dict[str, dict] = field(default_factory=dict)  # What fields does a method access
+    fields: dict[str, dict] = field(default_factory=dict)  # what fields are accessed
 
 
 def load_facts(path: str | Path) -> PointsToFacts:
-    """Only the facts of an export, without reading its graphs: what the kill
-    sets need, from an export of any size."""
+    """Only the facts of an export, without reading its graphs."""
     data = json.loads(Path(path).read_text())
     return PointsToFacts(data.get("methods", {}), data.get("fields", {}))
 
