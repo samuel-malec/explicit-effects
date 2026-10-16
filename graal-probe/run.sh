@@ -3,7 +3,7 @@
 # tree's own test harness (GraalCompilerTest), without mx.
 #
 #   ./run.sh                          # Examples
-#   ./run.sh Examples                 # chosen classes from ../graal-export/examples
+#   ./run.sh Examples                 # chosen classes from ../graal-export/corpus
 #   GRAAL_HOME=/path/to/graal ./run.sh
 PROBE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # G, UPGRADE_MP, MODULE_PATH, ADD_MODULES and EXPORTS: the same module and JVMCI
@@ -55,7 +55,7 @@ PY
 
 SOURCES=("$PROBE"/*.java)
 for name in "${EXAMPLES[@]}"; do
-    SOURCES+=("$PROBE/../graal-export/examples/$name.java")
+    SOURCES+=("$PROBE/../graal-export/corpus/$name.java")
 done
 if ! javac -nowarn -cp "$CP" @"$PROBE/classes/compile.args" "${EXPORTS[@]}" \
         --upgrade-module-path="$UPGRADE_MP" --module-path="$MODULE_PATH" \
