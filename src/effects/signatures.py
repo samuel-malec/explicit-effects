@@ -116,8 +116,7 @@ def _by_objects(facts: PointsToFacts, per_field: bool) -> Partitioner:
                 else:
                     known.setdefault(field, set()).update(receivers)
 
-    # An access the analysis can't say anything about may touch any object
-    # with the field, so it joins every object another access of it may touch.
+    # An access the analysis can't say anything about may touch any object with the field.
     for field in unknown:
         for o in known.get(field, ()):
             join(elements(field, None)[0], elements(field, frozenset({o}))[0])
@@ -298,8 +297,8 @@ def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, s
 
 
 def program_partition(facts: PointsToFacts, partition: Partitioner) -> Partitioner:
-    """The partitioning for the program's own fields and for array kinds; any
-    other field, the platform's, is in the rest of memory."""
+    """The partitioning for the program's own fields and for array kinds.
+       Any other field, the platform's, is in the rest of memory."""
     program = facts.fields.keys()  # the fields of the classes under analysis
 
     def part(field: str, receivers: Receivers = None) -> str:
