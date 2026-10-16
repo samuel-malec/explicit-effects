@@ -144,8 +144,6 @@ final class GraphExport {
         StructuredGraph.ScheduleResult schedule = graph.getLastSchedule();
         ControlFlowGraph cfg = schedule.getCFG();
 
-        // The graph exactly as it is exported, with its schedule: with -H:Dump=:1 and a
-        // -H:MethodFilter naming the method, IGV shows it as "Exported to JSON".
         DebugContext debug = graph.getDebug();
         try (DebugContext.Scope s = debug.scope("GraphExport", graph)) {
             debug.dump(DebugContext.BASIC_LEVEL, graph, "Exported to JSON");
@@ -173,18 +171,9 @@ final class GraphExport {
     /** Each hidden class's address, and what the export names it instead. */
     private static final Map<String, String> HIDDEN = new ConcurrentHashMap<>();
 
-    /**
-     * Gives each hidden class a name that is the same in every run. The JVM names a lambda's class,
-     * or a method handle form's, after its address, Foo$$Lambda/0x00000000a455d0c8, which differs
-     * in every run; Native Image renames them itself, the standalone analyzer doesn't. The address
-     * becomes a hash of what the class is: its interfaces, and each method's name, signature,
-     * bytecode, and the methods it invokes, which is what LambdaUtils.getSignature hashes for
-     * lambdas. Classes the same in all of that, such as two string concatenations of one shape,
-     * share the name: what they do to memory is the same, and their facts are merged.
-     */
     static void nameHiddenClasses(Collection<AnalysisType> types, PrintStream report) {
         HIDDEN.clear();
-        Map<String, Integer> named = new HashMap<>(); // a name → how many classes it names
+        Map<String, Integer> named = new HashMap<>();
         for (AnalysisType type : types) {
             Matcher address = HIDDEN_ADDRESS.matcher(type.toJavaName(true));
             if (address.find()) {
@@ -250,16 +239,6 @@ final class GraphExport {
         }
     }
 
-    /**
-     * Names for the object constants of one export, the same in every run: the image heap numbers
-     * its objects in whatever order the analysis's threads reach them, and the host VM prints an
-     * object by its identity hash code. A string goes by its first characters, "value is null"; a
-     * class by its name, java.lang.Integer.class; an object read from a static final field by the
-     * field, limits.Synchronized.LOCK; any other by its type and a number, java.lang.Object#1.
-     * Methods are exported in the order of their names, so the numbers count a type's objects in
-     * the order the export meets them; an object keeps its first name in every graph, and two
-     * objects that would share one get different numbers.
-     */
     static final class ObjectNames {
         /** How many characters of a string its name shows. */
         private static final int SHOWN = 40;
@@ -288,7 +267,7 @@ final class GraphExport {
                     text = text.substring(0, text.offsetByCodePoints(0, SHOWN)) + "...";
                 }
                 StringBuilder name = new StringBuilder();
-                quote(name, text); // as JSON writes it: on one line, with its quotes and backslashes escaped
+                quote(name, text);
                 return name.toString();
             }
             ResolvedJavaType type = bb.getConstantReflectionProvider().asJavaType(object);
@@ -348,17 +327,6 @@ final class GraphExport {
         return graph;
     }
 
-    /**
-     * The objects a reference may point to, as the points-to analysis names
-     * them. A parameter, an object load, an invoke's result, an allocation
-     * and a constant have a flow; a phi takes its inputs' objects, and a pi
-     * or a proxy its input's. Null when the flows can't say, for a saturated
-     * flow or a value without one: an access through it may then touch any
-     * object with the field.
-     *
-     * With a context-sensitive analysis each context has a clone of the
-     * method's flows, and a reference may point to what it does in any of them.
-     */
     static final class PointsTo {
         private final PointsToAnalysis bb;
         private final PointsToAnalysisMethod method;
@@ -384,7 +352,8 @@ final class GraphExport {
             return access instanceof AccessIndexedNode indexed ? objects(indexed.array()) : null;
         }
 
-        /** The objects, sorted, or null when the flows can't say. */
+        /** Objects corresponding to a given ValueNode, used to obtain an upper-bound of receivers of an access operation */
+        // TODO: how does this work, what is typeflow and how is it computed
         List<String> objects(ValueNode reference) {
             TreeSet<String> names = new TreeSet<>();
             Deque<ValueNode> work = new ArrayDeque<>(List.of(reference));
@@ -461,7 +430,7 @@ final class GraphExport {
         /**
          * An object by its type, and with an allocation-site-sensitive heap by
          * where it was allocated too: Examples$Counter@Examples.main([Ljava/lang/String;)V:9.
-         * Heap contexts are left out, which merges objects: sound, if coarser.
+         * Heap contexts are left out, which merges objects.
          */
         static String objectName(AnalysisObject object) {
             String type = typeName(object.type());

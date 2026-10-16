@@ -50,12 +50,10 @@ import jdk.vm.ci.code.BytecodePosition;
 import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.word.LocationIdentity;
 
+// TODO: rename this to something that makes more sense 
 public class ReadWriteExport {
 
-    /**
-     * The VM's own locations the facts name, vm:TLAB.top, by name: a feature in the same build
-     * gives them back to Graal.
-     */
+    /** The VM's own locations the facts name, vm:TLAB.top, by name: a feature in the same build gives them back to Graal. */
     public static final Map<String, LocationIdentity> VM_LOCATIONS = new ConcurrentHashMap<>();
 
     /** Packages treated as "not the program under analysis" by default. */
@@ -97,12 +95,6 @@ public class ReadWriteExport {
         export(bb, universe, jsonPath, irPath, report, false);
     }
 
-    /**
-     * With {@code compiled}, the analysis is the one the image is compiled from: a call it finds
-     * unreachable, or without a target, is one the image doesn't make, and goes to "dead". The
-     * standalone analyzer's reasons can be wrong (a field a native writes looks always null), so
-     * there such a call may touch anything.
-     */
     public static void export(PointsToAnalysis bb, AnalysisUniverse universe, String jsonPath, String irPath, PrintStream report, boolean compiled) {
         PrintStream out = report != null ? report : new PrintStream(OutputStream.nullOutputStream());
         // Before any name is made: names are keys, and the keys decide the order things are written in.
@@ -191,8 +183,7 @@ public class ReadWriteExport {
                         allocates.add(name);
                         add(unknownReads, name, n.getClass().getSimpleName() + at);
                     } else if (n instanceof Invoke invoke) {
-                        // No flow, a disabled one or one without callees: the analysis
-                        // found no target.
+                        // No flow, a disabled one or one without callees: the analysis found no target.
                         List<InvokeTypeFlow> found = flows.get(GraphExport.flowKey(invoke));
                         String why = found == null ? "no flow"
                                         : found.stream().noneMatch(InvokeTypeFlow::isFlowEnabled) ? "disabled"
@@ -298,7 +289,6 @@ public class ReadWriteExport {
         }
 
         if (!irPath.isEmpty()) {
-            // In the order they are written, which numbers the object constants (GraphExport.ObjectNames).
             List<PointsToAnalysisMethod> methods = new ArrayList<>();
             for (AnalysisMethod method : universe.getMethods()) {
                 if (method.isReachable() && method instanceof PointsToAnalysisMethod ptm && ptm.getTypeFlow().flowsGraphCreated() &&
