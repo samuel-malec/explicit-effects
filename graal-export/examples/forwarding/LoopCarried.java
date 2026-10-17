@@ -1,9 +1,10 @@
 package forwarding;
 
 /**
- * Each iteration reads what the iteration before stored, the first one the 1
- * stored before the loop: the header's new parameter is a loop-carried phi, which
- * the entry passes the 1 for and the back edge the i the body stored.
+ * Each iteration reads what the iteration before stored 
+ * (except the first one which clearly reads the 1 stored before the loop),
+ * therefore we don't have to load anything in the loop and only remember the
+ * value from the stores.
  */
 public class LoopCarried {
 
