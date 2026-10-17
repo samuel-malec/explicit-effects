@@ -3,7 +3,7 @@ package objects;
 /**
  * Control for ForwardPastOtherObject: main also passes one counter twice, so the
  * same access may touch either object, the analysis puts both in one set, and the
- * load must read the 2 when they are one object.
+ * load must read the 2 when both references point to one object.
  */
 public class ForwardPastMaybeAlias {
 

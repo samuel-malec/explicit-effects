@@ -34,7 +34,7 @@ public class Aliasing {
         return counter.value;
     }
 
-    // Control: alias may be counter.
+    // Control: alias may point to the same object as counter.
     static int forwardPastAliasControl(Counter counter, Counter alias) {
         counter.value = 1;
         alias.value = 2;
@@ -72,7 +72,7 @@ public class Aliasing {
         return sum;
     }
 
-    // Control: alias may be counter, so an iteration may read what the one
+    // Control: alias and counter may point to one object, so an iteration may read what the one
     // before stored.
     static int forwardIntoLoopPastAliasControl(Counter counter, Counter alias, Link list, int times) {
         counter.value = 1;

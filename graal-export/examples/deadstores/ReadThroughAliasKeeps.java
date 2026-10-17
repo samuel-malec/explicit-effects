@@ -1,8 +1,8 @@
 package deadstores;
 
 /**
- * Between the stores a load goes through another reference, which may be the same
- * object, and then reads the 1: the store stays. Reading alias.other first checks
+ * Between the stores a load goes through another reference, which may point to the
+ * same object, and then reads the 1: the store stays. Reading alias.other first checks
  * alias for null before the stores, so nothing between them can throw, and only
  * the load keeps the store. In package objects, the same method gets two objects
  * the analysis tells apart.

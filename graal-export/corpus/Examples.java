@@ -68,7 +68,7 @@ public class Examples {
         }
     }
 
-    // Control: alias may be another object, so its store doesn't overwrite the
+    // Control: alias may point to another object, so its store doesn't overwrite the
     // first. Checking alias for null first keeps both stores in one block.
     static void deadStoreMaybeAliasStoreControl(Counter counter, Counter alias) {
         alias.other = 0;
@@ -140,7 +140,7 @@ public class Examples {
         return sum;
     }
 
-    // Control: each iteration stores through alias, which may be another
+    // Control: each iteration stores through alias, which may point to another
     // object, so the next iteration's load can't take that value, and the
     // first iteration's load, which reads the 1, keeps that store.
     static int forwardAcrossIterationsAliasControl(Counter counter, Counter alias, Link list, int times) {
@@ -182,7 +182,7 @@ public class Examples {
         return counter.value + n;  // Graal produces redundant load here
     }
 
-    // Control: alias may be another object, so the load in the arm can't take
+    // Control: alias may point to another object, so the load in the arm can't take
     // the value stored through counter; with one heap token, the store to
     // alias.other comes between them.
     static int forwardIntoArmAliasControl(Counter counter, Counter alias, boolean flag) {
@@ -195,7 +195,7 @@ public class Examples {
         return n;
     }
 
-    // Control: alias may be another object, so its load can't take the value
+    // Control: alias may point to another object, so its load can't take the value
     // stored through counter. Checking alias for null first keeps them in one block.
     static int forwardMaybeAliasControl(Counter counter, Counter alias) {
         alias.other = 0;
@@ -229,7 +229,7 @@ public class Examples {
         return counter.value + n;
     }
 
-    // Control: the second arm stores through alias, which may be another
+    // Control: the second arm stores through alias, which may point to another
     // object, and then to another field, so only the first arm's value
     // reaches the load.
     static int forwardAcrossMergeAliasControl(Counter counter, Counter alias, Link list, boolean flag) {
