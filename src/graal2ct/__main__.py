@@ -5,6 +5,7 @@ Usage:
         DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
     uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
     uv run graal2ct graal-export/out/examples.json --partition field
+    uv run graal2ct graal-export/out/examples.json --partition field --shape
     uv run graal2ct graal-export/out/examples.json --partition field --rules
     uv run graal2ct graal-export/out/objects.allocsens.json --partition object-field --rules
 
@@ -32,8 +33,13 @@ def main() -> int:
     parser.add_argument("--partition", choices=["none", "field", "object", "object-field"], default="none",
                         help="none: one heap token in every method; field: a token per field and array kind; object: "
                              "per set of objects the points-to facts tell apart; object-field: per field of such a set")
-    parser.add_argument("--rules", action="store_true",
-                        help="then forward loads and remove dead stores, and list what they did")
+    rules = parser.add_mutually_exclusive_group()
+    rules.add_argument("--rules", action="store_true",
+                       help="then forward loads and remove dead stores, and list what they did")
+    rules.add_argument("--shape", action="store_true",
+                       help="then only make the code straight-line as the rules do (a branch to an arm that throws "
+                            "becomes a guard, a block that one jump reaches joins the λ that jumps), with no "
+                            "forwarding and no dead stores")
     parser.add_argument("--types", action="store_true",
                         help="give each λ's parameter and result types too, which makes the text much longer")
     args = parser.parse_args()
@@ -44,6 +50,8 @@ def main() -> int:
     translation = Translation(graphs, effects)
     program = translation.translate(keys)
     rewrites = memory.apply(program) if args.rules else None
+    if args.shape:
+        memory.apply(program, forward=False, stores=False)
     text = to_text(program, types=args.types)
 
     if args.out:

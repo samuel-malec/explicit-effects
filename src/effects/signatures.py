@@ -149,7 +149,7 @@ def _names(classes: dict, per_field: bool) -> dict:
     `Examples$Counter@main:9`."""
 
     def label(members: list) -> str:
-        found = sorted(o for o in ([m[1] for m in members] if per_field else [m for m in members if isinstance(m, str)])
+        found = sorted(o for o in ([o for _, o in members] if per_field else [m for m in members if isinstance(m, str)])
                        if o not in (UNKNOWN, NOTHING))
 
         if not found:  # only the field's unknown or null receivers
@@ -162,13 +162,14 @@ def _names(classes: dict, per_field: bool) -> dict:
     count: dict[str, int] = {}
     for members in classes.values():
         if per_field:
-            count[members[0][0]] = count.get(members[0][0], 0) + 1
+            field, _ = members[0]
+            count[field] = count.get(field, 0) + 1
 
     names, used = {}, set()
     for root, members in sorted(classes.items(), key=lambda item: sorted(map(str, item[1]))):
         name = label(members)
         if per_field:
-            field = members[0][0]
+            field, _ = members[0]
             name = field if count[field] == 1 else f"{field}@{name}"
 
         unique, k = name, 2
@@ -264,7 +265,7 @@ def _components(callees: dict[str, set[str]]) -> list[list[str]]:
             else:
                 work.pop()
                 if work:
-                    caller = work[-1][0]
+                    caller, _ = work[-1]
                     low[caller] = min(low[caller], low[m])
                 if low[m] == index[m]:
                     group = []

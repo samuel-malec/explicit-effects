@@ -22,7 +22,7 @@ from graal.graal_import import load
 from graal2ct.translate import Translation, structure_name
 
 from . import memory
-from .compare import MODES, accesses, probe_name, read_probe
+from .compare import MODES, accesses, column_total, probe_name, read_probe, stores_loads
 
 # Refusals worth grouping under one name: the translator names a node it can't take by
 # its class without `Node`, and the exporter gives the reasons it refuses a whole graph.
@@ -51,7 +51,10 @@ def report(export: Path, allocsens: Path | None) -> None:
 
     effects = analyse(facts, PARTITIONERS["field"](facts))
     keys = {g.name + g.descriptor for g in graphs.values()}
-    opaque = Counter(effects.signatures[k].why.split(": ", 1)[-1] for k in keys if k in effects.signatures and effects.signatures[k].opaque)
+    # Sorted, so that reasons with the same count are listed in the same order in every run:
+    # `keys` is a set, and the order of a set of strings changes from one run to the next.
+    opaque = Counter(sorted(effects.signatures[k].why.split(": ", 1)[-1] for k in keys
+                            if k in effects.signatures and effects.signatures[k].opaque))
     print(f"\n{sum(opaque.values())} of them touch everything, because they reach")
 
     for why, n in opaque.most_common(8):
@@ -117,8 +120,8 @@ def side_by_side(export: Path, allocsens: Path, images: list[Path]) -> None:
         ours[column], ours[column + " in loops"] = accesses(program), accesses(program, in_loops=True)
         
         for key, graph in graphs.items():  # as the images name a method: no package
-            simple = graph.name.rsplit(".", 1)
-            names[structure_name(key)] = probe_name(simple[0].rsplit(".", 1)[-1] + "." + simple[1], graph.descriptor)
+            owner, method = graph.name.rsplit(".", 1)
+            names[structure_name(key)] = probe_name(owner.rsplit(".", 1)[-1] + "." + method, graph.descriptor)
     
     built: dict[str, dict[str, tuple[Counter, Counter]]] = {}
     
@@ -143,11 +146,12 @@ def side_by_side(export: Path, allocsens: Path, images: list[Path]) -> None:
         chosen = [cells for _, l, cells in rows if l == loops]
         print(f"\n{len(chosen)} methods translated and compiled, field stores/loads{loops}:")
         print("  " + "  ".join(f"{c:>10}" for c in columns))
-        print("  " + "  ".join(f"{sum(c[i][0] for c in chosen)}/{sum(c[i][1] for c in chosen):<6}".rjust(10) for i in range(len(columns))))
+        totals = [column_total(chosen, i) for i in range(len(columns))]
+        print("  " + "  ".join(f"{stores}/{loads:<6}".rjust(10) for stores, loads in totals))
     print("\nwhere our rules and the kills image differ, all accesses:")
     for name, loops, cells in rows:
         if not loops and cells[1] != cells[4]:
-            print(f"  {name:70} " + "  ".join(f"{c[0]}/{c[1]}" for c in cells))
+            print(f"  {name:70} " + "  ".join(stores_loads(c) for c in cells))
 
 
 def main() -> int:

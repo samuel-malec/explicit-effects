@@ -24,7 +24,10 @@ def parse_function_type(name: str) -> tuple[list[str], list[str]] | None:
     """The parameter and result types of a function type, `f_rh_ih`, None if
     `name` is no function type. The lists are the caller's to keep."""
     parsed = _parse_function_type(name)
-    return None if parsed is None else (list(parsed[0]), list(parsed[1]))
+    if parsed is None:
+        return None
+    params, outs = parsed
+    return list(params), list(outs)
 
 
 @cache
@@ -32,7 +35,8 @@ def _parse_function_type(name: str) -> tuple[tuple[str, ...], tuple[str, ...]] |
     parts = name[2:].split("_")
     if not name.startswith("f_") or len(parts) != 2 or not all(c in _TYPES for c in "".join(parts)):
         return None
-    return tuple(_TYPES[c] for c in parts[0]), tuple(_TYPES[c] for c in parts[1])
+    params, outs = parts
+    return tuple(_TYPES[c] for c in params), tuple(_TYPES[c] for c in outs)
 
 
 @dataclass

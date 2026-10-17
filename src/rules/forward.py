@@ -1,7 +1,4 @@
-"""Perform Load forwarding transformation
-
-A load whose token comes straight from a store or a
-load of the same field of the same object takes that value."""
+"""Perform Load forwarding transformation."""
 
 from cthu.ir import Instr, Lambda, Structure, frame_type
 
@@ -15,6 +12,7 @@ from .tokens import (
     frame_of,
     fresh,
     in_loop,
+    is_load,
     is_pure,
     jump_sites,
     jump_to,
@@ -28,16 +26,18 @@ from .tokens import (
 
 
 def forward_within(lam: Lambda) -> list[str]:
-    """A load whose token comes straight from a store or a load of the same
-    field of the same object gives the value that access stored or loaded."""
+    """Forward within one λ: a load whose token comes straight from a store or
+    a load of the same field through the same reference takes its value.
+    Examples: forwarding.AcrossCall, forwarding.RepeatedLoad."""
     forwarded = []
     for i in list(lam.body):
-        a = field_access(i)
-        if not a or a[0] != "get":
+        if not is_load(i):
             continue
+        a = field_access(i)
+        _, static, _ = a
         source = source_of(lam, i.ins[0])
         
-        if not same_location(source, a, None if a[1] else i.ins[1]):
+        if not same_location(source, a, None if static else i.ins[1]):
             continue
         
         at = next(n for n, x in enumerate(lam.body) if x is i)
@@ -48,16 +48,17 @@ def forward_within(lam: Lambda) -> list[str]:
 
 
 def forwarding(load: Instr, value: str) -> list[Instr]:
-    """What replaces a load whose value is known."""
+    """The two moves that replace a load whose value is known: the result
+    becomes that value, and the token passes on unchanged."""
     t = load.out_types[0]
     return [Instr(t, "move", [value], [load.outs[0]], [t], note=f"forwarded {load.field}"),
             Instr("heap", "move", [load.ins[0]], [load.outs[1]], ["heap"])]
 
 
 def forward_into_arms(s: Structure) -> list[str]:
-    """A load in a branch arm whose token and object come unchanged from above
-    the branches it is in, where a store or a load of the same field of the
-    same object gave the token, takes that access's value as a parameter."""
+    """Forward into a branch arm: when the value was stored or loaded above the
+    branch, pass it down to the arm as a new parameter.
+    Example: forwarding.IntoBranchArm."""
     forwarded = []
     while True:
         closures = Closures(s)
@@ -73,28 +74,29 @@ def forward_into_arms(s: Structure) -> list[str]:
 
 
 def _from_above(s: Structure, arm: Lambda, load: Instr, closures: Closures) -> tuple[str, list[tuple[Branch, Lambda]]] | None:
-    """The value the load reads, in the λ above the branches it is in, and each
-    (branch, arm on the way) from there down to the load's λ."""
-    a = field_access(load)
-    if not a or a[0] != "get":
+    """The value the load reads, if a store or a load above its branches gives
+    it, and the branches the value has to pass through on the way down."""
+    if not is_load(load):
         return None
+    a = field_access(load)
+    _, static, _ = a
 
-    lam, token, obj = arm, param_origin(arm, load.ins[0]), None if a[1] else load.ins[1]
+    lam, token, reference = arm, param_origin(arm, load.ins[0]), None if static else load.ins[1]
     hops: list[tuple[Branch, Lambda]] = []
 
     while token is not None and all(lam is not l for _, l in hops):
         names = [n for n, _ in lam.params]
         branch = branch_into(s, lam.name, closures)
-        if branch is None or (obj is not None and obj not in names):
+        if branch is None or (reference is not None and reference not in names):
             return None
 
         hops.append((branch, lam))
         args = branch.call.ins[1:]
-        token, obj = args[names.index(token)], None if obj is None else args[names.index(obj)]
+        token, reference = args[names.index(token)], None if reference is None else args[names.index(reference)]
         source = source_of(branch.parent, token)
 
         if source is not None:
-            return (value_of(source), hops[::-1]) if same_location(source, a, obj) else None
+            return (value_of(source), hops[::-1]) if same_location(source, a, reference) else None
 
         lam, token = branch.parent, param_origin(branch.parent, token)
 
@@ -102,9 +104,9 @@ def _from_above(s: Structure, arm: Lambda, load: Instr, closures: Closures) -> t
 
 
 def thread(s: Structure, value: str, hops: list[tuple[Branch, Lambda]], load: Instr) -> str:
-    """Pass the value down each branch, as a new parameter of both of its
-    arms, to the load, which takes it, and say which parameter of the load's
-    λ that is."""
+    """Pass the value down through each branch, as a new parameter of both
+    arms, and let the load take it. Return the parameter's name in the
+    load's λ."""
     for branch, arm in hops:
         p = next((n for n, (_, t) in enumerate(arm.params) if t == "heap"), len(arm.params))
         given = {}
@@ -132,10 +134,13 @@ def thread(s: Structure, value: str, hops: list[tuple[Branch, Lambda]], load: In
 
 
 def split_merge(s: Structure) -> str | None:
-    """Split one merge, whose first load some predecessors know the value of,
-    and say which load. Only a merge that jumps reach, outside a loop, with
-    nothing before the load but what passes the token on or can't throw: that
-    much the copy repeats."""
+    """Forward across a merge: when some of the blocks that jump to a merge
+    know the value of its first load, give them their own copy of the merge
+    up to that load, which takes the value as a parameter instead of loading
+    it. Example: forwarding.AcrossMerge.
+
+    Only outside loops, and only when nothing before the load may throw, since
+    that part gets copied. Return which load was forwarded."""
     closures = Closures(s)
     for merge in s.lambdas:
         sites = jump_sites(s, merge.name, closures) if merge.name != ENTRY else None
@@ -143,25 +148,26 @@ def split_merge(s: Structure) -> str | None:
             continue
         params = [n for n, _ in merge.params]
         for at, load in enumerate(merge.body):
-            a = field_access(load)
-            if a and a[0] == "get":
+            if is_load(load):
                 break
             if not (is_pure(load) or (load.type == "heap" and load.op in ("move", "guard"))):
                 break
         else:
             continue
-        if not a or a[0] != "get":
+        if not is_load(load):
             continue
 
+        a = field_access(load)
+        _, static, _ = a
         token = param_origin(merge, load.ins[0])
-        obj = None if a[1] else load.ins[1]
-        if token is None or (obj is not None and obj not in params):
+        reference = None if static else load.ins[1]
+        if token is None or (reference is not None and reference not in params):
             continue
         known = []
         for caller, ref, jump in sites:
             args = jump.ins[1:]
             source = source_of(caller, args[params.index(token)])
-            if same_location(source, a, None if obj is None else args[params.index(obj)]):
+            if same_location(source, a, None if reference is None else args[params.index(reference)]):
                 known.append((ref, jump, value_of(source)))
         if known:
             _split(s, merge, at, known)
@@ -170,9 +176,10 @@ def split_merge(s: Structure) -> str | None:
 
 
 def _split(s: Structure, merge: Lambda, at: int, known: list[tuple[Instr, Instr, str]]) -> None:
-    """Move the code after the load at `at` into a new λ that the merge jumps
-    to, and give the predecessors that know the load's value a copy of the
-    merge that takes it as a parameter instead of loading it."""
+    """Split the merge at its load: the code after the load moves to a new λ,
+    and the predecessors that know the value jump to a copy of the merge that
+    takes it as a parameter. Both copies jump to the new λ, so nothing after
+    the load is repeated."""
     load = merge.body[at]
     head, rest = merge.body[:at + 1], merge.body[at + 1:]
     types = types_in(merge)

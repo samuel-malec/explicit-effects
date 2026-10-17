@@ -1,20 +1,21 @@
-"""Reading the token form: which instruction made a token, what a field
-access touches, the shape of a branch or a jump, and small builders the rules
-share."""
+"""Helpers the rules share for reading the token form
+
+Where a token came from, what a field access touches, what a branch or a jump
+looks like, and small builders for new names, jumps and frames."""
 
 import re
 from dataclasses import dataclass
 
 from cthu.ir import Instr, Lambda, Structure, function_type
 
-ENTRY = "run"  # the λ a method starts in: a closure of it is a call of the method itself
+ENTRY = "run"  # the λ a method starts in; taking it as a closure calls the method itself
 
-ACCESS = re.compile(r"(get|set|init)(static)?_(\d+)")  # init: a new object's field, as escape analysis left it
+ACCESS = re.compile(r"(get|set|init)(static)?_(\d+)")  # init: the first value of a new object's field
 
 VALUES = {"int", "long", "float", "double", "bool", "ref"}
 
-# Operations on values that can't throw: what may sit before a load in the part
-# of a merge that splitting copies, and what goes once nothing uses it.
+# Operations that can't throw and don't touch memory: safe to copy (split_merge)
+# and to remove once nothing uses them (drop_unused).
 PURE = re.compile(r"cons_m?\d+|const_\d+|null|move|not|neg|add|sub|mul|and|or|xor|shl|shr|ushr|eq\?|lt\?|ult\?|nil\?|opt|join"
                   r"|abs|min|max|sqrt|cmp|to_(int|long|float|double)|instanceof_\d+|isinstance|hub|exception")
 
@@ -23,9 +24,27 @@ ALLOCATION = re.compile(r"new_\d+|newarray_\w+")
 
 
 def field_access(i: Instr) -> tuple[str, bool, int] | None:
-    """(get or set, static, field index) for a field access."""
+    """(get or set, is static, field index) if the instruction accesses a field."""
     m = ACCESS.fullmatch(i.op) if i.type == "heap" else None
     return ("get" if m.group(1) == "get" else "set", bool(m.group(2)), int(m.group(3))) if m else None
+
+
+def is_load(i: Instr) -> bool:
+    """Whether the instruction reads a field."""
+    access = field_access(i)
+    if access is None:
+        return False
+    kind, _, _ = access
+    return kind == "get"
+
+
+def is_store(i: Instr) -> bool:
+    """Whether the instruction writes a field (a store, or a new object's first value)."""
+    access = field_access(i)
+    if access is None:
+        return False
+    kind, _, _ = access
+    return kind == "set"
 
 
 def is_pure(i: Instr) -> bool:
@@ -55,44 +74,52 @@ def names_in(lam: Lambda) -> set[str]:
 
 
 def _trace(lam: Lambda, token: str, loads: bool = False) -> tuple[Instr | None, str]:
-    """Follow a token back past what passes it on unchanged: moves and guards,
-    and with `loads` loads too, which write nothing. Give the instruction that
-    made it, None if no instruction of the λ did, and its name there."""
+    """Walk a token back past what passes it on unchanged: moves and guards,
+    and with `loads` also loads, which write nothing. Return the instruction
+    that made it (None if it came in as a parameter) and its name there."""
     defs = {out: i for i in lam.body for out in i.outs}
     while (d := defs.get(token)) is not None and d.type == "heap" and (
-            d.op in ("move", "guard") or (loads and (a := field_access(d)) is not None and a[0] == "get")):
+            d.op in ("move", "guard") or (loads and is_load(d))):
         token = d.ins[0]
     return d, token
 
 
 def source_of(lam: Lambda, token: str) -> Instr | None:
-    """The instruction that gave the token, past moves and guards."""
-    return _trace(lam, token)[0]
+    """The instruction that made the token, past moves and guards; None if it
+    came in as a parameter."""
+    made, _ = _trace(lam, token)
+    return made
 
 
 def param_origin(lam: Lambda, token: str) -> str | None:
-    """The parameter the token comes from, past moves and guards."""
+    """The parameter the token came in as, past moves and guards; None if an
+    instruction made it."""
     made, token = _trace(lam, token)
     return token if made is None and token in {n for n, _ in lam.params} else None
 
 
 def unchanged(lam: Lambda, token: str) -> str | None:
-    """The parameter a token comes from, past what writes nothing: moves,
-    guards and loads."""
+    """Like `param_origin`, but also past loads: the parameter the token came
+    in as, if nothing on the way wrote memory."""
     made, token = _trace(lam, token, loads=True)
     return token if made is None and token in {n for n, _ in lam.params} else None
 
 
-def same_location(access: Instr | None, a: tuple[str, bool, int], obj: str | None) -> bool:
-    """Whether `access` stores or loads the location of a load: the same
-    field, (static, index) in `a`, of the same object, unless it is static."""
-    b = field_access(access) if access is not None else None
-    return bool(b) and b[1:] == a[1:] and (obj is None or access.ins[1] == obj)
+def same_location(access: Instr | None, a: tuple[str, bool, int], reference: str | None) -> bool:
+    """Whether `access` touches the same location as the load: the same field
+    and, unless the field is static, the same reference: the same name, so
+    the same object."""
+    other = field_access(access) if access is not None else None
+    if other is None:
+        return False
+    _, static, index = a
+    _, other_static, other_index = other
+    return (other_static, other_index) == (static, index) and (reference is None or access.ins[1] == reference)
 
 
 def value_of(access: Instr) -> str:
-    """The value a store stored or a load loaded."""
-    return access.ins[-1] if field_access(access)[0] == "set" else access.outs[0]
+    """The value a store wrote or a load read."""
+    return access.ins[-1] if is_store(access) else access.outs[0]
 
 
 def copy_instr(i: Instr) -> Instr:
@@ -100,9 +127,8 @@ def copy_instr(i: Instr) -> Instr:
 
 
 class Closures:
-    """Where each of a method's λs is taken as a closure: the (λ, instruction)
-    of each place, in program order. It describes the program as it was when
-    made, so a rule makes it again after it changes which λ takes which."""
+    """For each λ of a method, the places that take it as a closure (to jump,
+    branch or call to it). Build it again after a rule changes the jumps."""
 
     def __init__(self, s: Structure):
         self.places: dict[str, list[tuple[Lambda, Instr]]] = {}
@@ -116,8 +142,7 @@ class Closures:
         return self.places.get(name, [])
 
     def reached_from(self, name: str) -> set[str]:
-        """The λs that λ `name` can get to by taking closures, through others;
-        itself only if it is on a loop."""
+        """The λs reachable from λ `name`; `name` itself only if it is on a loop."""
         if self._calls is None:
             self._calls = {}
             for target, places in self.places.items():
@@ -134,8 +159,8 @@ class Closures:
 
 @dataclass
 class Branch:
-    """A branch at the end of `parent`: the closures of both arms, the opts and
-    the join that make one of them, the frame's closure, and the call."""
+    """The instructions of a branch at the end of `parent`: the closures of
+    both arms, the two opts and the join that pick one, the frame, and the call."""
     parent: Lambda
     refs: list[Instr]
     opts: list[Instr]
@@ -145,21 +170,20 @@ class Branch:
 
 
 def branch_into(s: Structure, name: str, closures: Closures | None = None) -> Branch | None:
-    """The branch whose arm λ `name` is, if it is the only place that takes
-    either arm."""
+    """The branch that has λ `name` as an arm, if nothing else reaches either arm."""
     closures = closures or Closures(s)
     taken = closures.of(name)
     if len(taken) != 1:
         return None
-    branch = branch_at(s, taken[0][0])
+    parent, _ = taken[0]
+    branch = branch_at(s, parent)
     if branch is None or name not in {r.op for r in branch.refs} or any(len(closures.of(r.op)) != 1 for r in branch.refs):
         return None
     return branch
 
 
 def branch_at(s: Structure, lam: Lambda) -> Branch | None:
-    """The branch the λ ends with, if it ends with one: a call of the join of
-    two opts, each of a closure of one of the method's λs."""
+    """The branch the λ ends with, if it ends with one."""
     call = lam.body[-1] if lam.body else None
     if call is None or call.op != "call":
         return None
@@ -173,8 +197,7 @@ def branch_at(s: Structure, lam: Lambda) -> Branch | None:
 
 
 def arms_of(defs: dict[str, Instr], join: Instr | None, structure: str) -> tuple[list[Instr], list[Instr]] | None:
-    """The two opts a join of two arms takes, and the closure each opt makes,
-    if both closures are of the method's λs."""
+    """The two opts of a join, and the λ closure each one picks."""
     if join is None or join.op != "join":
         return None
     opts = [defs.get(n) for n in join.ins[:2]]
@@ -185,7 +208,8 @@ def arms_of(defs: dict[str, Instr], join: Instr | None, structure: str) -> tuple
 
 
 def jump_sites(s: Structure, name: str, closures: Closures | None = None) -> list[tuple[Lambda, Instr, Instr]] | None:
-    """Each (λ, closure, jump) that jumps to λ `name`, if only jumps reach it."""
+    """Each (λ, closure, jump) that jumps to λ `name`; None if anything but a
+    plain jump reaches it."""
     sites = []
     for lam, i in (closures or Closures(s)).of(name):
         jump = lam.body[-1]
@@ -196,14 +220,14 @@ def jump_sites(s: Structure, name: str, closures: Closures | None = None) -> lis
 
 
 def jump_to(s: Structure, target: Lambda, args: list[str], k: str) -> list[Instr]:
-    """A jump to `target` through closure `k`, which a λ ends with."""
+    """The two instructions that end a λ with a jump to `target`."""
     ftype = target.function_type
     return [Instr(s.name, target.name, [], [k], [ftype]),
             Instr(ftype, "call", [k, *args], [n for n, _ in target.outs], [t for _, t in target.outs])]
 
 
 def in_loop(s: Structure, name: str, sites: list[tuple[Lambda, Instr, Instr]], closures: Closures | None = None) -> bool:
-    """Whether one of the λs that jump to `name` is reachable from it."""
+    """Whether λ `name` is on a loop: one of the λs jumping to it is reachable from it."""
     reached = (closures or Closures(s)).reached_from(name)
     return any(lam.name in reached for lam, _, _ in sites)
 
@@ -216,7 +240,7 @@ def only_jumps(s: Structure, lam: Lambda) -> bool:
 
 
 def calls_into(s: Structure, lam: Lambda, closures: Closures | None = None) -> list[list[str]] | None:
-    """What each place that calls the λ passes it, if only jumps or one branch do."""
+    """What each caller passes to the λ, if only jumps or one branch reach it."""
     if lam.name == ENTRY:
         return None
     closures = closures or Closures(s)
@@ -228,9 +252,9 @@ def calls_into(s: Structure, lam: Lambda, closures: Closures | None = None) -> l
 
 
 def frame_of(s: Structure, params: list[tuple[str, str]], outs: list[tuple[str, str]]) -> str:
-    """A frame for arms that take these parameters: it forks each token, gives
-    both arms the values and one half of each fork, and joins what they give.
-    The method's own, if it has one for them."""
+    """The frame for a branch whose arms take these parameters: it splits each
+    token in two, gives one half to each arm, and joins what they give
+    back. An existing frame of the same type is reused."""
     ftype = function_type([t for _, t in params], [t for _, t in outs])
     for lam in s.lambdas:
         if lam.name.startswith("frame_") and [t for _, t in lam.params[:2]] == [ftype, ftype]:

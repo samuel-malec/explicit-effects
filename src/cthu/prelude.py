@@ -63,7 +63,8 @@ def parse(text: str) -> Prelude:
         if cycle:
             prelude.errors.append(f"signature {name} extends itself: {' → '.join(cycle)}")
 
-    if problem := _reference(module.signatures, FUNCTION[0], _function_arguments("F", ["I"], ["O"])):
+    function_signature, _, _ = FUNCTION
+    if problem := _reference(module.signatures, function_signature, _function_arguments("F", ["I"], ["O"])):
         prelude.errors.append(f"function types: {problem}")
 
     for name, structure in module.structures.items():
@@ -179,7 +180,8 @@ class _Expected:
         function = parse_function_type(t)
         if function:
             if t not in self.functions:
-                self.functions[t] = self.prelude.operations(FUNCTION[0], _function_arguments(t, *function))
+                function_signature, _, _ = FUNCTION
+                self.functions[t] = self.prelude.operations(function_signature, _function_arguments(t, *function))
             return self.functions[t].get(op, f"a function has no {op}")
 
         return f"no structure {t}"
@@ -195,7 +197,10 @@ class _Expected:
 
         if constant := _CONST.fullmatch(op):
             k = int(constant.group(1))
-            if k >= len(program.constants) or program.constants[k][0] != t:
+            if k >= len(program.constants):
+                return f"no {t} constant {k}"
+            declared, _ = program.constants[k]
+            if declared != t:
                 return f"no {t} constant {k}"
             return [], [t]
 
@@ -225,9 +230,11 @@ class _Expected:
         arms = [pt for _, pt in lam.params if parse_function_type(pt)]
         if not arms:
             return [], [lam.function_type]
-        if len(arms) != 2 or arms[0] != arms[1]:
-            return f"frame {op} takes arms {' and '.join(arms)}, not two of one type"
-        return [], [frame_type(arms[0])]
+        if len(arms) == 2:
+            first, second = arms
+            if first == second:
+                return [], [frame_type(first)]
+        return f"frame {op} takes arms {' and '.join(arms)}, not two of one type"
 
 
 def _function_arguments(t: str, ins: list[str], outs: list[str]) -> list:

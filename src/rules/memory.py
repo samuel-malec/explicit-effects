@@ -1,11 +1,13 @@
-""" Memory rules on the token form.
+"""Memory rules on the token form
 
-    - Shape: a branch to an arm that throws becomes guards, and a λ that only
-      one jump reaches joins the λ that jumps, so that code is straight-line.
-    - Load forwarding: within a λ, into branch arms, into loops, across merges,
-      and out of a loop by peeling its first iteration.
-    - Dead store removal: a store that every path overwrites before anything
-      may read it, an exception leaving the method included.
+The rules run on every method, in this order:
+    1. Shape: make the code as straight-line as possible (shape.py).
+    2. Load forwarding: a load whose value is already known takes that value
+       instead of reading memory (forward.py, loops.py).
+    3. Dead stores: a store that is always overwritten before anyone can read
+       it goes (stores.py).
+    4. Clean-up: what nothing uses any more goes, and the code is put back into
+       single-use form.
 """
 
 import warnings
@@ -19,22 +21,26 @@ from .loops import forward_into_loops, hoist_out_of_loop
 from .shape import drop_unused, fuse, guard_exits, merge_same_params, remove_unreferenced, unshare
 from .stores import remove_dead_stores
 
-ROUNDS = 100  # merges split and loops peeled per method, at most
+ROUNDS = 100  # at most this many merge splits and loop peels per method
 
 
 @dataclass
 class Rewrites:
-    """What the rules did: `structure: field` for each load and store, and
-    where each removed store is: its position, a tab, and its field."""
+    """What the rules did, for printing: each forwarded load and each removed
+    store. `dead` also says where each removed store was in the bytecode, so
+    that Native Image can remove the same store."""
     forwarded: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
     dead: list[str] = field(default_factory=list)
 
 
-def apply(program: Program, forward: bool = True) -> Rewrites:
-    """Rewrite the program in place, and say what changed. Without `forward`,
-    only the shape changes before dead stores go: a store is then dead
-    whatever happens to the loads."""
+def apply(program: Program, forward: bool = True, stores: bool = True) -> Rewrites:
+    """Run the rules on every method of the program, and say what changed.
+
+    `forward=False` skips load forwarding. The dead stores sent to Native Image
+    use it, because they must be dead on their own, not only because a load
+    was forwarded. `forward=False, stores=False` only straightens the code,
+    which is what `graal2ct --shape` shows."""
     done = Rewrites()
     for s in program.structures:
         for lam in s.lambdas:
@@ -63,7 +69,7 @@ def apply(program: Program, forward: bool = True) -> Rewrites:
         else:
             warnings.warn(f"{s.name}: stopped after {ROUNDS} rounds of forwarding, with more left", stacklevel=2)
         
-        dead = remove_dead_stores(s)
+        dead = remove_dead_stores(s) if stores else []
         done.removed += [f"{s.name}: {i.field}" for i in dead]
         done.dead += [f"{i.at}\t{i.field}" for i in dead if i.at]
         remove_unreferenced(s)

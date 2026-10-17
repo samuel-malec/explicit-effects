@@ -133,7 +133,10 @@ def compare(export: Path, graal: dict, native: dict | None = None) -> list[Row]:
     for key, graph in sorted(graphs.items()):
         name = probe_name(graph.name, graph.descriptor)
         modes = graal.get(name)
-        if not modes or not sum(modes["bytecode"][0].values()) + sum(modes["bytecode"][1].values()):
+        if not modes:
+            continue
+        bytecode_writes, bytecode_reads = modes["bytecode"]
+        if not sum(bytecode_writes.values()) + sum(bytecode_reads.values()):
             continue
         writes, reads = ({f for f in c if not f.endswith("(loop)")} for c in modes["bytecode"])
 
@@ -159,12 +162,26 @@ def compare(export: Path, graal: dict, native: dict | None = None) -> list[Row]:
     return rows
 
 
+def stores_loads(cell: tuple[int, int] | None) -> str:
+    """A cell as `stores/loads`, or `refused` for a method the translation refused."""
+    if cell is None:
+        return "refused"
+    stores, loads = cell
+    return f"{stores}/{loads}"
+
+
+def column_total(rows: list[list[tuple[int, int]]], column: int) -> tuple[int, int]:
+    """The stores and the loads of one column, summed over the rows."""
+    cells = [row[column] for row in rows]
+    return sum(stores for stores, _ in cells), sum(loads for _, loads in cells)
+
+
 def table(title: str, rows: list[tuple[str, list[tuple[int, int] | None]]], width: int, columns=COLUMNS) -> None:
     print(f"{title:{width}}  " + "  ".join(f"{c:>9}" for c in columns))
     for name, cells in rows:
-        print(f"{name:{width}}  " + "  ".join(f"{f'{c[0]}/{c[1]}' if c else 'refused':>9}" for c in cells))
+        print(f"{name:{width}}  " + "  ".join(f"{stores_loads(c):>9}" for c in cells))
     translated = [cells for _, cells in rows if all(cells)]
-    totals = [f"{sum(c[i][0] for c in translated)}/{sum(c[i][1] for c in translated)}" for i in range(len(columns))]
+    totals = [stores_loads(column_total(translated, i)) for i in range(len(columns))]
     print(f"{f'total, {len(translated)} methods translated':{width}}  " + "  ".join(f"{t:>9}" for t in totals))
 
 

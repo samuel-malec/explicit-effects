@@ -16,7 +16,9 @@ from . import memory, tokens
 
 
 def dead_stores(export: Path, partition: str = "field") -> list[str]:
-    """`position\\tfield` of each store that is dead in Java."""
+    """The stores the rules find dead, as `position\\tfield`, for Native Image
+    to remove. Loads aren't forwarded first: a store that is dead only because
+    our rules removed a load must not go, since Native Image keeps that load."""
     facts, graphs = load(export)
     program = Translation(graphs, analyse(facts, PARTITIONERS[partition](facts))).translate(sorted(graphs))
     done = memory.apply(program, forward=False)

@@ -732,8 +732,8 @@ class MethodTranslation:
 
     def _leave(self, result: str | None) -> None:
         """Gives the caller the result, nothing when the method throws, and every token."""
-        if self.outs[0][0] == "r":
-            t = self.outs[0][1]
+        first, t = self.outs[0]
+        if first == "r":
             if result:
                 self._emit(t, "move", [result], ["r"], [t])
             else:
