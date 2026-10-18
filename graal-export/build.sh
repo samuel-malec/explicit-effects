@@ -19,13 +19,14 @@ if ! javac -XDstringConcat=inline ${JAVAC_CP:+-cp "$JAVAC_CP"} -d "$HERE/classes
     echo "       if it imports a library, put the jar on JAVAC_CP here and on TARGET_CP for run-dump.sh" >&2
     exit 1
 fi
-# The driver is compiled with the module flags run-dump.sh runs it with, so it
-# builds against the repo's jdk.graal.compiler rather than the JDK's own older
-# copy: GraphExport uses the compiler's node classes directly.
+# The launcher is compiled with the module flags run-dump.sh runs it with, so it
+# builds against the graal tree's jdk.graal.compiler rather than the JDK's own
+# older copy. The exporter it calls, PointsToExport, is in the graal tree's
+# pointsto.jar: change it there and rebuild with mx.
 if ! javac -cp "$CP" --upgrade-module-path="$UPGRADE_MP" --module-path="$MODULE_PATH" \
         --add-modules="$ADD_MODULES,jdk.graal.compiler,jdk.graal.compiler.options" \
         "${EXPORTS[@]}" @"$HERE/exports.args" \
-        -d "$HERE" "$HERE/ReadWriteExport.java" "$HERE/GraphExport.java"; then
+        -d "$HERE" "$HERE/StandalonePointsToExport.java"; then
     echo "error: compiling the driver failed" >&2
     exit 1
 fi

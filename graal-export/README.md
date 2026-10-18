@@ -4,6 +4,10 @@
 
 Runs Native Image's points-to analysis and dumps Graal IR and points-to analysis information for furhter analysis. 
 It runs on the standalone points-to analyzer `com.oracle.graal.pointsto.standalone`.
+The exporter itself, `PointsToExport`, is part of the graal tree's points-to analysis
+(`substratevm/src/com.oracle.graal.pointsto/src/com/oracle/graal/pointsto/export/`), so that
+native-image builds can use it too; this directory has its standalone launcher,
+`StandalonePointsToExport`. After changing the exporter, rebuild the graal tree with `mx build`.
 
 ## Example Usage
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Export the examples, examples/: each example is a program of its own,
 # exported on its own, so that the analysis sees only that example. The examples
-# in package objects are exported with allocation sites as well.
+# in packages objects and concurrency are exported with allocation sites as well.
 #
 #   ./suite                                    # every example whose export is older than its source
 #   ./suite forwarding.AcrossCall NullCheck    # these examples, by class or package.class
 #
 # Writes out/suite/<package>.<Class>.json, and <package>.<Class>.allocsens.json for
-# package objects. examples/README.md says in which order to read them.
+# packages objects and concurrency. .notes/example-suite.md says in which order to read them.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 SUITE="$HERE/examples"
@@ -15,14 +15,17 @@ OUT="$HERE/out/suite"
 CLASSES="$OUT/classes"
 mkdir -p "$OUT"
 
-# The exporter itself, compiled as build.sh compiles it, without touching the
-# classes/ directory that build.sh and run-dump.sh use for single examples.
-if [[ ! -f "$HERE/ReadWriteExport.class" || "$HERE/ReadWriteExport.java" -nt "$HERE/ReadWriteExport.class"
-      || "$HERE/GraphExport.java" -nt "$HERE/ReadWriteExport.class" ]]; then
+# The launcher, compiled as build.sh compiles it, without touching the classes/
+# directory that build.sh and run-dump.sh use for single examples. The exporter
+# itself is in the graal tree's pointsto.jar: an export older than that jar is
+# made again.
+LAUNCHER="$HERE/StandalonePointsToExport"
+EXPORTER_JAR="$G/substratevm/mxbuild/dists/pointsto.jar"
+if [[ ! -f "$LAUNCHER.class" || "$LAUNCHER.java" -nt "$LAUNCHER.class" ]]; then
     if ! javac -cp "$CP" --upgrade-module-path="$UPGRADE_MP" --module-path="$MODULE_PATH" \
             --add-modules="$ADD_MODULES,jdk.graal.compiler,jdk.graal.compiler.options" \
             "${EXPORTS[@]}" @"$HERE/exports.args" \
-            -d "$HERE" "$HERE/ReadWriteExport.java" "$HERE/GraphExport.java"; then
+            -d "$HERE" "$LAUNCHER.java"; then
         echo "error: compiling the exporter failed" >&2
         exit 1
     fi
@@ -39,7 +42,7 @@ fi
 export_one() {  # source, entry class, export, extra options
     local source=$1 entry=$2 json=$3
     shift 3
-    if [[ -f "$json" && "$json" -nt "$source" && "$json" -nt "$HERE/ReadWriteExport.class" ]]; then
+    if [[ -f "$json" && "$json" -nt "$source" && "$json" -nt "$LAUNCHER.class" && "$json" -nt "$EXPORTER_JAR" ]]; then
         return 0
     fi
     if TARGET_CP="$CLASSES" DUMP_IR="$json" "$HERE/run-dump.sh" "$entry" "$@" > "${json%.json}.txt" 2>&1; then
@@ -62,7 +65,7 @@ for source in "${SOURCES[@]}"; do
         $wanted || continue
     fi
     export_one "$source" "$package.$class" "$OUT/$package.$class.json" || status=1
-    if [[ $package == objects ]]; then
+    if [[ $package == objects || $package == concurrency ]]; then
         export_one "$source" "$package.$class" "$OUT/$package.$class.allocsens.json" \
             -H:AnalysisContextSensitivity=allocsens || status=1
     fi

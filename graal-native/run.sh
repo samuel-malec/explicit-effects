@@ -21,7 +21,8 @@
 #                              # only some of the images, into out/awfy-sym/, with more
 #                              # native-image options: here, the symbols perf needs
 #
-# A fourth image (decisions) also removes the stores our rules find dead in Java.
+# A fourth image (decisions) also removes the stores our rules find dead in Java. A fifth,
+# graal-dse, only with ONLY, has Graal remove dead stores itself after inlining instead.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 EXAMPLE=${1:?usage: run.sh <a class of graal-export/corpus, or a program of programs/>}
@@ -29,7 +30,7 @@ PROGRAM="$REPO/programs/$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')"
 NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${SPLIT:+-split}${DEAD:+-dead}${ALLOCSENS:+-allocsens}${TAG:+-$TAG}
 OUT="$HERE/out/$NAME"
 MAIN=$EXAMPLE
-SOURCES=("$EXPORTER/corpus/$EXAMPLE.java")
+SOURCES=("$EXPORT_DIR/corpus/$EXAMPLE.java")
 if [[ -f "$HERE/Run$EXAMPLE.java" ]]; then
     MAIN=Run$EXAMPLE
     SOURCES+=("$HERE/Run$EXAMPLE.java")
@@ -60,23 +61,19 @@ if [[ -x "$PROGRAM/build.sh" ]]; then
 else
     "$GRAALVM/bin/javac" -d "$OUT/classes" "${SOURCES[@]}"
 fi
-# What a program prints and how it exits: Signatures, for one, ends in an exception.
+# What a program prints and how it exits: Signatures, for one, ends in an exception. A run
+# that takes longer than RUN_TIMEOUT seconds (default 300) is stopped and exits with 124: a
+# wrong optimization can make a loop endless.
 run() {
     local status=0
-    "$@" 2> /dev/null || status=$?
+    timeout "${RUN_TIMEOUT:-300}" "$@" 2> /dev/null || status=$?
     echo "exit $status"
 }
 run "$GRAALVM/bin/java" -cp "$OUT/classes" "$MAIN" > "$OUT/jvm.txt"
 
-# The image's class path gets the JVMCI exports, but JVMCI is no root module of the image.
-CI_EXPORTS=()
-for flag in "${JVMCI_EXPORTS[@]}"; do
-    [[ "$flag" == --add-exports=jdk.internal.vm.ci/* ]] && CI_EXPORTS+=("$flag")
-done
-
 for mode in "${MODES[@]}"; do
     mkdir -p "$OUT/$mode"
-    narrow=$([[ $mode == graal ]] && echo false || echo true)
+    narrow=$([[ $mode == graal ]] && echo - || echo +)
     # Object partitions need the analysis to tell objects apart by where they were
     # allocated, and the compiled graphs to keep where each access is.
     OBJECTS=()
@@ -84,20 +81,30 @@ for mode in "${MODES[@]}"; do
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens)
     fi
     if [[ $mode == objects || $mode == decisions ]]; then
-        OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -J-Deffects.partition=object-field
-                 ${SPLIT:+"-J-Deffects.split=$SPLIT"})
+        OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:SideEffectAnalysisPartition=object-field
+                 ${SPLIT:+"-H:SideEffectAnalysisClaimNoAliasing=$SPLIT"})
     fi
     if [[ $mode == decisions ]]; then
-        OBJECTS+=(-J-Deffects.decisions=true ${DEAD:+"-J-Deffects.dead=$DEAD"})
+        OBJECTS+=(-H:+SideEffectAnalysisRemoveDeadStores ${DEAD:+"-H:SideEffectAnalysisClaimDeadStore=$DEAD"})
+    fi
+    # Not one of the four images by default (ONLY="... graal-dse"): Graal's own dead-store
+    # elimination, OverwrittenStoreEliminationPhase, after inlining, with the same partitions as
+    # the decisions image, instead of the tool's decisions.
+    if [[ $mode == graal-dse ]]; then
+        OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:SideEffectAnalysisPartition=object-field
+                 -H:+SideEffectAnalysisEliminateOverwrittenStores)
     fi
     start=$(date +%s)
+    # The side-effect analysis is a feature of the graal tree's image builder
+    # (SideEffectAnalysisFeature), switched on and configured with these options.
     if ! "$GRAALVM/bin/native-image" \
             -J--upgrade-module-path="$COMPILER" \
-            @"$EXPORTER/exports.args" "${CI_EXPORTS[@]}" "${BUILDER_EXPORTS[@]}" \
-            -cp "$OUT/classes:$HERE/classes" --features=EffectsFeature -EHOME -EPATH \
-            -J-Deffects.out="$OUT/$mode" -J-Deffects.program="$SCOPE" -J-Deffects.narrow=$narrow \
-            -J-Deffects.tool="$REPO" -J-Deffects.uv="$(command -v uv)" ${LIE:+"-J-Deffects.lie=$LIE"} "${OBJECTS[@]}" \
-            -H:+UnlockExperimentalVMOptions -H:-AOTTrivialInline "${EXTRA_OPTIONS[@]}" \
+            -cp "$OUT/classes" -EHOME -EPATH \
+            -H:+UnlockExperimentalVMOptions -H:+SideEffectAnalysis \
+            -H:SideEffectAnalysisOutput="$OUT/$mode" -H:SideEffectAnalysisProgram="$SCOPE" -H:${narrow}SideEffectAnalysisNarrowCalls \
+            -H:SideEffectAnalysisTool="$REPO" -H:SideEffectAnalysisUv="$(command -v uv)" \
+            ${LIE:+"-H:SideEffectAnalysisClaimWritesNothing=$LIE"} "${OBJECTS[@]}" \
+            -H:-AOTTrivialInline "${EXTRA_OPTIONS[@]}" \
             "$MAIN" -o "$OUT/$mode/$NAME" > "$OUT/$mode.log" 2>&1; then
         tail -40 "$OUT/$mode.log"
         exit 1

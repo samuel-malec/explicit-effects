@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Dump per-method field read/write sets from Native Image's points-to analysis.
+# Run the standalone points-to analyzer on a program and export what it found
+# (StandalonePointsToExport, which calls the graal tree's PointsToExport).
 #
 #   ./run-dump.sh                        # entry class Examples
 #   ./run-dump.sh my.pkg.Main            # your own entry class
@@ -31,7 +32,7 @@ exec java \
   --add-modules="$ADD_MODULES" \
   "${EXPORTS[@]}" @"$HERE/exports.args" \
   -cp "$CP:$HERE" \
-  ReadWriteExport \
+  StandalonePointsToExport \
   "$ENTRY" \
   -H:StandaloneAnalysisTargetAppCP="${TARGET_CP:-$HERE/classes}" \
   -H:StandaloneAnalysisReportsPath="$HERE/out" \
