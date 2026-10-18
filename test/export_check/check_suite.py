@@ -1,5 +1,6 @@
 """Each example (graal-export/examples/) still shows what its comment says: the conversion examples by their shape, the optimization examples by
-what the rules do under each partitioning, the controls by what they keep.
+what the rules do under each partitioning, the controls by what they keep, and
+the concurrency examples by what synchronization lets the rules do.
 
 The exports come from `graal-export/suite` (or `make suite`); without them these
 checks are skipped.
@@ -161,3 +162,39 @@ def check_suite_optimizations() -> None:
                 wrong[example, partition] = (done.forwarded, done.removed)
     assert not wrong, wrong
     print("ok   suite: each optimization example is rewritten as its comment says, and no control is")
+
+
+#: example → whether the Java memory model lets the load take the value the method already has,
+#: in a program free of data races → (loads forwarded, stores removed) today, per field and per
+#: object and field. RacySpin races, and the model promises it nothing, so the rules may hoist
+#: its load. Today every synchronization makes its method opaque, so nothing is forwarded; with
+#: a model of synchronization the allowed loads may start to be forwarded, the controls never.
+SYNCHRONIZING = {
+    "concurrency.AcrossRelease": (True, (0, 0)),
+    "concurrency.AcrossAcquireLocal": (True, (0, 0)),
+    "concurrency.AcrossAcquireSharedBlocks": (False, (0, 0)),
+    "concurrency.AcrossLockLocal": (True, (0, 0)),
+    "concurrency.AcrossLockSharedBlocks": (False, (0, 0)),
+    "concurrency.AcrossLocalMonitor": (True, (0, 0)),
+    "concurrency.AcrossAtomicLocal": (True, (0, 0)),
+    "concurrency.FinalAcrossLock": (True, (0, 0)),
+    "concurrency.HandedToThreadBlocks": (False, (0, 0)),
+    "concurrency.RacySpin": (True, (0, 0)),
+}
+
+
+def check_suite_concurrency() -> None:
+    """No load is forwarded where another thread's write may become visible in between, and
+    each concurrency example is rewritten as its comment says."""
+    wrong = {}
+    for example, (allowed, expected) in SYNCHRONIZING.items():
+        for partition in ("field", "object-field"):
+            program, _ = translate(example, partition)
+            demo(program)  # translated: a refused method would keep its loads for the wrong reason
+            done = memory.apply(program)
+            assert not check(program) + prelude.check(program, prelude.load()), (example, partition)
+            assert allowed or not done.forwarded, (example, partition, done.forwarded)
+            if (len(done.forwarded), len(done.removed)) != expected:
+                wrong[example, partition] = (done.forwarded, done.removed)
+    assert not wrong, wrong
+    print("ok   suite: no load is forwarded across synchronization that may let another thread's write in")

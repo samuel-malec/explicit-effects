@@ -524,6 +524,18 @@ def check_object_partitions() -> None:
         part = partitioning(hidden)
         assert part(value, seen) == part(value, None), (partitioning.__name__, part(value, seen), part(value, None))
 
+    # Where the analysis doesn't tell allocation sites apart, it names an object by its type: a
+    # summary that may be any object of that type, so it shares a partition with each site's.
+    summarized = copy.deepcopy(facts)
+    first = next(access for access in summarized.methods[f"{a}.forwardPastOtherObject(L{a}$Counter;L{a}$Counter;)I"]["accesses"]
+                 if access["field"] == value)
+    sites = {o for e in facts.methods.values() for _, f, r in accesses(e) if f == value and r for o in r}
+    assert len(sites) > 1, sites
+    first["receivers"] = [f"{a}$Counter"]
+    for partitioning in (by_object, by_object_field):
+        part = partitioning(summarized)
+        assert {part(value, frozenset({o})) for o in sites} == {part(value, frozenset({f"{a}$Counter"}))}, partitioning.__name__
+
     facts, _ = load(EXAMPLES)
     assert analyse(facts, by_object_field(facts)).partitions == analyse(facts, by_field).partitions
     classes = analyse(facts, by_object(facts)).partitions

@@ -370,11 +370,11 @@ def leaving_arm(how: str, noted: bool = False) -> Program:
     s = structure(program, "Examples_deadStoreOneArm")
     arm = next(l for l in s.lambdas if l.name.startswith("b") and len(l.params) == 2 and not l.exit
                and not any(i.op.startswith("set_") for i in l.body))
-    (obj, _), (token, _), (exc, _), (out, _) = *arm.params, *arm.outs
+    (reference, _), (token, _), (exc, _), (out, _) = *arm.params, *arm.outs
     leave = ([Instr("ref", "exception", [], [exc], ["ref"]), Instr("heap", "move", [token], [out], ["heap"])]
              if how == "throws" else
              [Instr("heap", "trap", [token]), Instr("ref", "bot", [], [exc], ["ref"]), Instr("heap", "bot", [], [out], ["heap"])])
-    arm.body = [Instr("ref", "drop", [obj]), *leave]
+    arm.body = [Instr("ref", "drop", [reference]), *leave]
     arm.exit = how if noted else ""
     assert not check(program), check(program)
     return program
