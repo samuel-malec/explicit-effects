@@ -79,8 +79,8 @@ def report(export: Path, allocsens: Path | None) -> None:
 def native(out: Path) -> None:
     """What each image of graal-native's round trip left of the program's methods."""
     print(f"\n{out.name}: {'stores':>7} {'(loops)':>7} {'loads':>6} {'(loops)':>7} {'calls':>6}   calls narrowed to nothing/one/several,"
-          f" fields partitioned, dead stores removed")
-    for mode in MODES:
+          f" fields partitioned, dead stores removed, overwritten stores removed by Graal")
+    for mode in (*MODES, "graal-dse"):
         counts = out / mode / "counts.txt"
         if not counts.exists():
             continue
@@ -94,15 +94,16 @@ def native(out: Path) -> None:
                     total[what] += n
                     total[what + " in loops"] += n if f.endswith("(loop)") else 0
 
-        calls = sum(int(n) for n in re.findall(r"^\s+\w+\s+calls (\d+)", text, re.M))
+        calls = sum(int(n) for n in re.findall(r"^\s+[\w-]+\s+calls (\d+)", text, re.M))
         kills = [line.split(" kills ")[1] for line in text.splitlines() if re.match(r"\s{8}\S.* kills ", line)]
         narrowed = "/".join(str(n) for n in (sum(k == "nothing" for k in kills), sum(k != "nothing" and len(k.split()) == 1 for k in kills),
                                               sum(len(k.split()) > 1 for k in kills)))
 
         partitioned = len(re.findall(r"^\s{8}\S+ in @", text, re.M))
         dead = text.count("dead store to")
+        overwritten = text.count("overwritten store to")
         print(f"{mode:{len(out.name) + 1}} {total['stores']:>7} {total['stores in loops']:>7} {total['loads']:>6} {total['loads in loops']:>7}"
-              f" {calls:>6}   {narrowed}, {partitioned}, {dead}")
+              f" {calls:>6}   {narrowed}, {partitioned}, {dead}, {overwritten}")
 
 
 def side_by_side(export: Path, allocsens: Path, images: list[Path]) -> None:

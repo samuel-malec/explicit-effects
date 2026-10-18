@@ -121,6 +121,16 @@ def _by_objects(facts: PointsToFacts, per_field: bool) -> Partitioner:
         for o in known.get(field, ()):
             join(elements(field, None)[0], elements(field, frozenset({o}))[0])
 
+    # Where the analysis doesn't tell allocation sites apart, it names an object by its type
+    # alone, T: a summary that may be any object of exactly that type, so the same object as
+    # one other accesses name by its allocation site, T@site, or as a constant, T@constant.
+    for element in list(parent):
+        o = element[1] if per_field else element
+        if isinstance(o, str) and "@" in o:
+            summary = (element[0], o.split("@", 1)[0]) if per_field else o.split("@", 1)[0]
+            if summary in parent:
+                join(summary, element)
+
     classes: dict = {}
     for element in parent:
         classes.setdefault(find(element), []).append(element)

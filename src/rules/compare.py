@@ -22,7 +22,7 @@ from graal2ct.translate import Translation, structure_name
 from . import memory, tokens
 
 HEADER = re.compile(r"([\w$]+\.[\w$<>]+)\((.*)\)")
-ROW = re.compile(r"\s+(bytecode|inlining|no inline|graal|kills|objects|decisions)\s+calls \d+\s+writes (.+?)\s+reads (.+)")
+ROW = re.compile(r"\s+(bytecode|inlining|no inline|graal-dse|graal|kills|objects|decisions)\s+calls \d+\s+writes (.+?)\s+reads (.+)")
 SIMPLE = {"Z": "boolean", "B": "byte", "C": "char", "S": "short", "I": "int", "J": "long", "F": "float", "D": "double"}
 COLUMNS = ("bytecode", "Graal", "Graal+inl", "export", "one heap", "per field", "objects", "obj+field")
 OURS = ("none", "field", "object", "object-field")
