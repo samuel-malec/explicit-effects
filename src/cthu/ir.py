@@ -4,7 +4,7 @@ from functools import cache
 LINEAR = frozenset({"heap"})
 
 # How code leaves the method
-THROWS, TRAPS = "throws", "taps"
+THROWS, TRAPS = "throws", "traps"
 
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
 _TYPES = {code: t for t, code in _TYPE_CODES.items()}
