@@ -15,23 +15,23 @@ If you are new to the problem, these two posts are the gentlest introduction:
 explicit-effects/
 ├── src/
 │   ├── graal/         # loads a Graal IR export
-│   ├── cthu/          # the Graal dialect of Cthulhu (graal.ct), parser and single-use checker
+│   ├── cthu/          # the Graal dialect of Cthulhu, parser and single-use checker
 │   ├── effects/       # heap partitions and method signatures: which partitions a method may touch
 │   ├── graal2ct/      # the Graal IR → Cthulhu translation
-│   └── rules/         # rewrites on the token form (load forwarding, dead stores) and the comparison with Graal
+│   └── rules/         # rewrites on the token form and the comparison with Graal
 ├── test/              # example exports and the checks
-├── graal-export/      # exports Graal IR and points-to facts from Native Image's standalone analysis
-│   ├── examples/      # forty one-concept programs to learn the pipeline from
+├── graal-export/      # runs the standalone points-to analysis and exports its facts and Graal IR
+│   ├── examples/      # concept programs to learn the pipeline from
 │   └── corpus/        # the programs the checks, make compare and the round trip are built from
 ├── graal-probe/       # measures what Graal itself does to the examples' loads and stores
-├── graal-native/      # the round trip: Native Image compiles with the kill sets our tool computes
+├── graal-native/      # the round trip: native images built with the graal tree's side-effect analysis
 ├── programs/          # whole programs: Are We Fast Yet and the native-image driver
-├── graal/             # submodule: our Graal fork, with kill sets on invokes and partitions on field locations
+├── graal/             # submodule: our Graal fork with the exporter and the analysis feature
 ├── are-we-fast-yet/   # submodule: the Are We Fast Yet benchmarks
 └── thesis/            # the thesis text
 ```
 
-`src/effects/`, `src/rules/`, `graal-native/` and `programs/` each have their own README with the details and the results.
+`src/effects/`, `src/rules/` and `programs/` each have their own README with the details and the results.
 
 ## Setup
 
@@ -49,8 +49,8 @@ Once the submodule is built, the scripts use it. Until then, or whenever `GRAAL_
 
 ## Learning the pipeline
 
-[`graal-export/examples/`](graal-export/examples/) holds forty small programs, one concept each: how each Graal IR construct becomes the token form, what the translation refuses, and each optimization next to a control that must stop it.
-Each example's comment says what to look for. `make suite` exports them all and checks that each still shows what its comment says.
+[`graal-export/examples/`](graal-export/examples/) contains small self-contained programs, where 
+each example's comment says what to look for. `make suite` exports them all and checks that each still shows what its comment says.
 
 ## Trying it out
 
@@ -99,6 +99,6 @@ The four images `make native` builds are:
 4. additionally with the stores our rules find dead in Java removed.
 
 After `make native`, `make compare` shows the images too.
-This needs the fork's `graal.jar` rebuilt with kill sets on invokes and partitions on field locations (`graal-native/README.md`).
+This needs the graal tree built with `mx build` in its `substratevm`: its image builder carries the side-effect analysis (`-H:+SideEffectAnalysis`), its compiler the kill sets on invokes and the partitions on field locations.
 
 After rebuilding the Graal tree, force fresh exports with `make -B`.

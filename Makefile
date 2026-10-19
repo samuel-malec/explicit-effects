@@ -15,9 +15,10 @@
 #   make suite        export the examples (graal-export/examples/), one program per example,
 #                     and check each still shows what its comment says
 #
-# An export is redone when its program or the exporter changes; after
-# rebuilding the graal tree, force it with make -B. GRAAL_HOME is passed on to
-# graal-export/env.sh. Each export's analysis report is saved next to it, in
+# An export is redone when its program, the launcher or the exporter changes:
+# the exporter, PointsToExport, is in the graal tree's pointsto.jar. After
+# rebuilding other parts of the graal tree, force it with make -B. GRAAL_HOME is
+# passed on to graal-export/env.sh. Each export's analysis report is saved next to it, in
 # graal-export/out/<name>.txt.
 #
 # The analysis names objects by type. graal-export/out/<name>.allocsens.json
@@ -30,9 +31,10 @@
 # own analysis, with each field access in its partition of the objects too,
 # and with the stores our rules find dead in Java removed as well. It runs
 # them against the JVM, and checks that a wrong kill, a wrong partition and a
-# wrong dead store show: see graal-native/README.md. It needs graal.jar rebuilt in
-# the graal tree with kill sets on invokes and partitions on field locations.
-# make compare then sets the images next to the rest.
+# wrong dead store show. It needs the graal tree built with mx: its builder has
+# SideEffectAnalysisFeature (-H:+SideEffectAnalysis), its compiler kill sets on
+# invokes and partitions on field locations. make compare then sets the images
+# next to the rest.
 #
 # A translation has one heap token; make translate PARTITION=field writes
 # <name>.field.ct, with a token per field and array kind. PARTITION=object
@@ -43,7 +45,9 @@ EXPORT := graal-export
 OUT := $(EXPORT)/out
 NATIVE_DIR := graal-native
 NATIVE := $(NATIVE_DIR)/out
-EXPORTER := $(addprefix $(EXPORT)/,ReadWriteExport.java GraphExport.java build.sh run-dump.sh env.sh exports.args)
+# The graal tree the scripts use, as graal-export/env.sh picks it.
+GRAAL := $(or $(GRAAL_HOME),$(if $(wildcard graal/substratevm/mxbuild/dists/standalone-pointsto.jar),$(CURDIR)/graal,/home/xmalec/graal))
+EXPORTER := $(addprefix $(EXPORT)/,StandalonePointsToExport.java build.sh run-dump.sh env.sh exports.args) $(GRAAL)/substratevm/mxbuild/dists/pointsto.jar
 TRANSLATOR := $(wildcard src/*/*.py) src/cthu/graal.ct
 CORPUS := $(basename $(notdir $(wildcard $(EXPORT)/corpus/*.java)))
 FIXTURES := examples signatures aliasing
@@ -75,7 +79,6 @@ compare: $(OUT)/probe.txt $(foreach e,$(COMPARED),$(OUT)/$(call lower,$(e)).allo
 # references in forwardPastAliasControl never meet, and one that a store in
 # forwardAcrossMerge, which is read, is dead.
 native:
-	$(NATIVE_DIR)/build.sh
 	$(foreach e,$(COMPARED),$(NATIVE_DIR)/run.sh $(e) &&) true
 	@out=$$(LIE='Examples.countInto(LExamples$$Counter;LExamples$$Link;)V' $(NATIVE_DIR)/run.sh Examples) && echo "$$out" && echo "$$out" | grep -q 'instead of'
 	@out=$$(SPLIT='Aliasing.forwardPastAliasControl(LAliasing$$Counter;LAliasing$$Counter;)I' $(NATIVE_DIR)/run.sh Aliasing) && echo "$$out" && echo "$$out" | grep -q 'instead of'
@@ -92,7 +95,6 @@ awfy: $(OUT)/awfy.json $(OUT)/awfy.allocsens.json
 	uv run python -m rules.report $^ --native $(wildcard $(NATIVE)/awfy $(NATIVE)/awfy-allocsens)
 
 native-awfy:
-	$(NATIVE_DIR)/build.sh
 	$(NATIVE_DIR)/run.sh Awfy
 	ALLOCSENS=1 $(NATIVE_DIR)/run.sh Awfy
 	uv run python $(AWFY)/time.py $(NATIVE)/awfy
@@ -104,12 +106,11 @@ native-awfy:
 # Then CD's counters in each, and graal against kills for every benchmark across the
 # alignments. See programs/README.md.
 awfy-layouts:
-	$(NATIVE_DIR)/build.sh
 	ONLY="graal kills" TAG=sym EXTRA=-H:-DeleteLocalSymbols $(NATIVE_DIR)/run.sh Awfy
 	for a in 16 64 128; do \
 		ONLY="graal kills" TAG=a$$a EXTRA="-H:-DeleteLocalSymbols -H:CodeAlignment=$$a" $(NATIVE_DIR)/run.sh Awfy; done
-	ONLY=kills TAG=skipcd EXTRA="-H:-DeleteLocalSymbols -J-Deffects.skip=cd." $(NATIVE_DIR)/run.sh Awfy
-	ONLY=kills TAG=onlyremove EXTRA="-H:-DeleteLocalSymbols -J-Deffects.only=cd.RedBlackTree.remove" $(NATIVE_DIR)/run.sh Awfy
+	ONLY=kills TAG=skipcd EXTRA="-H:-DeleteLocalSymbols -H:SideEffectAnalysisSkipMethods=cd." $(NATIVE_DIR)/run.sh Awfy
+	ONLY=kills TAG=onlyremove EXTRA="-H:-DeleteLocalSymbols -H:SideEffectAnalysisOnlyMethods=cd.RedBlackTree.remove" $(NATIVE_DIR)/run.sh Awfy
 	uv run python $(AWFY)/counters.py CD $(NATIVE)/awfy-sym $(NATIVE)/awfy-skipcd $(NATIVE)/awfy-onlyremove $(NATIVE)/awfy-a64 --runs 5
 	uv run python $(AWFY)/layouts.py $(NATIVE)/awfy-a16 $(NATIVE)/awfy-sym $(NATIVE)/awfy-a64 $(NATIVE)/awfy-a128 --runs 3
 
@@ -127,7 +128,6 @@ $(OUT)/awfy.allocsens.json: $(AWFY_SOURCES) $(EXPORTER)
 # The native-image driver, from the graal tree the scripts use: its own package
 # is the program. It needs the builder's jar too, for ExitStatus and
 # NativeImageGeneratorRunner, or the analysis reaches 17 of its methods.
-GRAAL := $(or $(GRAAL_HOME),$(if $(wildcard graal/substratevm/mxbuild/dists/standalone-pointsto.jar),$(CURDIR)/graal,/home/xmalec/graal))
 DRIVER_CP := $(subst $(eval) ,:,$(addprefix $(GRAAL)/substratevm/mxbuild/dists/,svm-driver.jar svm.jar native-image-base.jar svm-shared.jar) \
 	$(addprefix $(GRAAL)/sdk/mxbuild/dists/,nativeimage.jar collections.jar graal-sdk.jar word.jar))
 DRIVER := TARGET_CP=$(DRIVER_CP) DUMP_FILTER=com.oracle.svm.driver
