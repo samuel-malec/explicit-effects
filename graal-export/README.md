@@ -12,8 +12,11 @@ native-image builds can use it too; this directory has its standalone launcher,
 ## Example Usage
 
 ```bash
-./build.sh examples/conversion/Class.java && DUMP_IR=out/conversion.Class.json ./run-dump.sh conversion.Class
+./build.sh examples/conversion/Class.java && ./run-dump.sh conversion.Class
 ```
+
+This writes the facts and graphs to `out/conversion.Class.json`; `DUMP_IR=file.json` writes them elsewhere,
+and `DUMP_JSON=file.json` writes only the facts.
 
 ## Output
 Each method is exported as a json dictionary, which consists of the necessary information
@@ -54,6 +57,15 @@ Each method's facts also say what it does to memory beyond its field and array
 accesses, by what Graal says each node does: `allocates`; `vmWrites`, the VM's
 own locations it writes, such as `vm:identityHashCode`; `unknownReads`, nodes
 that may read any location; `unknown`, nodes that may write anything (no
-location, or synchronization); `unresolved`, calls without a target; and,
+location); `acquires` and `releases`, the synchronization, by the Java memory
+model: entering a lock and an ordered load acquire, leaving a lock and an ordered
+store release, an atomic update or a fence does both, and `locks` names the
+objects each of them is on, where the analysis can; `unresolved`, calls
+without a target; and,
 exported from a native-image build, `dead`, calls the image's own analysis
 proves it never makes.
+
+The facts also list `sharedObjects`: the objects another thread may reach. They are what a static
+field, an object in the image heap, a thread, a reference, or an argument of a call into code the facts
+don't describe whole can reach, through the fields and array elements that may hold them (`ThreadEscape`).
+Every other object is only ever touched by the thread that made it.

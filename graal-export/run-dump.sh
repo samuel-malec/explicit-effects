@@ -6,7 +6,13 @@
 #   ./run-dump.sh my.pkg.Main            # your own entry class
 #   ./run-dump.sh my.pkg.Main -H:...     # plus extra analyzer options
 #
+# Writes the facts and graphs to out/<Main>.json, or where DUMP_IR says; with
+# only DUMP_JSON set, just the facts, there.
+#
 # Env:
+#   DUMP_IR      where to write the facts and the program's graphs, what graal2ct
+#                reads (default out/<Main>.json, unless DUMP_JSON is set)
+#   DUMP_JSON    where to write the facts alone
 #   GRAAL_HOME   graal checkout (default /home/xmalec/graal)
 #   TARGET_CP    classes to analyse (default ./classes)
 #   DUMP_FILTER  the program: report, export graphs and list fields only for
@@ -19,6 +25,10 @@ ENTRY=Examples
 if [[ $# -gt 0 && "$1" != -* ]]; then
     ENTRY="$1"
     shift
+fi
+if [[ -z "${DUMP_IR:-}" && -z "${DUMP_JSON:-}" ]]; then
+    DUMP_IR="$HERE/out/$ENTRY.json"
+    mkdir -p "$HERE/out"
 fi
 
 exec java \

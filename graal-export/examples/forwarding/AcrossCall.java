@@ -3,9 +3,7 @@ package forwarding;
 /**
  * The load after the call reads the 5 stored before it: `length` only reads
  * Link.next, so with a token per field the call doesn't take h_value, the load's
- * token comes straight from the store, and the load takes the 5. With one heap
- * token the call takes the heap, and the load stays. Graal keeps it either way:
- * its call kills all of memory.
+ * token comes straight from the store, and the load takes the 5.
  */
 public class AcrossCall {
 
