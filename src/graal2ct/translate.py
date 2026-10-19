@@ -46,7 +46,7 @@ OPAQUE = {"EnsureClassInitialized", "MarkStaticFinalFieldInitialized", "PureBox"
           "ArrayCopyWithConversions",
           "UnaryMathIntrinsic", "ArrayCopy"}
 
-ALIASES = {"Pi", "ValueProxy", "PublishWrites"}
+ALIASES = {"Pi", "ValueProxy", "PublishWrites", "StateSplitProxy"}
 
 ENDS = {"If", "Return", "Unwind"}
 
@@ -532,10 +532,41 @@ class MethodTranslation:
         elif op == "FinalFieldBarrier" and self.constructor:
             pass  # ordered by the receiver the constructor returns
 
+        elif op == "MonitorId":
+            pass  # names the lock's slot in the frame, which nothing here reads
+
+        elif op in ("MonitorEnter", "MonitorExit"):
+            # Taking a lock acquires, leaving it releases. Which object is locked doesn't matter
+            # until we know which memory only this thread reaches: every token takes part.
+            self._emit("ref", "drop", [self.ref(n.inputs[0])], [], [])
+            self._synchronize("acquire" if op == "MonitorEnter" else "release", f"{op} at bci {n.bci}", n.receivers)
+
+        elif op == "Membar":
+            self._synchronize("release", f"{op} at bci {n.bci}")
+            self._synchronize("acquire", f"{op} at bci {n.bci}")
+
         else:
             raise Unsupported(op)
 
+    def _synchronize(self, kind: str, what: str, objects: tuple[str, ...] | None = None) -> None:
+        """An acquire or a release on every token of memory another thread may touch, unless it
+        synchronizes on objects no other thread can reach, which orders it with nothing."""
+        if not self.t.effects.synchronizes(objects):
+            return
+        for partition in self.t.effects.partitions:
+            if partition in self.token and partition in self.t.effects.shared:
+                before, after = self._advance(self.token[partition])
+                self._emit("heap", kind, [before], [after], ["heap"], note=what)
+
     def _field(self, n: Node) -> None:
+        if n.ordered and n.op == "LoadField":
+            # A volatile read acquires before it reads: what it reads may be another thread's
+            # write, and so may anything read after it.
+            self._synchronize("acquire", f"volatile read of {n.field} at bci {n.bci}", n.receivers)
+        elif n.ordered:
+            # A volatile write releases before it writes: another thread that reads the new value
+            # may see anything written before it, and the value itself.
+            self._synchronize("release", f"volatile write of {n.field} at bci {n.bci}", n.receivers)
         value = _type(n) if n.op == "LoadField" else self.type_of(n.inputs[-1])
         k = self.t.program.field_index(n.field, value)
         try:
@@ -672,8 +703,12 @@ class MethodTranslation:
         if n.flow == "ok":
             wanted = set().union(*(self.t.effects.tokens(c) for c in n.callees))
             partitions = [p for p in self.t.effects.partitions if p in wanted]
+            # A token no target writes comes back unchanged, which the rules may see through.
+            observes = tuple(at - len(partitions) for at, p in enumerate(partitions)
+                             if all(self.t.effects.keeps(c, p) for c in n.callees))
         else:
             partitions = [p for p in self.t.effects.partitions if p in self.token]
+            observes = ()
 
         tokens = [self._token_for(p, f"the call to {callee}") for p in partitions]
         heaps = ["heap"] * len(tokens)
@@ -693,6 +728,7 @@ class MethodTranslation:
 
         self._emit(ftype, "call", [k, *(self.ref(a) for a in n.args), *(before for before, _ in versions)], outs,
                    out_types, note=callee)
+        self.body[-1].observes = observes
         if constructs:
             self.renamed[self.value(n.args[0])] = f"v{n.id}"
 
