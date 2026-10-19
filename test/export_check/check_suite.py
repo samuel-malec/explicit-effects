@@ -109,24 +109,31 @@ def check_suite_conversion() -> None:
 
 
 def check_suite_limits() -> None:
-    """The volatile access, the lock and the switch are refused; the native call
-    makes the method take every token."""
-    for example, reason in (("limits.VolatileField", "volatile"), ("limits.Synchronized", "Monitor"),
-                            ("limits.Switch", "IntegerSwitch")):
-        program, translation = translate(example, "field")
-        assert not program.structures and any(reason in why for why in translation.refused.values()), \
-            (example, translation.refused)
+    """The switch is refused; the native call makes the method take every token. The lock
+    and the volatile read translate: taking the lock and the volatile read acquire every
+    token before the field is read, leaving the lock releases every token after it is
+    written."""
+    program, translation = translate("limits.Switch", "field")
+    assert not program.structures and any("IntegerSwitch" in why for why in translation.refused.values()), translation.refused
+    s = demo(translate("limits.Synchronized", "field")[0])
+    sync = [i.op for i in s.lambdas[0].body if i.op in ("acquire", "release", "getstatic_0", "setstatic_0")]
+    tokens = len(heaps(s.lambdas[0].params))
+    assert sync == ["acquire"] * tokens + ["getstatic_0", "setstatic_0"] + ["release"] * tokens, sync
+    s = demo(translate("limits.VolatileField", "field")[0])
+    sync = [i.op for i in s.lambdas[0].body if i.op in ("acquire", "release", "getstatic_0")]
+    assert sync == ["acquire"] * len(heaps(s.lambdas[0].params)) + ["getstatic_0"], sync
     facts, graphs = load(SUITE / "limits.OpaqueCall.json")
     effects = analyse(facts, PARTITIONERS["field"](facts))
     s = demo(translate("limits.OpaqueCall", "field")[0])
     assert len(heaps(s.lambdas[0].params)) == len(effects.partitions)
-    print("ok   suite: the limits are refused, and an opaque call takes every token")
+    print("ok   suite: the switch is refused, an opaque call takes every token, a lock and a volatile read acquire and release")
 
 
 #: example → partitioning → (loads forwarded, stores removed)
 OPTIMIZED = {
     "forwarding.ForwardedByGraal": {"none": (0, 0), "field": (0, 0)},
     "forwarding.AcrossCall": {"none": (0, 0), "field": (1, 0)},
+    "forwarding.AcrossReadingCall": {"none": (0, 0), "field": (1, 0)},
     "forwarding.WritingCallBlocks": {"none": (0, 0), "field": (0, 0)},
     "forwarding.RepeatedLoad": {"none": (0, 0), "field": (1, 0)},
     "forwarding.IntoBranchArm": {"none": (0, 0), "field": (1, 0)},
@@ -165,27 +172,34 @@ def check_suite_optimizations() -> None:
 
 
 #: example → whether the Java memory model lets the load take the value the method already has,
-#: in a program free of data races → (loads forwarded, stores removed) today, per field and per
+#: or the first store go, in a program free of data races → (loads forwarded, stores removed) today, per field and per
 #: object and field. RacySpin races, and the model promises it nothing, so the rules may hoist
-#: its load. Today every synchronization makes its method opaque, so nothing is forwarded; with
-#: a model of synchronization the allowed loads may start to be forwarded, the controls never.
+#: its load. An acquire writes, and a release reads, the partitions another thread may touch;
+#: memory only this thread reaches, and a lock on an object only it reaches, play no part.
+#: AcrossAtomicLocal keeps its load: its helper reaches code without facts, so the counter it is
+#: given counts as shared. The controls must never be rewritten.
 SYNCHRONIZING = {
-    "concurrency.AcrossRelease": (True, (0, 0)),
-    "concurrency.AcrossAcquireLocal": (True, (0, 0)),
+    "concurrency.AcrossRelease": (True, (1, 0)),
+    "concurrency.AcrossAcquireLocal": (True, (1, 0)),
     "concurrency.AcrossAcquireSharedBlocks": (False, (0, 0)),
-    "concurrency.AcrossLockLocal": (True, (0, 0)),
+    "concurrency.AcrossLockLocal": (True, (1, 0)),
     "concurrency.AcrossLockSharedBlocks": (False, (0, 0)),
-    "concurrency.AcrossLocalMonitor": (True, (0, 0)),
+    "concurrency.AcrossLocalMonitor": (True, (1, 0)),
     "concurrency.AcrossAtomicLocal": (True, (0, 0)),
-    "concurrency.FinalAcrossLock": (True, (0, 0)),
+    "concurrency.FinalAcrossLock": (True, (1, 0)),
     "concurrency.HandedToThreadBlocks": (False, (0, 0)),
     "concurrency.RacySpin": (True, (0, 0)),
+    "concurrency.ReleaseInMethod": (True, (1, 0)),
+    "concurrency.AcquireInMethodBlocks": (False, (0, 0)),
+    "concurrency.DeadStoreAcrossReleaseKeeps": (False, (0, 0)),
+    "concurrency.DeadStoreAcrossAcquire": (True, (0, 1)),
 }
 
 
 def check_suite_concurrency() -> None:
-    """No load is forwarded where another thread's write may become visible in between, and
-    each concurrency example is rewritten as its comment says."""
+    """No load is forwarded where another thread's write may become visible in between, no
+    store is removed that another thread may read, and each concurrency example is rewritten
+    as its comment says."""
     wrong = {}
     for example, (allowed, expected) in SYNCHRONIZING.items():
         for partition in ("field", "object-field"):
@@ -193,7 +207,7 @@ def check_suite_concurrency() -> None:
             demo(program)  # translated: a refused method would keep its loads for the wrong reason
             done = memory.apply(program)
             assert not check(program) + prelude.check(program, prelude.load()), (example, partition)
-            assert allowed or not done.forwarded, (example, partition, done.forwarded)
+            assert allowed or not (done.forwarded or done.removed), (example, partition, done.forwarded, done.removed)
             if (len(done.forwarded), len(done.removed)) != expected:
                 wrong[example, partition] = (done.forwarded, done.removed)
     assert not wrong, wrong

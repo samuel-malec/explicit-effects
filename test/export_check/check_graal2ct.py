@@ -185,18 +185,18 @@ def check_handlers_translate() -> None:
 
 def check_what_the_export_flags_is_refused() -> None:
     """A method the export flags, for something it could not express such as
-    a volatile access, is refused with the export's reason, although each of
-    its nodes would translate: a volatile store looks like any other. No
-    method of Examples is flagged."""
+    a graph it couldn't decode again, is refused with the export's reason,
+    although each of its nodes would translate. No method of Examples is
+    flagged."""
     _, graphs = load(EXAMPLES)
     assert not any(g.unsupported for g in graphs.values()), {k: g.unsupported for k, g in graphs.items() if g.unsupported}
     key = "Examples.deadStoreOtherField"
-    reason = "ordered (volatile) access to Examples$Counter.value at bci 2"
+    reason = "no graph after the analysis (GraalError)"
     flagged = {**graphs, key: dataclasses.replace(graphs[key], unsupported=(reason,))}
     translation = Translation(flagged)
     translation.translate([key])
     assert translation.refused == {key: reason}, translation.refused
-    print("ok   a method the export flags (a volatile access) is refused with its reason; Examples has none")
+    print("ok   a method the export flags is refused with its reason; Examples has none")
 
 
 def method_calls(program: Program) -> list[tuple[str, str, str]]:
@@ -346,10 +346,13 @@ def check_signature_rules() -> None:
     and loads it again. Through the call it touches Logger.count when the
     callee writes that field, int[] when it fills an int array, and the rest of
     memory when it allocates; constructing an object with a final field adds
-    that field and nothing more. It touches everything when the callee has a
-    monitor, a volatile store, no facts (a native), or a call the analysis did
-    not resolve; and the call the analysis did not resolve passes every token.
-    Without those facts, none of the four would touch everything.
+    that field and nothing more. It touches everything when the callee has no
+    facts (a native), or a call the analysis did not resolve; and the call the
+    analysis did not resolve passes every token. Without those facts, neither
+    would touch everything. The volatile store is to a Flag, and the monitor
+    locks a Box, that only this thread reaches: neither orders it with another
+    thread, so raise writes only the flag, and acrossMonitor touches
+    Counter.value and Box.v, and nothing else.
 
     A final field needs no token because a constructor returns its receiver
     and the object's later uses take that: in Item's constructor, the λ after
@@ -362,11 +365,14 @@ def check_signature_rules() -> None:
     assert effects.tokens(key["acrossArray"]) == (value, "int[]")
     assert effects.tokens(key["acrossAllocation"]) == (REST, value)
     assert effects.tokens(key["acrossFinalField"]) == (REST, value, "Signatures$Item.id"), effects.tokens(key["acrossFinalField"])
-    everything = {"acrossMonitor": "MonitorEnterNode", "acrossVolatile": "volatile access",
-                  "acrossNative": "has no facts", "acrossUnresolved": "unresolved call"}
+    everything = {"acrossNative": "has no facts", "acrossUnresolved": "unresolved call"}
     for name, why in everything.items():
         signature = effects.signatures[key[name]]
         assert signature.opaque and why in signature.why, (name, signature)
+    release = effects.signatures["Signatures.raise(LSignatures$Flag;)V"]
+    assert not release.releases and not release.opaque and release.writes == {"Signatures$Flag.raised"}, release
+    assert effects.tokens(key["acrossMonitor"]) == ("Signatures$Box.v", value), effects.tokens(key["acrossMonitor"])
+    assert all(effects.keeps("Signatures.raise(LSignatures$Flag;)V", p) == (p != "Signatures$Flag.raised") for p in effects.partitions)
 
     program = Translation(graphs, effects).translate(["Signatures.acrossUnresolved"])
     call = next(i for s in program.structures for l in s.lambdas for i in l.body if i.op == "call" and "Sink.take" in i.note)
@@ -379,14 +385,15 @@ def check_signature_rules() -> None:
     assert run.outs[0] == ("r", "ref") and initialized in branch.ins[1:], (run.outs, branch.text())
 
     blind = copy.deepcopy(facts)
-    for method in ("Signatures$Box.add(I)V", "Signatures.raise(LSignatures$Flag;)V"):
-        blind.methods[method]["unknown"] = []
+    for method in ("Signatures$Box.add(I)V",):
+        blind.methods[method]["unknown"] = blind.methods[method]["acquires"] = blind.methods[method]["releases"] = []
     blind.methods[key["acrossUnresolved"]]["unresolved"] = []
     blind.methods["Signatures.fromOutside()I"] = {"reads": [], "writes": [], "callees": []}
     known = analyse(blind, by_field)
     assert not any(known.signatures[key[name]].opaque for name in everything), [n for n in everything if known.signatures[key[n]].opaque]
-    print("ok   signature rules: a field, an array kind, an allocation, a final field; a monitor, a volatile store,"
-          " a native and an unresolved call touch everything; a constructor returns the object it initialized")
+    print("ok   signature rules: a field, an array kind, an allocation, a final field; a native and an unresolved call"
+          " touch everything, a volatile store reads shared memory, a lock only this thread reaches is nothing;"
+          " a constructor returns the object it initialized")
 
 
 def check_kills_for_graal() -> None:
@@ -396,7 +403,9 @@ def check_kills_for_graal() -> None:
     writes int[]. A method that allocates, as item and make do, writes the
     initialization of what it allocates and the fields its constructor stores.
     One that reaches a monitor, a volatile store, a native or an unresolved call
-    may write anything, and so may main. With objects told apart, in Aliasing, countInto
+    may write anything, and so may main. A volatile store is a release, which
+    the token form lets loads move up past; Graal can't be told that without
+    letting earlier loads sink below it too. With objects told apart, in Aliasing, countInto
     writes Counter.value only of the counters passed to it, which is not the
     partition of forwardAcrossCallOnOtherObject's own counter; each access has
     its partition, two in forwardPastOtherObject and one in its control."""

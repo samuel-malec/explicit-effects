@@ -108,12 +108,14 @@ def check_forwarding() -> None:
     after the call in forwardAcrossCall, forwardAcrossWritingCall, where it is
     the 5 stored before the call, and repeatedLoadAcrossCall, and across the
     dispatch in forwardAcrossVirtualCall, whose two targets write nothing; in Signatures,
-    after each call whose signature leaves Counter.value out. Not in the
-    controls, whose callee writes Counter.value or whose load goes through
-    another reference (forwardMaybeAliasControl), nor after a call that
-    touches everything: a monitor, a volatile store, a native, an unresolved
-    call. With one heap token every call takes the heap, so nothing is
-    forwarded past one."""
+    after each call whose signature leaves Counter.value out, after the
+    volatile store, a release: it lets no other thread's write in, so the call
+    gives Counter.value's token back unchanged; and after the monitor, which
+    locks a Box only this thread reaches. Not in the controls, whose callee
+    writes Counter.value or whose load goes through another reference
+    (forwardMaybeAliasControl), nor after a call that touches everything: a
+    native, an unresolved call. With one heap token every call takes the heap,
+    so nothing is forwarded past one."""
     program = translate(EXAMPLES, "field")
     done = memory.apply(program)
     assert methods(within(done.forwarded)) == {"Examples_forwardAcrossCall", "Examples_forwardAcrossWritingCall",
@@ -123,7 +125,7 @@ def check_forwarding() -> None:
     assert origin(run, move.ins[0]).op == "cons_5", move.text()
 
     done = memory.apply(translate(SIGNATURES, "field"))
-    across = {f"Signatures_across{name}" for name in ("Field", "Array", "Allocation", "FinalField")}
+    across = {f"Signatures_across{name}" for name in ("Field", "Array", "Allocation", "FinalField", "Volatile", "Monitor")}
     assert methods(done.forwarded) == across, done.forwarded
 
     for path in (EXAMPLES, SIGNATURES):
