@@ -20,7 +20,7 @@ from pathlib import Path
 from .graal_import import load
 
 # Effects the facts can't name one by one, as the export lists them.
-EFFECTS = ("unknown", "unresolved", "unknownReads", "vmWrites", "dead")
+EFFECTS = ("unknown", "acquires", "releases", "unresolved", "unknownReads", "vmWrites", "dead")
 
 
 def short_method(key: str) -> str:
@@ -66,9 +66,11 @@ def show(key: str, facts: dict) -> str:
         lines.append(f"    {'calls':<8}{', '.join(short_method(c) for c in facts['callees'])}")
     if facts.get("allocates"):
         lines.append("    allocates")
+    locks = facts.get("locks", {})
     for kind in EFFECTS:
         for what in facts.get(kind, ()):
-            lines.append(f"    {kind:<8}{what}")
+            on = f"   on {receivers(locks[what])}" if what in locks else ""
+            lines.append(f"    {kind:<7} {what}{on}")
     for access in facts.get("accesses", ()):
         at = (access.get("at") or "").rpartition(":")[2]
         lines.append(f"    {access['kind']:<6}{short_field(access['field']):<30} through {receivers(access['receivers'])}"

@@ -11,12 +11,19 @@ from .graal_ir import Graph, parse_graph
 class PointsToFacts:
     methods: dict[str, dict] = field(default_factory=dict)  # What fields does a method access
     fields: dict[str, dict] = field(default_factory=dict)  # what fields are accessed
+    # The objects another thread may reach, by the export's names; None when the export doesn't
+    # say, so that every object counts as shared.
+    shared: frozenset[str] | None = None
 
 
 def load_facts(path: str | Path) -> PointsToFacts:
     """Only the facts of an export, without reading its graphs."""
     data = json.loads(Path(path).read_text())
-    return PointsToFacts(data.get("methods", {}), data.get("fields", {}))
+    return PointsToFacts(data.get("methods", {}), data.get("fields", {}), _shared(data))
+
+
+def _shared(data: dict) -> frozenset[str] | None:
+    return frozenset(data["sharedObjects"]) if "sharedObjects" in data else None
 
 
 def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
@@ -40,4 +47,4 @@ def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
         counts[g.name] = counts.get(g.name, 0) + 1
 
     keyed = {(g.name if counts[g.name] == 1 else g.name + g.descriptor): g for g in graphs}
-    return PointsToFacts(data.get("methods", {}), data.get("fields", {})), keyed
+    return PointsToFacts(data.get("methods", {}), data.get("fields", {}), _shared(data)), keyed

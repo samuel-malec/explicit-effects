@@ -41,7 +41,7 @@ def _node(n: Node) -> str:
     if n.value is not None:
         details.append(n.value)
     if n.field:
-        details.append(n.field.rsplit("$", 1)[-1])
+        details.append(("volatile " if n.ordered else "") + n.field.rsplit("$", 1)[-1])
     if n.cls:
         details.append(n.cls.rsplit("$", 1)[-1])
     if n.kind:
