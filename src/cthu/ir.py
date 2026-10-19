@@ -3,8 +3,8 @@ from functools import cache
 
 LINEAR = frozenset({"heap"})
 
-# How code leaves the method: with an exception and every token, or by stopping the program.
-THROWS, TRAPS = "throws", "traps"
+# How code leaves the method
+THROWS, TRAPS = "throws", "taps"
 
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
 _TYPES = {code: t for t, code in _TYPE_CODES.items()}
@@ -50,6 +50,7 @@ class Instr:
     at: str = ""  # where in the bytecode it came from, as graal-export names a position
     field: str = ""  # the field a field access reads or writes
     exit: str = ""  # how a guard leaves the method: THROWS or TRAPS
+    observes: tuple[int, ...] = () # tokens that are only read
 
     def renamed(self, ins: list[str], outs: list[str]) -> "Instr":
         copy = object.__new__(Instr)
@@ -61,7 +62,8 @@ class Instr:
         if self.outs:
             line += " →  " + " ".join(self.outs)
         # A call's note is its callee, which the closure's structure already names.
-        comment = "" if self.op == "call" else self.note or self.field or self.exit
+        comment = ("only reads " + " ".join(self.ins[at] for at in self.observes) if self.observes else "") \
+            if self.op == "call" else self.note or self.field or self.exit
         return line + (f"   ; {comment}" if comment else "")
 
 
