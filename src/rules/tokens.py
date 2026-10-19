@@ -75,12 +75,18 @@ def names_in(lam: Lambda) -> set[str]:
 
 def _trace(lam: Lambda, token: str, loads: bool = False) -> tuple[Instr | None, str]:
     """Walk a token back past what passes it on unchanged: moves and guards,
-    and with `loads` also loads, which write nothing. Return the instruction
-    that made it (None if it came in as a parameter) and its name there."""
+    releases and calls that only read it, and with `loads` also loads, which
+    write nothing.
+    Return the instruction that made it (None if it came in as a parameter) and
+    its name there."""
     defs = {out: i for i in lam.body for out in i.outs}
-    while (d := defs.get(token)) is not None and d.type == "heap" and (
-            d.op in ("move", "guard") or (loads and is_load(d))):
-        token = d.ins[0]
+    while (d := defs.get(token)) is not None:
+        if d.type == "heap" and (d.op in ("move", "guard", "release") or (loads and is_load(d))):
+            token = d.ins[0]
+        elif d.op == "call" and (at := d.outs.index(token) - len(d.outs)) in d.observes:
+            token = d.ins[at]
+        else:
+            break
     return d, token
 
 

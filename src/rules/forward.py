@@ -150,7 +150,7 @@ def split_merge(s: Structure) -> str | None:
         for at, load in enumerate(merge.body):
             if is_load(load):
                 break
-            if not (is_pure(load) or (load.type == "heap" and load.op in ("move", "guard"))):
+            if not (is_pure(load) or (load.type == "heap" and load.op in ("move", "guard", "release"))):
                 break
         else:
             continue

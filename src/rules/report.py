@@ -29,7 +29,6 @@ from .compare import MODES, accesses, column_total, probe_name, read_probe, stor
 REASONS = [
     (r"allocation after escape analysis", "allocation after escape analysis"),
     (r"^Monitor", "a monitor"),
-    (r"ordered \(volatile\)", "a volatile access"),
     (r"no graph", "no graph (native or abstract)"),
 ]
 
