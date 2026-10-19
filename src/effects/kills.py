@@ -21,7 +21,13 @@ INIT = "init"
 def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tuple[str, ...]]:
     """Method → the partitions it may write, a field's own name where the
     partition is all of the field, `init` if it allocates, and the VM's state it
-    writes; `any` if it reaches something the facts can't say anything about."""
+    writes; `any` if it reaches something the facts can't say anything about, or
+    synchronization.
+
+    A release kills everything too, although it writes only its own writes: Graal
+    would let a load before a call that kills nothing of its location float below
+    the call, where it may read what another thread wrote after the release saw
+    it. A kill set can't stop loads below the call without stopping those above."""
     part = program_partition(facts, PARTITIONERS[partition](facts))
     rest = part(REST)
     methods = facts.methods
@@ -33,7 +39,7 @@ def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tup
 
     callees = callees_of(facts)
     unknown = reaching(callees, {m: m for m, e in methods.items()
-                                 if e.get("unknown") or e.get("unresolved") or any(c not in methods for c in callees[m])})
+                                 if e.get("unknown") or e.get("acquires") or e.get("releases") or e.get("unresolved") or any(c not in methods for c in callees[m])})
     close_over_callees(callees, written)
     return {m: ANY if m in unknown else tuple(sorted(written[m])) for m in sorted(methods)}
 

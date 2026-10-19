@@ -41,6 +41,21 @@ REST = "*"
 # anything about, and of one whose receiver is always null, which touches nothing.
 UNKNOWN, NOTHING = "?", "null"
 
+# The pseudo-object of a class's static fields, which every thread reaches.
+STATICS = ".<statics>"
+
+
+def shared_object(facts: PointsToFacts, o: str) -> bool:
+    """Whether another thread may reach the object: one the analysis can't name, a class's
+    static fields, or one the export lists as shared. Without that list, any object."""
+    return facts.shared is None or o == UNKNOWN or o.endswith(STATICS) or o in facts.shared
+
+
+def synchronizes_on(facts: PointsToFacts, objects: Receivers) -> bool:
+    """Whether synchronizing on these objects, a lock's or a volatile field's, may order this
+    thread with another: not when no other thread can reach any of them."""
+    return objects is None or any(o != NOTHING and shared_object(facts, o) for o in objects)
+
 
 def one_heap(field: str, receivers: Receivers = None) -> str:
     """All of memory as one partition."""
@@ -208,6 +223,9 @@ class Signature:
     writes: frozenset[str]
     opaque: bool = False  # may touch anything
     why: str = ""  # what makes it opaque: the effect at the root of it
+    # It, or a method it calls, releases: other threads may then see anything this thread
+    # wrote before, so it reads every partition, though it writes only `writes`.
+    releases: bool = False
 
 
 @dataclass
@@ -215,6 +233,12 @@ class Effects:
     partition: Partitioner
     signatures: dict[str, Signature]  # by method: name and descriptor
     partitions: tuple[str, ...]  # every partition of the program, the rest of memory included
+    shared: frozenset[str] | None = None  # the partitions another thread may touch: all of them unless given
+    facts: PointsToFacts | None = None  # which objects another thread may reach: any, without facts
+
+    def __post_init__(self) -> None:
+        if self.shared is None:
+            self.shared = frozenset(self.partitions)
 
     def tokens(self, method: str) -> tuple[str, ...]:
         """The partitions a method needs a token for."""
@@ -222,6 +246,16 @@ class Effects:
         if signature is None or signature.opaque:
             return self.partitions
         return tuple(sorted(signature.reads | signature.writes))
+
+    def synchronizes(self, objects: Receivers) -> bool:
+        """Whether synchronizing on these objects may order this thread with another."""
+        return self.facts is None or synchronizes_on(self.facts, objects)
+
+    def keeps(self, method: str, partition: str) -> bool:
+        """Whether a call to the method gives the partition's token back unchanged: the
+        method may read the partition, but writes none of it."""
+        signature = self.signatures.get(method)
+        return signature is not None and not signature.opaque and partition not in signature.writes
 
 
 def no_analysis() -> Effects:
@@ -327,7 +361,6 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
         {part(REST)} if e.get("allocates") else set())
               for m, e in methods.items()}
     callees = callees_of(facts)
-    close_over_callees(callees, reads, writes)
 
     # What makes a method touch everything, and every method that reaches it too.
     why: dict[str, str] = {}
@@ -343,6 +376,34 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
             why[m] = f"{m}: {e['unknownReads'][0]}"
     why = reaching(callees, why)
 
+    # The partitions another thread may touch: the rest of memory, and every partition some
+    # access reaches through an object another thread may reach.
+    shared = {part(REST)}
+    for m in methods:
+        for _, f, r in touched[m]:
+            if r is None or any(shared_object(facts, o) for o in r):
+                shared.add(part(f, r))
+
+    # Synchronization on an object another thread may reach. An acquire may show this thread
+    # their writes, so it writes every shared partition; a release may show them this thread's
+    # writes and lets none of theirs in, so it reads every shared partition. Synchronization on
+    # an object only this thread reaches orders it with no other thread, and does nothing.
+    def synchronizing(e: dict, kind: str) -> list[str]:
+        locks = e.get("locks", {})
+        return [s for s in e.get(kind, ()) if s not in locks or synchronizes_on(facts, locks[s])]
+
+    releasing = {}
+    for m, e in methods.items():
+        if synchronizing(e, "acquires"):
+            reads[m] |= shared
+            writes[m] |= shared
+        if synchronizing(e, "releases"):
+            reads[m] |= shared
+            releasing[m] = m
+    close_over_callees(callees, reads, writes)
+    releases = reaching(callees, releasing)
+
     everything = {p for m in methods for p in reads[m] | writes[m]} | {part(REST)}
-    signatures = {m: Signature(frozenset(reads[m]), frozenset(writes[m]), m in why, why.get(m, "")) for m in methods}
-    return Effects(part, signatures, tuple(sorted(everything)))
+    signatures = {m: Signature(frozenset(reads[m]), frozenset(writes[m]), m in why, why.get(m, ""), m in releases and m not in why)
+                  for m in methods}
+    return Effects(part, signatures, tuple(sorted(everything)), frozenset(shared), facts)
