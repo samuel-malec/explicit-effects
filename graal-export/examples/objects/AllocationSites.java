@@ -1,3 +1,5 @@
+package objects;
+
 public class AllocationSites {
 
     private static class A{ int value; }
