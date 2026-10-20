@@ -79,7 +79,7 @@ signature floating[ T, S, B ] : simple[ T, S, B ]
     lt?  ∷ T × T → B
 )
 
-; Graal's conversions between numbers, narrowing included, and its three-way comparison.
+; Graal's conversions between numbers
 signature numeric[ T, I ]
 (
     to_int    ∷ T → int
@@ -107,14 +107,12 @@ signature reference[ R, S, B, I ] : simple[ R, S, B ]
     exception ∷ ∅ → R  ; a new exception
 )
 
-; An exception is control flow: a method gives back the exception it threw, null when it
-; returned normally, and its caller branches on it.
 signature memory[ H, S, B ] : linear[ H, S, B ]
 (
-    trap ∷ H → ∅        ; the program stops: a deoptimization, which ahead-of-time code never comes back from
-    guard ∷ H × B → H   ; leaves the method when B holds, as a branch to an arm that throws or traps would
-    acquire ∷ H → H     ; synchronization that may show this thread what other threads wrote: the memory may have changed
-    release ∷ H → H     ; synchronization that may show other threads what this thread wrote: the memory is read, and stays as it was
+    trap ∷ H → ∅
+    guard ∷ H × B → H
+    acquire ∷ H → H
+    release ∷ H → H
 )
 
 signature function[ F, S, B, I, O, G ] : simple[ F, S, B ]
