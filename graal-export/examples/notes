@@ -1,0 +1,1 @@
+mx native-image -cp ../graalir-playground/ -H:Dump=:2 -H:PrintGraph=Network -H:MethodFilter=PureArithmetic.* conversion.PureArithmetic

@@ -7,7 +7,6 @@
 #   ./suite forwarding.AcrossCall NullCheck    # these examples, by class or package.class
 #
 # Writes out/suite/<package>.<Class>.json, and <package>.<Class>.allocsens.json for
-# packages objects and concurrency. .notes/example-suite.md says in which order to read them.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 SUITE="$HERE/examples"

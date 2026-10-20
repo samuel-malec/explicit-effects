@@ -5,7 +5,7 @@ package concurrency;
  * passes it only to `demo`. No other thread can take its monitor, so taking it
  * synchronizes with nothing, and the load may take the 5 even though the
  * counter is in a static field that other threads can reach. This is the case
- * lock elision needs. Today the call takes every token, and the load stays.
+ * lock elision needs.
  */
 public class AcrossLocalMonitor {
 

@@ -3,8 +3,7 @@ package objects;
 /**
  * The call writes Counter.value, but only ever of the other counter: with object
  * partitions its signature names only that object's partition, so the call doesn't
- * take the token of counter.value, and the load takes the 5. Per field the call
- * takes h_value, as in forwarding.WritingCallBlocks.
+ * take the token of counter.value, and the load takes the 5. 
  */
 public class CallOnOtherObject {
 

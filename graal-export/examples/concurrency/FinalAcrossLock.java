@@ -4,7 +4,7 @@ package concurrency;
  * A final field read on both sides of a lock. A final field keeps the value
  * its constructor gave it, and every thread that sees the object sees that
  * value, so the second load may take the first one's value across any
- * synchronization. Today the call takes every token, and the load stays.
+ * synchronization.
  */
 public class FinalAcrossLock {
 

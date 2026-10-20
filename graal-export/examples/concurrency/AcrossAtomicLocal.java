@@ -4,7 +4,7 @@ package concurrency;
  * An atomic update between a store and a load: `ticket` increments a shared
  * AtomicInteger, a compare-and-swap, which is both an acquire and a release.
  * The counter is allocated in `main` and no other thread can reach it, so the
- * load may take the 5. Today the call takes every token, and the load stays.
+ * load may take the 5. 
  */
 public class AcrossAtomicLocal {
 

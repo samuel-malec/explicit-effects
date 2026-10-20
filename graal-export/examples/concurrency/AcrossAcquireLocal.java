@@ -5,8 +5,7 @@ package concurrency;
  * makes what another thread wrote before setting the flag visible here. But
  * the counter is allocated in `main` and never stored where another thread
  * could reach it, so no other thread writes its value: the load may take the 5.
- * Telling that apart needs a thread-escape analysis. Today the call takes every
- * token, and the load stays.
+ * Telling that apart needs a thread-escape analysis.
  */
 public class AcrossAcquireLocal {
 

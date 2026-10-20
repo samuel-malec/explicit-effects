@@ -3,10 +3,7 @@ package concurrency;
 /**
  * A release between a store and a load: `publish` writes a volatile field. A
  * release makes this thread's earlier writes visible to a thread that later
- * reads the flag, but lets no other thread's write in. So in a program free of
- * data races the load may take the 5, whatever the object. Today every
- * synchronization makes its method opaque: the call takes every token, and the
- * load stays.
+ * reads the flag, but lets no other thread's write in. 
  */
 public class AcrossRelease {
 
