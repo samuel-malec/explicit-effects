@@ -2,8 +2,7 @@ package forwarding;
 
 /**
  * Both arms store, and the load after the merge reads whichever value its arm
- * stored: the rules split the merge, so that each arm jumps to a copy of it, up to
- * the load, that takes the arm's value as a parameter, as a phi.
+ * stored. Instead, each arm could jump to a specialised branch with the load forwarded.
  */
 public class AcrossMerge {
 

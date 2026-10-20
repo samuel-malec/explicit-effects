@@ -1,7 +1,6 @@
 package forwarding;
 
 /**
- * An example of a program that can't really be optimized as a sanity check of fundamental limitations
  * Control for OutOfLoop: `countInto` writes Counter.value in every iteration, so
  * each load must read what the call left, and none leaves the loop.
  */

@@ -1,9 +1,8 @@
 package forwarding;
 
 /**
- * The load is in one arm of a branch, its value stored above the branch: the rules
- * pass the value down the branch as a new parameter of both arms, and the load in
- * the arm takes it.
+ * The load is in one arm of a branch, its value stored above the branch.
+ * We could pass the value down the branch and forward the load.
  */
 public class IntoBranchArm {
 

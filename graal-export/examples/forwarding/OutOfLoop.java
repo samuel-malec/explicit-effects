@@ -2,9 +2,7 @@ package forwarding;
 
 /**
  * Nothing in the loop writes Counter.value, but no store before the loop gives its
- * value: the rules peel the first iteration, whose load reads it, and the loop
- * takes that value, so the loop itself has no load left. A load can't simply move
- * above the loop: the loop may not run at all.
+ * value.
  */
 public class OutOfLoop {
 

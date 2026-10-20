@@ -2,9 +2,7 @@ package forwarding;
 
 /**
  * The load after the call reads the 5 stored before it, although `sum` reads
- * Counter.value: it writes nothing, so with a token per field the call takes
- * h_value but gives it back unchanged, and the load's token still comes from
- * the store.
+ * Counter.value, it doesn't modify it.
  */
 public class AcrossReadingCall {
 

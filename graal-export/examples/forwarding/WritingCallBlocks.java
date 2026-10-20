@@ -1,8 +1,8 @@
 package forwarding;
 
 /**
- * Control for AcrossCall: `countInto` writes Counter.value, so the call takes h_value
- * under every partitioning, and the load must read what the call left.
+ * Control for AcrossCall: `countInto` writes Counter.value,
+ * and the load must read what the call left.
  */
 public class WritingCallBlocks {
 

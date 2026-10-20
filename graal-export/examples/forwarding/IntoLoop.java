@@ -2,8 +2,7 @@ package forwarding;
 
 /**
  * The value stored before the loop lasts through it: nothing in the loop writes
- * Counter.value. The loop header takes the value as a new parameter, the entry
- * passes the 1, the back edge passes it on, and the load in the body takes it.
+ * Counter.value, and therefore the load is loop invariant. 
  */
 public class IntoLoop {
 

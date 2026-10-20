@@ -2,9 +2,7 @@ package forwarding;
 
 /**
  * Nothing for the rules to do: with nothing between the store and the load, Graal
- * forwards the 5 itself before the analysis, so the export has no load left. That
- * is why every other example here puts a call between them, which Graal can't see
- * through.
+ * forwards the 5 itself before the analysis, so the export has no load left.
  */
 public class ForwardedByGraal {
 

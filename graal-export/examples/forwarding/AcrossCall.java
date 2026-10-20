@@ -2,8 +2,7 @@ package forwarding;
 
 /**
  * The load after the call reads the 5 stored before it: `length` only reads
- * Link.next, so with a token per field the call doesn't take h_value, the load's
- * token comes straight from the store, and the load takes the 5.
+ * Link.next, therefore we don't have to load for the second time.
  */
 public class AcrossCall {
 
