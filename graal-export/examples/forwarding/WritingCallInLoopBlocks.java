@@ -9,7 +9,6 @@ public class WritingCallInLoopBlocks {
     static class Counter { int value; }
     static class Link { Link next; }
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static void countInto(Counter counter, Link link) {
         if (link != null) {
             counter.value++;

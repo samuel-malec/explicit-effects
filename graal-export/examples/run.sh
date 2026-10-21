@@ -4,7 +4,6 @@
 # --field (default) narrows calls and removes dead stores; --object-field also splits fields by
 # allocation site; --graal applies nothing. --dump sends the graphs to IGV (start `mx igv`).
 # Results go to $OUT/<class>/<variant> (default /tmp/side-effects): image, counts.txt, kills.txt.
-# The examples live here, in explicit-effects; ~/graal/graalir-playground is a link to this directory.
 set -euo pipefail
 
 GRAAL=${GRAAL:-$HOME/graal}

@@ -11,7 +11,6 @@ public class LoopCarried {
     static class Counter { int value; }
     static class Link { Link next; }
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static int length(Link link) {
         return link == null ? 0 : 1 + length(link.next);
     }

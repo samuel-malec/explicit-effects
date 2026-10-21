@@ -11,7 +11,6 @@ public class AcrossReadingCall {
         Counter next;
     }
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static int sum(Counter counter) {
         return counter == null ? 0 : counter.value + sum(counter.next);
     }
