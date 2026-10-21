@@ -21,6 +21,7 @@ public class AllocationSites {
     public static void main(String[] args) {
         A a1 = new A();
         A a2 = new A();
-        sink = demo(a1, a2, new Link());
+        A tmp = args.length > 0 ? a1 : a2;
+        sink = demo(a1, tmp, new Link());
     }
 }
