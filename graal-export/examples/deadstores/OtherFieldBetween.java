@@ -1,10 +1,7 @@
 package deadstores;
 
 /**
- * A store to another field comes between the two stores to counter.value. With a
- * token per field it takes h_other, not h_value, so the first store's token goes
- * straight to the overwrite, and the store is dead. With one heap token the store
- * between takes the heap, and the rule never looks past a memory operation.
+ * A store to another field comes between the two stores to counter.value.
  */
 public class OtherFieldBetween {
 

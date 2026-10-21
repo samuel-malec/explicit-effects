@@ -1,9 +1,7 @@
 package deadstores;
 
 /**
- * Both arms of the branch overwrite the field before anything reads it: the first
- * store is dead, even with one heap token, because the rule follows the token into
- * both arms.
+ * Both arms of the branch overwrite the field before anything reads it.
  */
 public class BothArms {
 

@@ -1,8 +1,7 @@
 package deadstores;
 
 /**
- * The simplest dead store: overwritten right away, with nothing between. Compare
- * what the export still has with what the rules leave.
+ * The simplest dead store: overwritten right away, with nothing between.
  */
 public class Adjacent {
 
