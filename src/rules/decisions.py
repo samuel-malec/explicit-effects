@@ -16,14 +16,14 @@ from . import memory, tokens
 
 
 def dead_stores(export: Path, partition: str = "field") -> list[str]:
-    """The stores the rules find dead, as `position\\tfield`, for Native Image
+    """The stores the rules find deadm for Native Image
     to remove. Loads aren't forwarded first: a store that is dead only because
     our rules removed a load must not go, since Native Image keeps that load."""
     facts, graphs = load(export)
     program = Translation(graphs, analyse(facts, PARTITIONERS[partition](facts))).translate(sorted(graphs))
     done = memory.apply(program, forward=False)
     left = {f"{i.at}\t{i.field}" for s in program.structures for lam in s.lambdas for i in lam.body
-            if (m := tokens.ACCESS.fullmatch(i.op)) and m.group(1) == "set" and i.at}
+            if tokens.is_store(i) and i.at}
     return sorted(set(done.dead) - left)
 
 

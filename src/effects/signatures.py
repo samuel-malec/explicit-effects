@@ -223,10 +223,7 @@ class Signature:
     writes: frozenset[str]
     opaque: bool = False  # may touch anything
     why: str = ""  # what makes it opaque: the effect at the root of it
-    # It, or a method it calls, releases: other threads may then see anything this thread
-    # wrote before, so it reads every partition, though it writes only `writes`.
-    releases: bool = False
-
+    releases: bool = False # whether this method, or any other method it may call, releases
 
 @dataclass
 class Effects:

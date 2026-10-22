@@ -1,12 +1,4 @@
-""" Graal IR → Cthulhu transformation 
-
-    The translation works as follows:
-    Each method becomes a Cthulhu structure, basic block becomes a λ, a branch an
-    `opt`/`join` pair with a frame that forks every token, and a loop a λ that jumps
-    back to itself. Every memory operation takes the token of its partition and
-    gives the next one. An exception is control flow, as in Graal IR: a method
-    gives back the exception it threw, and its caller branches on it.
-"""
+""" Graal IR → Cthulhu transformation. """
 
 import re
 from itertools import count
@@ -536,8 +528,8 @@ class MethodTranslation:
             pass  # names the lock's slot in the frame, which nothing here reads
 
         elif op in ("MonitorEnter", "MonitorExit"):
-            # Taking a lock acquires, leaving it releases. Which object is locked doesn't matter
-            # until we know which memory only this thread reaches: every token takes part.
+            # Taking a lock acquires, leaving it releases: on every token of memory another thread
+            # may touch, unless no other thread can reach the objects the lock may be.
             self._emit("ref", "drop", [self.ref(n.inputs[0])], [], [])
             self._synchronize("acquire" if op == "MonitorEnter" else "release", f"{op} at bci {n.bci}", n.receivers)
 
