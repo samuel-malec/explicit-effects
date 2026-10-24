@@ -16,9 +16,9 @@ explicit-effects/
 ├── src/
 │   ├── graal/         # loads a Graal IR export
 │   ├── cthu/          # the Graal dialect of Cthulhu, parser and single-use checker
-│   ├── effects/       # heap partitions and method signatures: which partitions a method may touch
-│   ├── graal2ct/      # the Graal IR → Cthulhu translation
-│   └── rules/         # rewrites on the token form and the comparison with Graal
+│   ├── effects/       # heap partitions and method signatures
+│   ├── graal2ct/      # the Graal IR to Cthulhu translation
+│   └── rules/         # ad-hoc optimizations on Cthu programs
 ├── test/              # example exports and the checks
 ├── graal-export/      # runs the standalone points-to analysis and exports its facts and Graal IR
 │   ├── examples/      # concept programs to learn the pipeline from
