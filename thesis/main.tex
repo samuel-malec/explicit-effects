@@ -3,17 +3,26 @@
 \begin{document}
     \input{frontmatter}
 
+    % The main text, introduction to conclusion: the only part the faculty counts,
+    % 30 to 70 standard pages of 1,800 characters (50 recommended).
     \input{chapters/introduction}
-    \input{chapters/preliminaries}
-    % \input{chapters/explicit-effects}
-    \input{chapters/analysis}
-    \input{chapters/conversion}
+    \input{chapters/background}
+    \input{chapters/problem}
+    \input{chapters/effects}
+    \input{chapters/implementation}
     \input{chapters/evaluation}
+    \input{chapters/related-work}
     \input{chapters/conclusion}
-    \backmatter
-    \chapter{Bibliography}
+
+    % The faculty's order: the main text, the bibliography, then the appendices.
     \begingroup
     \raggedright
-    \printbibliography[heading=none]
+    \printbibliography[heading=bibintoc, title=Bibliography]
     \endgroup
+
+    \appendix
+    \input{chapters/appendix-archive}
+    \input{chapters/appendix-proofs}
+    \input{chapters/appendix-dialect}
+    \input{chapters/appendix-reproduction}
 \end{document}

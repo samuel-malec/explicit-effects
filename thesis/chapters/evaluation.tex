@@ -1,1 +1,27 @@
 \chapter{Evaluation}\label{chap:evaluation}
+% Budget: 12 standard pages. The faculty expects an experimental thesis to explain the approaches compared,
+% describe the experiments, analyse the results and draw conclusions. Material:
+% .notes/evaluation/evaluation-2026-10-22.md, evaluation-2026-10-24-concurrency.md.
+
+\section{Method}\label{sec:eval-method}
+% Programs (corpus, examples, Are We Fast Yet, javac, Native Image's JUnit suite), image configurations,
+% the machine, what is counted, how correctness and timing are checked.
+
+\section{What Graal Optimizes with the Facts (RQ1)}\label{sec:eval-gain}
+% Loads and stores left, calls narrowed, run time; secondarily, the same facts used by rules on the token form.
+
+\section{Cost against Benefit (RQ2)}\label{sec:eval-cost}
+% Build time added by each step, before and after the cuts, against the gains.
+
+\section{What Modelling Concurrency Enables (RQ3)}\label{sec:eval-concurrency}
+% Thread escape's answers, lock elision and ordinary volatile accesses: designed shapes, AWFY, javac.
+
+\section{Soundness in Practice (RQ4)}\label{sec:eval-soundness}
+% Every image against the JVM, controls that must fail, Native Image's JUnit suite.
+
+\section{What Blocks the Analysis}\label{sec:eval-blockers}
+% The layers that make calls opaque on real programs: synchronization, class initialization, identity
+% hash codes, aliased arrays.
+
+\section{Threats to Validity}\label{sec:eval-threats}
+% Static counts and unrolling, the analysis changing the code, code placement, one machine, few programs.

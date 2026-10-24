@@ -26,12 +26,20 @@
 \cleardoublepage
 
 \section*{Declaration}
-I hereby declare that this thesis is my original work and that I developed it
-independently. I have properly cited all sources and literature used in this
-thesis and provided complete references to them.
+% The faculty's wording, verbatim.
+Hereby I declare that this thesis is my original authorial work, which I have worked out on my own.
+All sources, references, and literature used or excerpted during elaboration of this work are properly cited
+and listed in complete reference to the due source.
+
+\bigskip
+% Required by the faculty, recommended on the same page. TODO: say exactly what you used AI tools for,
+% which parts they generated, and keep the closing sentence. A draft to correct:
+During the preparation of this thesis, I used Claude Code (Anthropic, \url{https://claude.ai}) to write and
+review source code, to run and summarise experiments, and to help structure the text.
+After using this tool, I checked the content and accept full responsibility for it.
 
 \vfill
-\textbf{Supervisor:} TBD 
+\textbf{Supervisor:} Petr Ročkai % TODO: academic titles
 
 \cleardoublepage
 
@@ -41,11 +49,14 @@ Write your acknowledgements here.
 \cleardoublepage
 
 \section*{Abstract}
+% At most one page: the problem, the approach, the main results (gain, cost, concurrency).
 Write your abstract here.
 
 \bigskip
 \subsection*{Keywords}
-keyword, keyword
+% 5 to 10, comma-separated, about the subject rather than the tools. TODO: a proposal to adjust.
+side-effect analysis, static single use, linear types, points-to analysis, ahead-of-time compilation,
+memory optimization, thread escape analysis, lock elision, GraalVM Native Image
 
 \cleardoublepage
 

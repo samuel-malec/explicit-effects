@@ -1,0 +1,18 @@
+\chapter{Analysis of the Problem}\label{chap:problem}
+% Budget: 5 standard pages. The faculty's "analysis of the problem": what is missing today, what would
+% help, and what a solution must guarantee.
+
+\section{What a Call Costs the Optimizer}\label{sec:problem-calls}
+% Examples in Native Image: loads after calls, stores before calls, locks on objects no other thread sees.
+
+\section{What Information Would Help}\label{sec:problem-information}
+% Per call, the locations it may write; fields split by the objects that hold them; which objects
+% only one thread reaches.
+
+\section{Requirements}\label{sec:problem-requirements}
+% Soundness: the closed world, the virtual machine's own state, exceptions, other threads.
+% Cost: the analysis must pay for itself in build time.
+
+\section{Approach}\label{sec:problem-approach}
+% The analysis is ours, the transformations are Graal's. Why a token form. Out of scope: translating
+% the token form back to Sea of Nodes, and optimizations written on the token form itself.

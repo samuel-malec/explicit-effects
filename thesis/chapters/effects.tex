@@ -1,0 +1,29 @@
+\chapter{Explicit Effects}\label{chap:effects}
+% Budget: 11 standard pages. The theory of the solution. Statements and short arguments here, full proofs
+% in Appendix~\ref{app:proofs}. Material: the deleted chapters/explicit-effects.tex in git history
+% (commit before 24 Oct), research notebook F31--F43.
+
+\section{A Language with Heap Tokens}\label{sec:effects-language}
+% Syntax, static single use, token typing, the Chains lemma.
+
+\section{Semantics}\label{sec:effects-semantics}
+% Big-step semantics, the trap model, erasure: tokens carry nothing.
+
+\section{Partitions}\label{sec:effects-partitions}
+% Field, object and object-field partitions from points-to facts; the refinement order.
+
+\section{Signatures}\label{sec:effects-signatures}
+% The least solution over the call graph; the signature theorem; the frame lemma.
+
+\section{What the Tokens Guarantee}\label{sec:effects-guarantees}
+% Locality and independence; forwarding and dead stores as consequences.
+
+\section{Exceptions and Deoptimization}\label{sec:effects-exceptions}
+% Calls give back an exception and branch; traps only for deoptimization.
+
+\section{Concurrency}\label{sec:effects-concurrency}
+% Acquire writes and release reads the shared partitions; thread escape decides what is shared;
+% synchronization on objects only one thread reaches orders nothing.
+
+\section{From Signatures to Kill Sets}\label{sec:effects-kill-sets}
+% The kill-set theorem under Graal's memory model; the virtual machine's state; why no call kills init.

@@ -1,4 +1,21 @@
-\chapter{Introduction}
-Static program analysis is an area of computer science that is concerned with reasoning about properties of interest of a given program. 
-With the emergence of generative AI it has never been 
+\chapter{Introduction}\label{chap:introduction}
+% Budget: 3 standard pages. The faculty asks the introduction to place the topic in a broader context,
+% state the objectives clearly, and may outline the structure chapter by chapter.
 
+\section{Motivation}\label{sec:motivation}
+% An ahead-of-time compiler inlines aggressively because it knows little about calls it keeps:
+% a call kills all of memory. One example: a load reloaded after a call that writes nothing
+% (forwarding.AcrossCall), and the same in Native Image.
+
+\section{Objectives}\label{sec:objectives}
+% The research questions the evaluation answers:
+% RQ1 how much more Graal optimizes with our facts; RQ2 at what cost; RQ3 what modelling
+% concurrency enables; RQ4 whether it is sound in practice.
+
+\section{Contributions}\label{sec:contributions}
+% The token form with its theorems; partitions and signatures from points-to facts; thread escape
+% inside Native Image's analysis; the facts fed to Graal (kill sets, partitions, dead stores, lock
+% elision, ordinary volatile accesses); the evaluation of gain against cost.
+
+\section{Structure of the Thesis}\label{sec:structure}
+% One sentence per chapter.

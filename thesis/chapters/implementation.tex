@@ -1,0 +1,24 @@
+\chapter{Implementation in GraalVM Native Image}\label{chap:implementation}
+% Budget: 9 standard pages. The design and what is specific to the problem, not standard procedure.
+
+\section{Architecture}\label{sec:impl-architecture}
+% Figure: Native Image's analysis, the export, the tool, the feature, Graal's phases.
+
+\section{Exporting the Points-to Analysis}\label{sec:impl-export}
+% Facts and graphs, stable names, facts collected in parallel.
+
+\section{Translation to the Token Form}\label{sec:impl-translation}
+% Blocks to lambdas, calls, allocation, synchronization; what is refused and why.
+
+\section{Signatures and Kill Sets}\label{sec:impl-kills}
+% effects.kills: closure over callees, what makes a method kill everything.
+
+\section{Back into Graal}\label{sec:impl-graal}
+% Kill sets on invokes and exception handlers, partitioned field locations, dead stores; the changes
+% to the compiler.
+
+\section{Thread Escape in Native Image's Analysis}\label{sec:impl-thread-escape}
+% Roots, stores, saturated flows rebuilt from their inputs, the named assumptions.
+
+\section{Lock Elision and Ordinary Volatile Accesses}\label{sec:impl-elision}
+% effects.elide and the phase: what must hold, how a lock goes whole.
