@@ -17,8 +17,20 @@ from pathlib import Path
 STAGE = re.compile(r"^\[(\d)/8\] .*?\(\s*([\d.]+)s @")
 TOTAL = re.compile(r"Finished generating '.*' in (?:(\d+)m )?([\d.]+)s\.")
 RSS = re.compile(r"Peak RSS: ([\d.]+)GiB")
-CONFIGS = (("graal", ""), ("kills", ""), ("graal", "-allocsens"), ("objects", "-allocsens"), ("decisions", "-allocsens"))
-STEPS = ("export", "effects.kills", "rules.decisions", "apply")
+# (label, the tag in the build's name, the mode it was run in (the directory of its output), the analysis' suffix,
+# the label of the configuration it adds to). The baseline of a configuration has the same analysis and flags.
+CONFIGS = (
+    ("graal", "graal", "graal", "", None),
+    ("graal + inputs", "graalinputs", "graal", "", "graal"),
+    ("kills", "kills", "kills", "", "graal"),
+    ("kills + escape", "killsescape", "kills", "", "graal + inputs"),
+    ("graal (allocsens)", "graal", "graal", "-allocsens", None),
+    ("graal + flags (allocsens)", "graalflags", "graal", "-allocsens", "graal (allocsens)"),
+    ("objects (allocsens)", "objects", "objects", "-allocsens", "graal (allocsens)"),
+    ("locks (allocsens)", "locks", "locks", "-allocsens", "graal + flags (allocsens)"),
+    ("decisions (allocsens)", "decisions", "decisions", "-allocsens", "graal (allocsens)"),
+)
+STEPS = ("export", "export: thread escape", "effects.kills", "effects.elide", "rules.decisions", "apply", "elide locks")
 
 
 def build(log: Path) -> dict[str, float]:
@@ -55,33 +67,33 @@ def main() -> int:
     args = parser.parse_args()
 
     rows = {}
-    for config, analysis in CONFIGS:
-        runs = sorted(args.out.glob(f"{args.program}{analysis}-cost-{config}-r*"))
-        builds = [build(run / f"{config}.log") for run in runs]
-        ours = [steps(run / config / "timings.txt") for run in runs]
-        rows[(config, analysis)] = (builds, ours)
+    for label, tag, mode, analysis, base in CONFIGS:
+        runs = sorted(args.out.glob(f"{args.program}{analysis}-cost-{tag}-r*"))
+        builds = [build(run / f"{mode}.log") for run in runs]
+        ours = [steps(run / mode / "timings.txt") for run in runs]
+        rows[label] = (builds, ours, base)
 
     columns = ("total", "analysis", "compile", "rss GiB")
     print(f"{args.program}: median (min–max) over rounds, seconds")
-    print(f"{'configuration':24} {'rounds':>6} " + " ".join(f"{c:>18}" for c in columns) + "  " + " ".join(f"{s:>16}" for s in STEPS))
-    for (config, analysis), (builds, ours) in rows.items():
-        name = config + (" (allocsens)" if analysis else "")
-        print(f"{name:24} {len(builds):>6} " + " ".join(f"{cell([b[c] for b in builds if c in b]):>18}" for c in columns)
-              + "  " + " ".join(f"{cell([o[s] for o in ours if s in o]):>16}" for s in STEPS))
+    print(f"{'configuration':28} {'rounds':>6} " + " ".join(f"{c:>18}" for c in columns))
+    for label, (builds, _, _) in rows.items():
+        if builds:
+            print(f"{label:28} {len(builds):>6} " + " ".join(f"{cell([b[c] for b in builds if c in b]):>18}" for c in columns))
+    print("\nour steps inside the build (seconds, median over rounds; part of the analysis stage, except apply and elide locks, which are in the compile stage and summed over the compiler's threads):")
+    print(f"{'configuration':28} " + " ".join(f"{s:>22}" for s in STEPS))
+    for label, (builds, ours, _) in rows.items():
+        if builds and any(ours):
+            print(f"{label:28} " + " ".join(f"{cell([o[s] for o in ours if s in o]):>22}" for s in STEPS))
 
-    print("\nadded to graal on the same analysis (difference of medians):")
-    for (config, analysis), (builds, _) in rows.items():
-        if config == "graal" or not builds:
+    print("\nadded to the configuration it builds on (difference of medians):")
+    for label, (builds, _, base) in rows.items():
+        if base is None or not builds or not rows[base][0]:
             continue
-        base, _ = rows[("graal", analysis)]
-        if not base:
-            continue
-        name = config + (" (allocsens)" if analysis else "")
         added = []
         for c in ("total", "analysis", "compile"):
-            mine, theirs = statistics.median(b[c] for b in builds), statistics.median(b[c] for b in base)
+            mine, theirs = statistics.median(b[c] for b in builds), statistics.median(b[c] for b in rows[base][0])
             added.append(f"{c} {mine - theirs:+.1f} s ({100 * (mine - theirs) / theirs:+.0f}%)")
-        print(f"  {name:24} " + ", ".join(added))
+        print(f"  {label:28} on {base:26} " + ", ".join(added))
     return 0
 
 

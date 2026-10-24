@@ -7,6 +7,11 @@
 #
 #   ./cost-javac.sh                                   # 3 rounds of graal and kills
 #   REPEATS=1 CONFIGS="graal kills objects" ./cost-javac.sh
+#   CONFIGS="graal graalinputs kills killsescape graal-allocsens graalflags-allocsens objects locks" ./cost-javac.sh   # the full table
+#
+# graalinputs and graalflags-allocsens are graal with the flags thread escape needs (inputs of flows kept, source
+# positions kept): the baselines of killsescape and locks, so that what the flags cost Native Image itself is not
+# counted as ours.
 #
 # javac's classes are under com.sun., which isn't the program by default: the builds name them.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
@@ -26,36 +31,44 @@ rm -rf "$REFERENCE" && mkdir -p "$REFERENCE/classes"
 "$JDK/bin/java" -cp "$REFERENCE/classes" Examples > "$REFERENCE/output.txt" 2>&1
 
 build() {  # configuration, round
-    local config=$1 round=$2 analysis="" flags=()
+    local config=$1 round=$2 analysis="" tag mode flags=()
+    tag=$config; mode=$config
+    local inputs=(-H:+TrackInputFlows) positions=(-H:+TrackNodeSourcePosition) escape=(-H:SideEffectAnalysisAssumptions=vm-code,entry-points)
+    local allocsens=(-H:AnalysisContextSensitivity=allocsens)
     case $config in
         graal)          flags=(-H:-SideEffectAnalysisNarrowCalls) ;;
+        graalinputs)    mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls "${inputs[@]}") ;;
         kills)          flags=() ;;
-        graal-allocsens) flags=(-H:-SideEffectAnalysisNarrowCalls -H:AnalysisContextSensitivity=allocsens); analysis=-allocsens; config=graal ;;
-        objects)        flags=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:SideEffectAnalysisPartition=object-field); analysis=-allocsens ;;
+        killsescape)    mode=kills; flags=("${inputs[@]}" "${escape[@]}") ;;
+        graal-allocsens) tag=graal; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}") ;;
+        graalflags-allocsens) tag=graalflags; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${inputs[@]}" "${positions[@]}") ;;
+        objects)        analysis=-allocsens; flags=("${allocsens[@]}" "${positions[@]}" -H:SideEffectAnalysisPartition=object-field) ;;
+        locks)          analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${positions[@]}" "${inputs[@]}" -H:SideEffectAnalysisLabel=locks
+                                                   -H:+SideEffectAnalysisElideLocks "${escape[@]}") ;;
         *) echo "unknown configuration $config" >&2; exit 1 ;;
     esac
-    local dir="$HERE/out/javac$analysis-cost-$config-r$round"
-    rm -rf "$dir" && mkdir -p "$dir/$config"
+    local dir="$HERE/out/javac$analysis-cost-$tag-r$round"
+    rm -rf "$dir" && mkdir -p "$dir/$mode"
     local start=$SECONDS
     if ! mx -p "$G/substratevm" javac-image -H:+UnlockExperimentalVMOptions -H:+SideEffectAnalysis \
             -H:SideEffectAnalysisTool="$REPO" -H:SideEffectAnalysisUv="$(command -v uv)" \
-            -H:SideEffectAnalysisProgram=com.sun.tools.javac -H:SideEffectAnalysisOutput="$dir/$config" \
-            "${flags[@]}" > "$dir/$config.log" 2>&1; then
-        tail -30 "$dir/$config.log"
+            -H:SideEffectAnalysisProgram=com.sun.tools.javac -H:SideEffectAnalysisOutput="$dir/$mode" \
+            "${flags[@]}" > "$dir/$mode.log" 2>&1; then
+        tail -30 "$dir/$mode.log"
         exit 1
     fi
     # mx puts the image in its own build directory, whatever the output path: keep a copy.
     local image
-    image=$(grep -oE '/[^ ]*/javac \(executable' "$dir/$config.log" | cut -d' ' -f1)
-    cp "$image" "$dir/$config/javac"
+    image=$(grep -oE '/[^ ]*/javac \(executable' "$dir/$mode.log" | cut -d' ' -f1)
+    cp "$image" "$dir/$mode/javac"
     local same="compiles Examples as the JDK's javac does"
-    mkdir -p "$dir/$config/classes"
-    if ! "$dir/$config/javac" -proc:none "${SYSTEM[@]}" -d "$dir/$config/classes" "$EXAMPLES" > "$dir/$config/javac.txt" 2>&1; then
-        same="FAILED to compile Examples: $(head -c 300 "$dir/$config/javac.txt")"
-    elif ! "$JDK/bin/java" -cp "$dir/$config/classes" Examples 2>&1 | cmp -s - "$REFERENCE/output.txt"; then
+    mkdir -p "$dir/$mode/classes"
+    if ! "$dir/$mode/javac" -proc:none "${SYSTEM[@]}" -d "$dir/$mode/classes" "$EXAMPLES" > "$dir/$mode/javac.txt" 2>&1; then
+        same="FAILED to compile Examples: $(head -c 300 "$dir/$mode/javac.txt")"
+    elif ! "$JDK/bin/java" -cp "$dir/$mode/classes" Examples 2>&1 | cmp -s - "$REFERENCE/output.txt"; then
         same="compiled Examples DIFFERENTLY: its classes print something else"
     fi
-    echo "javac$analysis-cost-$config-r$round: built in $((SECONDS - start)) s, $same"
+    echo "javac$analysis-cost-$tag-r$round: built in $((SECONDS - start)) s, $same"
 }
 
 for round in $(seq 1 "$REPEATS"); do
