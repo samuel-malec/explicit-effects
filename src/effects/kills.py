@@ -12,7 +12,7 @@ from pathlib import Path
 
 from graal.graal_import import PointsToFacts, load_facts
 
-from .signatures import PARTITIONERS, REST, accesses, callees_of, close_over_callees, program_partition, reaching
+from .signatures import PARTITIONERS, REST, accesses, callees_of, close_over_callees, program_partition, reaching, synchronizing
 
 ANY = "any"
 INIT = "init"
@@ -22,7 +22,9 @@ def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tup
     """Method → the partitions it may write, a field's own name where the
     partition is all of the field, `init` if it allocates, and the VM's state it
     writes; `any` if it reaches something the facts can't say anything about, or
-    synchronization.
+    synchronization that may order this thread with another. A lock or a volatile
+    field only this thread reaches (`synchronizing`) orders it with no one, and kills
+    nothing.
 
     A release kills everything too, although it writes only its own writes: Graal
     would let a load before a call that kills nothing of its location float below
@@ -39,7 +41,8 @@ def kills(facts: PointsToFacts, partition: str = "field") -> dict[str, str | tup
 
     callees = callees_of(facts)
     unknown = reaching(callees, {m: m for m, e in methods.items()
-                                 if e.get("unknown") or e.get("acquires") or e.get("releases") or e.get("unresolved") or any(c not in methods for c in callees[m])})
+                                 if e.get("unknown") or synchronizing(facts, e, "acquires") or synchronizing(facts, e, "releases")
+                                 or e.get("unresolved") or any(c not in methods for c in callees[m])})
     # A method that reaches something unknown kills everything, whatever it writes. Every other one
     # calls only methods like itself, so only they need what their callees write: on javac's export,
     # a third of the methods, and a tenth of the time.
@@ -61,10 +64,11 @@ def main() -> int:
     parser.add_argument("export", type=Path, help="facts or graphs exported by graal-export")
     parser.add_argument("-o", "--out", type=Path, required=True)
     parser.add_argument("--partition", choices=["field", "object-field"], default="field")
+    parser.add_argument("--assumptions", help="the thread-escape assumptions to read, from an export made with all of them")
     parser.add_argument("--accesses", type=Path, help="where to write each access's partition")
     args = parser.parse_args()
 
-    facts = load_facts(args.export)
+    facts = load_facts(args.export, args.assumptions)
     written = kills(facts, args.partition)
     args.out.write_text("".join(f"{m}\t{w if w == ANY else ','.join(w)}\n" for m, w in written.items()))
     narrowed = [w for w in written.values() if w != ANY]

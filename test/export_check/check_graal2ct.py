@@ -402,10 +402,13 @@ def check_kills_for_graal() -> None:
     length writes nothing; countInto for a Logger writes Logger.count; fill
     writes int[]. A method that allocates, as item and make do, writes the
     initialization of what it allocates and the fields its constructor stores.
-    One that reaches a monitor, a volatile store, a native or an unresolved call
-    may write anything, and so may main. A volatile store is a release, which
-    the token form lets loads move up past; Graal can't be told that without
-    letting earlier loads sink below it too. With objects told apart, in Aliasing, countInto
+    One that reaches a native or an unresolved call may write anything, and so may
+    main. A monitor or a volatile store is a release, which the token form lets
+    loads move up past; Graal can't be told that without letting earlier loads sink
+    below it too, so a call that synchronizes with another thread kills everything
+    (check_suite_kill_sets_of_synchronization). One on an object only this thread
+    reaches, acrossMonitor's Box and acrossVolatile's Flag, orders it with no one
+    and kills what the method writes. With objects told apart, in Aliasing, countInto
     writes Counter.value only of the counters passed to it, which is not the
     partition of forwardAcrossCallOnOtherObject's own counter; each access has
     its partition, two in forwardPastOtherObject and one in its control."""
@@ -423,9 +426,9 @@ def check_kills_for_graal() -> None:
     assert written[f"{s}.log(L{s}$Logger;)V"] == (f"{s}$Logger.count",)
     assert written[f"{s}.item(I)L{s}$Item;"] == (f"{s}$Item.id", "init")
     assert written[f"{s}.make()L{s}$Box;"] == ("init",)
-    for method in ("acrossMonitor(L{0}$Counter;L{0}$Box;)I",
-                   "acrossVolatile(L{0}$Counter;L{0}$Flag;)I", "acrossNative(L{0}$Counter;)I",
-                   "acrossUnresolved(L{0}$Counter;L{0}$Sink;)I"):
+    assert written[f"{s}.acrossMonitor(L{s}$Counter;L{s}$Box;)I"] == (f"{s}$Box.v", f"{s}$Counter.value")
+    assert written[f"{s}.acrossVolatile(L{s}$Counter;L{s}$Flag;)I"] == (f"{s}$Counter.value", f"{s}$Flag.raised")
+    for method in ("acrossNative(L{0}$Counter;)I", "acrossUnresolved(L{0}$Counter;L{0}$Sink;)I"):
         assert written[f"{s}.{method.format(s)}"] == ANY, method
 
     # With objects told apart, a kill is a field of a set of objects, and each access has its set.

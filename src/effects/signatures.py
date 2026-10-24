@@ -57,6 +57,13 @@ def synchronizes_on(facts: PointsToFacts, objects: Receivers) -> bool:
     return objects is None or any(o != NOTHING and shared_object(facts, o) for o in objects)
 
 
+def synchronizing(facts: PointsToFacts, method: dict, kind: str) -> list[str]:
+    """The method's own acquires or releases (`kind`: "acquires" or "releases") that may order this
+    thread with another: not those on locks or volatile fields only this thread reaches."""
+    locks = method.get("locks", {})
+    return [s for s in method.get(kind, ()) if s not in locks or synchronizes_on(facts, locks[s])]
+
+
 def one_heap(field: str, receivers: Receivers = None) -> str:
     """All of memory as one partition."""
     return "heap"
@@ -385,16 +392,12 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
     # their writes, so it writes every shared partition; a release may show them this thread's
     # writes and lets none of theirs in, so it reads every shared partition. Synchronization on
     # an object only this thread reaches orders it with no other thread, and does nothing.
-    def synchronizing(e: dict, kind: str) -> list[str]:
-        locks = e.get("locks", {})
-        return [s for s in e.get(kind, ()) if s not in locks or synchronizes_on(facts, locks[s])]
-
     releasing = {}
     for m, e in methods.items():
-        if synchronizing(e, "acquires"):
+        if synchronizing(facts, e, "acquires"):
             reads[m] |= shared
             writes[m] |= shared
-        if synchronizing(e, "releases"):
+        if synchronizing(facts, e, "releases"):
             reads[m] |= shared
             releasing[m] = m
     close_over_callees(callees, reads, writes)

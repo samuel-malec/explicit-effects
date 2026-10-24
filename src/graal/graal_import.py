@@ -16,13 +16,17 @@ class PointsToFacts:
     shared: frozenset[str] | None = None
 
 
-def load_facts(path: str | Path) -> PointsToFacts:
-    """Only the facts of an export, without reading its graphs."""
+def load_facts(path: str | Path, assumptions: str | None = None) -> PointsToFacts:
+    """Only the facts of an export, without reading its graphs. `assumptions` names one set of
+    thread-escape assumptions, if the export was made with all of them (`none`, `thread-confined`,
+    `thread-confined,vm-fields`, ...): the shared objects are then those under that set."""
     data = json.loads(Path(path).read_text())
-    return PointsToFacts(data.get("methods", {}), data.get("fields", {}), _shared(data))
+    return PointsToFacts(data.get("methods", {}), data.get("fields", {}), _shared(data, assumptions))
 
 
-def _shared(data: dict) -> frozenset[str] | None:
+def _shared(data: dict, assumptions: str | None = None) -> frozenset[str] | None:
+    if assumptions is not None:
+        return frozenset(data["sharedObjectsByAssumptions"][assumptions])
     return frozenset(data["sharedObjects"]) if "sharedObjects" in data else None
 
 
