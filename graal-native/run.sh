@@ -17,6 +17,9 @@
 #                              # the same for decisions: a store that is read claimed dead
 #   ALLOCSENS=1 ./run.sh Awfy  # every image with allocation sites, so that the analysis is
 #                              # the same in all four: out/awfy-allocsens/
+#   ONLY=locks ./run.sh LockShapes      # the image that also removes the locks on objects only one thread
+#                              # reaches; LIE_LOCKS='LocksShared.add(I)V' ONLY=locks ./run.sh LocksShared is the
+#                              # control: the program shares that lock, so it must go wrong
 #   ONLY="graal kills" TAG=sym EXTRA="-H:-DeleteLocalSymbols" ./run.sh Awfy
 #                              # only some of the images, into out/awfy-sym/, with more
 #                              # native-image options: here, the symbols perf needs
@@ -27,7 +30,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 EXAMPLE=${1:?usage: run.sh <a class of graal-export/corpus, or a program of programs/>}
 PROGRAM="$REPO/programs/$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')"
-NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${SPLIT:+-split}${DEAD:+-dead}${ALLOCSENS:+-allocsens}${TAG:+-$TAG}
+NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${LIE_LOCKS:+-lie}${SPLIT:+-split}${DEAD:+-dead}${ALLOCSENS:+-allocsens}${TAG:+-$TAG}
 OUT="$HERE/out/$NAME"
 MAIN=$EXAMPLE
 SOURCES=("$EXPORT_DIR/corpus/$EXAMPLE.java")
@@ -73,7 +76,7 @@ run "$GRAALVM/bin/java" -cp "$OUT/classes" "$MAIN" > "$OUT/jvm.txt"
 
 for mode in "${MODES[@]}"; do
     mkdir -p "$OUT/$mode"
-    narrow=$([[ $mode == graal ]] && echo - || echo +)
+    narrow=$([[ $mode == graal || $mode == locks ]] && echo - || echo +)
     # Object partitions need the analysis to tell objects apart by where they were
     # allocated, and the compiled graphs to keep where each access is.
     OBJECTS=()
@@ -86,6 +89,15 @@ for mode in "${MODES[@]}"; do
     fi
     if [[ $mode == decisions ]]; then
         OBJECTS+=(-H:+SideEffectAnalysisRemoveDeadStores ${DEAD:+"-H:SideEffectAnalysisClaimDeadStore=$DEAD"})
+    fi
+    # Not one of the four images by default (ONLY="locks"): the monitors on objects only one thread reaches
+    # are removed, and nothing else changes. The analysis tells objects apart by allocation site and keeps
+    # the inputs of its flows, and thread escape makes the assumptions the export names; with LIE_LOCKS=<method key>
+    # the control claims that method's monitors are thread-local, which a program that shares them must not survive.
+    if [[ $mode == locks ]]; then
+        OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:+TrackInputFlows -H:SideEffectAnalysisLabel=locks
+                 -H:+SideEffectAnalysisElideLocks -H:SideEffectAnalysisAssumptions="${ASSUMPTIONS:-vm-code,entry-points}"
+                 ${LIE_LOCKS:+"-H:SideEffectAnalysisClaimLocksLocal=$LIE_LOCKS"})
     fi
     # Not one of the four images by default (ONLY="... graal-dse"): Graal's own dead-store
     # elimination, OverwrittenStoreEliminationPhase, after inlining, with the same partitions as
