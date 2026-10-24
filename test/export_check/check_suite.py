@@ -10,11 +10,16 @@ from pathlib import Path
 
 import pytest
 
+from dataclasses import replace
+
 from cthu import prelude
 from cthu.ir import Program, Structure
 from cthu.ssu import check
+from effects.blockers import blockers
+from effects.elide import elidable
+from effects.kills import ANY, kills
 from effects.signatures import PARTITIONERS, analyse, no_analysis
-from graal.graal_import import load
+from graal.graal_import import PointsToFacts, load, load_facts
 from graal2ct.translate import Translation
 from rules import memory
 from rules.compare import looping
@@ -212,3 +217,177 @@ def check_suite_concurrency() -> None:
                 wrong[example, partition] = (done.forwarded, done.removed)
     assert not wrong, wrong
     print("ok   suite: no load is forwarded across synchronization that may let another thread's write in")
+
+
+#: example → its method that synchronizes, and what a call to it may write (as Graal is told):
+#: everything for a lock or volatile field another thread may reach, nothing but the method's own
+#: writes for one only this thread reaches. A kill set can't tell Graal "everything another thread
+#: may touch", so a call that synchronizes with another thread kills everything, even if
+#: the token form lets loads of memory only this thread reaches pass it. The methods reaching code
+#: without facts (AcrossAtomicLocal's helper) kill everything for that reason.
+SYNCHRONIZING_CALLS = {
+    "concurrency.AcrossLocalMonitor": ("$Tally.add(", ("concurrency.AcrossLocalMonitor$Tally.count",)),
+    "concurrency.AcrossLockLocal": (".logged(", ANY),
+    "concurrency.AcrossLockSharedBlocks": (".logged(", ANY),
+    "concurrency.FinalAcrossLock": (".logged(", ANY),
+    "concurrency.AcrossAcquireLocal": (".poll(", ANY),
+    "concurrency.AcrossAcquireSharedBlocks": (".poll(", ANY),
+    "concurrency.AcrossRelease": (".publish(", ANY),
+    "concurrency.AcquireInMethodBlocks": (".demo(", ANY),
+    "concurrency.ReleaseInMethod": (".demo(", ANY),
+    "concurrency.DeadStoreAcrossAcquire": (".demo(", ANY),
+    "concurrency.DeadStoreAcrossReleaseKeeps": (".demo(", ANY),
+    "concurrency.AcrossAtomicLocal": (".ticket(", ANY),
+    "concurrency.HandedToThreadBlocks": (".demo(", ANY),
+}
+
+
+def synchronizing_call(example: str, partition: str):
+    path = SUITE / (f"{example}.allocsens.json" if partition.startswith("object") else f"{example}.json")
+    if not path.exists():
+        pytest.skip(f"{path} is missing: run graal-export/suite")
+    facts, _ = load(path)
+    suffix, expected = SYNCHRONIZING_CALLS[example]
+    method = next(m for m in facts.methods if m.startswith(example) and suffix in m)
+    return facts, method, expected
+
+
+def check_suite_kill_sets_of_synchronization() -> None:
+    """A call that synchronizes kills everything unless the lock or volatile field is only this
+    thread's; the control, with the lock claimed to be another object, is narrowed, and so is the
+    call to a method that locks an object a second thread is told about."""
+    wrong = {}
+    for example, (_, expected) in SYNCHRONIZING_CALLS.items():
+        for partition in ("field", "object-field"):
+            facts, method, _ = synchronizing_call(example, partition)
+            answer = kills(facts, partition)[method]
+            if (answer == ANY) != (expected == ANY) or (expected != ANY and partition == "field" and answer != expected):
+                wrong[example, partition] = answer
+    assert not wrong, wrong
+
+    # Controls, which must change the answer: the monitor's object shared with another thread
+    # makes the call kill everything, and a lock claimed to be an object nothing shares, as
+    # a thread escape that misses a sharing path would claim, makes every other one narrow.
+    facts, method, _ = synchronizing_call("concurrency.AcrossLocalMonitor", "field")
+    tally = facts.methods[method]["locks"]["MonitorEnterNode at bci 0"][0]
+    assert kills(replace(facts, shared=facts.shared | {tally}))[method] == ANY
+    for example in ("concurrency.AcrossLockLocal", "concurrency.AcrossAcquireLocal", "concurrency.AcrossRelease"):
+        facts, method, _ = synchronizing_call(example, "field")
+        claimed = {site: ["claimed.OnlyHere"] for site in facts.methods[method]["locks"]}
+        facts.methods[method]["locks"] = claimed
+        assert kills(facts)[method] != ANY, example
+    print("ok   suite: a call kills everything when it synchronizes on what another thread may reach, and only then")
+
+
+def check_suite_blockers() -> None:
+    """Why methods kill everything is told by what they reach: a lock on a shared object blocks, one on an
+    object only this thread reaches only when all synchronization counts, and with none counting
+    nothing blocks in these programs."""
+    program = ["concurrency."]
+    local, _ = load(SUITE / "concurrency.AcrossLocalMonitor.json")
+    assert blockers(local, program, "shared") == {} and sum(blockers(local, program, "all").values()) == 3
+    shared, _ = load(SUITE / "concurrency.AcrossLockSharedBlocks.json")
+    assert sum(blockers(shared, program, "shared").values()) == 3 and blockers(shared, program, "none") == {}
+    print("ok   suite: the blockers of a program's methods count synchronization as the kill sets do")
+
+
+#: example → what the analysis says of the item where the program uses it, for the default analysis
+#: and with allocation sites; None where the program's use is folded away. Each Published example
+#: puts the item where another thread reaches it by a different way, and must be shared; each
+#: control keeps it in something no one shares, and is local where the analysis can tell the
+#: objects apart. LocalInLocalAtomic and LocalInLocalList are shared today: the code of AtomicReference.set,
+#: ArrayList.add and the arrays under them is one for every object, so what it stores into the
+#: shared one (an atomic reference and a list are shared) it stores into the local one. Variable handles
+#: are natives to the standalone analysis, which shares what they are given.
+PUBLICATION = {
+    "PublishedByStatic": ("shared", "shared"),
+    "PublishedByField": ("shared", "shared"),
+    "PublishedByArray": ("shared", "shared"),
+    "PublishedByArrayCopy": ("shared", "shared"),
+    "PublishedByAtomic": ("shared", "shared"),
+    "PublishedByQueue": (None, "shared"),
+    "PublishedByMap": (None, "shared"),
+    "PublishedByExecutor": (None, "shared"),
+    "PublishedByVarHandle": (None, "shared"),
+    "LocalInLocalObject": ("local", "local"),
+    "LocalInLocalArray": ("local", "local"),
+    "LocalInLocalQueue": (None, "local"),
+    "LocalInLocalAtomic": ("shared", "shared"),
+    "LocalInLocalList": ("shared", "shared"),
+    "LocalInLocalVarHandle": (None, "shared"),
+}
+
+
+def check_suite_publication() -> None:
+    """The item of each example is shared when and only when the example publishes it, as far as the
+    analysis can tell; graal-export/publication-controls.sh leaves out each kind of site in turn,
+    and each time the examples that kind publishes become local."""
+    from effects.publication import item_shared
+    from graal.graal_import import load_facts
+
+    wrong = {}
+    for example, expected in PUBLICATION.items():
+        for variant, want in zip(("", ".allocsens"), expected):
+            path = SUITE / f"concurrency.{example}{variant}.json"
+            if not path.exists():
+                pytest.skip(f"{path} is missing: run graal-export/suite")
+            got = item_shared(load_facts(path), example)
+            if want is not None and got != want:
+                wrong[example, variant or ".default"] = got
+    assert not wrong, wrong
+    print("ok   suite: what another thread can reach is shared, through a static field, a field, an array, a copy, an atomic, a queue, a map and a task")
+
+
+def check_suite_elidable_locks() -> None:
+    """A monitor goes when every object it may lock is reached by one thread only and nothing waits on it;
+    a lock on a shared object stays, and so does a local one that is waited on. Each answer has a control
+    that changes it."""
+    def facts(example: str) -> PointsToFacts:
+        path = SUITE / f"concurrency.{example}.allocsens.json"
+        if not path.exists():
+            pytest.skip(f"{path} is missing: run graal-export/suite")
+        return load_facts(path)
+
+    def in_method(sites: dict[str, str], method: str) -> dict[str, str]:
+        return {s: k for s, k in sites.items() if s.startswith(f"concurrency.{method}(")}
+
+    # The tally of AcrossLocalMonitor is main's alone: its enter and its exit can go.
+    local = facts("AcrossLocalMonitor")
+    sites = in_method(elidable(local), "AcrossLocalMonitor$Tally.add")
+    assert sorted(sites.values()).count("enter") == 1 and "exit" in sites.values(), sites
+    # The control: if every object counted as shared, nothing could go.
+    assert not elidable(replace(local, shared=None)), "a lock on a shared object stays"
+    # A lock on a static object is every thread's.
+    assert not in_method(elidable(facts("AcrossLockLocal")), "AcrossLockLocal.logged")
+    # A local object that is waited on keeps its lock...
+    waited = facts("WaitedOnKeepsLock")
+    assert not in_method(elidable(waited), "WaitedOnKeepsLock.pass"), "a lock that wait needs stays"
+    # ...and the control: without the waits in the facts the same lock is listed.
+    unwaited = replace(waited, methods={m: {k: v for k, v in e.items() if k != "waits"} for m, e in waited.methods.items()})
+    assert in_method(elidable(unwaited), "WaitedOnKeepsLock.pass"), "the lock would go if nothing waited on it"
+    # A wait on an object the analysis can't name could be on any lock.
+    unnamed = replace(local, methods={**local.methods, "concurrency.Elsewhere.wait()V": {"waits": {"wait at bci 0": None}}})
+    assert not elidable(unnamed), "a wait on an unnamed object keeps every lock"
+    print("ok   suite: the monitors that can go are those on objects one thread reaches that nothing waits on")
+
+
+def check_suite_elidable_volatiles() -> None:
+    """A volatile access of a field becomes an ordinary one when every object it may be on is reached by one
+    thread only; on an object handed to a thread, or in a static field, it stays volatile."""
+    def facts(example: str) -> PointsToFacts:
+        path = SUITE / f"concurrency.{example}.allocsens.json"
+        if not path.exists():
+            pytest.skip(f"{path} is missing: run graal-export/suite")
+        return load_facts(path)
+
+    def in_method(sites: dict[str, str], method: str) -> dict[str, str]:
+        return {s: k.split("\t")[0] for s, k in sites.items() if s.startswith(f"concurrency.{method}(")}
+
+    local = facts("VolatileOnLocal")
+    kinds = sorted(in_method(elidable(local), "VolatileOnLocal.fill").values())
+    assert kinds == ["plain-read", "plain-read", "plain-write"], kinds
+    # The control: if every object counted as shared, nothing could change.
+    assert not elidable(replace(local, shared=None)), "a volatile access on a shared object stays"
+    assert not in_method(elidable(facts("VolatileOnShared")), "VolatileOnShared.fill"), "the gauge a thread reaches stays volatile"
+    assert not in_method(elidable(facts("AcrossAcquireLocal")), "AcrossAcquireLocal.poll"), "a static field is every thread's"
+    print("ok   suite: the volatile accesses that become ordinary are those on objects one thread reaches")
