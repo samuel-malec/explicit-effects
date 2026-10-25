@@ -13,7 +13,6 @@ public class AcrossAcquireLocal {
 
     static volatile boolean ready;
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static boolean poll(int n) {
         return n > 0 ? poll(n - 1) : ready;
     }

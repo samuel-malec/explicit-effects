@@ -11,9 +11,7 @@ from .graal_ir import Graph, parse_graph
 class PointsToFacts:
     methods: dict[str, dict] = field(default_factory=dict)  # What fields does a method access
     fields: dict[str, dict] = field(default_factory=dict)  # what fields are accessed
-    # The objects another thread may reach, by the export's names; None when the export doesn't
-    # say, so that every object counts as shared.
-    shared: frozenset[str] | None = None
+    shared: frozenset[str] | None = None # The objects another thread may reach
 
 
 def load_facts(path: str | Path, assumptions: str | None = None) -> PointsToFacts:

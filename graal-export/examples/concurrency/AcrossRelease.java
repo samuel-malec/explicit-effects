@@ -1,13 +1,14 @@
 package concurrency;
 
 /**
- * A release between a store and a load: `publish` writes a volatile field. A
- * release makes this thread's earlier writes visible to a thread that later
- * reads the flag, but lets no other thread's write in. 
+ * `publish` writes a volatile field. A release makes this thread's earlier writes visible
+ * to a thread that later reads the flag, but lets no other thread's write in.
  */
 public class AcrossRelease {
 
-    static class Counter { int value; }
+    static class Counter {
+        int value;
+    }
 
     static volatile boolean ready;
 
