@@ -12,13 +12,12 @@ nothing (`--synchronization all` counts it, as the kill sets did before they kne
 """
 
 import argparse
-import re
 from collections import Counter
 from pathlib import Path
 
 from graal.graal_import import PointsToFacts, load_facts
 
-from .kills import ANY, kills
+from .kills import ANY, kills, kind
 from .signatures import callees_of, synchronizes_on, synchronizing
 
 # Packages that are not the program under analysis, as the export treats them by default.
@@ -30,11 +29,6 @@ def in_program(method: str, prefixes: list[str]) -> bool:
     if prefixes:
         return "*" in prefixes or any(method.startswith(p) for p in prefixes)
     return not method.startswith(PLATFORM)
-
-
-def kind(text: str) -> str:
-    """A fact's text without its position and the node's address: `EnsureClassInitializedNode`."""
-    return re.split(r" at | \(|:", text, maxsplit=1)[0].strip()
 
 
 def direct_cause(facts: PointsToFacts, method: str, sync: str) -> str | None:
