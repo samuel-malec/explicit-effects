@@ -1,8 +1,8 @@
 # explicit-effects
 
 A prototype side-effect analysis for Java programs compiled by Graal.
-It translates Graal IR into a Static Single Use form in which every part of the heap is an explicit value, a *token*, that a method has to take and give back.
-Which memory a call may change is then visible in its type, and load forwarding and dead-store removal become simple local rewrites.
+It derives, from Native Image's points-to analysis, what each method may write, which memory each access can touch, and which locks and volatile accesses no other thread can reach, and gives these facts to Graal, whose own phases then forward loads, remove stores and remove locks.
+The model behind the facts is a translation of Graal IR into a Static Single Use form in which every part of the heap is an explicit value, a *token*, that a method has to take and give back, so that which memory a call may change is visible in its type.
 
 If you are new to the problem, these two posts are the gentlest introduction:
 
@@ -28,8 +28,6 @@ explicit-effects/
 ├── are-we-fast-yet/   # submodule: the Are We Fast Yet benchmarks
 └── thesis/            # the thesis text
 ```
-
-`src/effects/` and `programs/` each have their own README with the details and the results.
 
 ## Setup
 
@@ -85,7 +83,7 @@ You rarely need to run the steps above by hand:
 | `make export` | Exports every example to `graal-export/out/<name>.json`, with the analysis report in `<name>.txt`. |
 | `make translate` | Translates every export to `<name>.ct` with one heap token. Add `PARTITION=field` (or `object`, `object-field`) for `<name>.field.ct` and so on. |
 | `make native` | Builds each example as a native image three times and checks each against the JVM. See below. |
-| `make awfy`, `make driver` | Export whole programs (`programs/README.md`). |
+| `make awfy`, `make driver` | Export whole programs: Are We Fast Yet, and the native-image driver. |
 | `make native-awfy` | The timed round trip on Are We Fast Yet. |
 | `make suite` | Exports the example suite, one program per example, and checks that each still shows what its comment says. |
 

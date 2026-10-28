@@ -95,7 +95,7 @@ native-awfy:
 # methods at multiples of 32 bytes) and with methods at multiples of 16, 64 and 128 bytes,
 # and two kills images that narrow CD's methods not at all, or only RedBlackTree.remove.
 # Then CD's counters in each, and graal against kills for every benchmark across the
-# alignments. See programs/README.md.
+# alignments. See programs/awfy/layouts.py.
 awfy-layouts:
 	ONLY="graal kills" TAG=sym EXTRA=-H:-DeleteLocalSymbols $(NATIVE_DIR)/run.sh Awfy
 	for a in 16 64 128; do \
