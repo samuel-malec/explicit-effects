@@ -21,11 +21,13 @@
 # with the allocation-site analysis (AnalysisError in CallSiteSensitiveMethodTypeFlow.setAsStubFlow).
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/../env.sh"
+source "$DIR/../provenance.sh"
 set +e
 
 OUT="$HERE/out/deopt-locks"
 rm -rf "$OUT"
 mkdir -p "$OUT/classes"
+provenance "$OUT"
 BUILDER="$GRAALVM/lib/svm/builder"
 SDK="$G/sdk/mxbuild/dists"
 "$GRAALVM/bin/javac" --add-modules jdk.internal.vm.ci --add-exports jdk.internal.vm.ci/jdk.vm.ci.code=ALL-UNNAMED \

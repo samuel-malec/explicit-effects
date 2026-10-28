@@ -23,8 +23,12 @@
 #                              # native-image options: here, the symbols perf needs
 #
 # A fourth image, graal-dse, only with ONLY, has Graal remove dead stores itself after inlining,
-# with the partitions of the objects image.
+# with the partitions of the objects image. A fifth, ceiling, only with ONLY, is the kills image with the kill of
+# everything the facts cannot name left out (identity hash, class initialization, synchronization, unresolved and native
+# calls, ...): the most that precise kill sets could give Graal, an upper bound whose image may be wrong. Its output is
+# compared with the JVM's as the others' are, and timings.txt says the kill sets are not sound.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$HERE/provenance.sh"
 
 EXAMPLE=${1:?usage: run.sh <a class of graal-export/corpus, or a program of programs/>}
 PROGRAM="$REPO/programs/$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')"
@@ -55,6 +59,7 @@ read -r -a EXTRA_OPTIONS <<< "${EXTRA:-}"
 
 rm -rf "$OUT"
 mkdir -p "$OUT/classes"
+provenance "$OUT"  # which code made this: OUT/provenance.txt
 if [[ -x "$PROGRAM/build.sh" ]]; then
     "$PROGRAM/build.sh" "$OUT/classes"
 else
@@ -76,8 +81,11 @@ for mode in "${MODES[@]}"; do
     # Object partitions need the analysis to tell objects apart by where they were
     # allocated, and the compiled graphs to keep where each access is.
     OBJECTS=()
-    if [[ -n "${ALLOCSENS:-}" && ( $mode == graal || $mode == kills ) ]]; then
+    if [[ -n "${ALLOCSENS:-}" && ( $mode == graal || $mode == kills || $mode == ceiling ) ]]; then
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens)
+    fi
+    if [[ $mode == ceiling ]]; then
+        OBJECTS+=(-H:SideEffectAnalysisIgnoreEffects=all)
     fi
     if [[ $mode == objects ]]; then
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:SideEffectAnalysisPartition=object-field

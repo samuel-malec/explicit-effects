@@ -8,13 +8,17 @@
 #   ./cost-javac.sh                                   # 3 rounds of graal and kills
 #   REPEATS=1 CONFIGS="graal kills objects" ./cost-javac.sh
 #   CONFIGS="graal graalinputs kills killsescape graal-allocsens graalflags-allocsens objects locks" ./cost-javac.sh   # the full table
+#   CONFIGS="graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" ./cost-javac.sh      # lock removal with the saturation cutoff raised
 #
 # graalinputs and graalflags-allocsens are graal with the flags thread escape needs (inputs of flows kept, source
 # positions kept): the baselines of killsescape and locks, so that what the flags cost Native Image itself is not
-# counted as ours.
+# counted as ours. With the points-to analysis's saturation cutoff at 100 instead of 20 the analysis keeps the types that
+# javac's generic code passes around, and thread escape finds 66 locks of the JDK it can prove local (F65); graalcutoff-allocsens
+# and graalflagscutoff-allocsens are the baselines of lockscutoff for what the cutoff itself costs and for what removing locks costs.
 #
 # javac's classes are under com.sun., which isn't the program by default: the builds name them.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$HERE/provenance.sh"
 
 REPEATS=${REPEATS:-3}
 read -r -a CONFIGS <<< "${CONFIGS:-graal kills}"
@@ -34,7 +38,7 @@ build() {  # configuration, round
     local config=$1 round=$2 analysis="" tag mode flags=()
     tag=$config; mode=$config
     local inputs=(-H:+TrackInputFlows) positions=(-H:+TrackNodeSourcePosition) escape=(-H:SideEffectAnalysisAssumptions=vm-code,entry-points)
-    local allocsens=(-H:AnalysisContextSensitivity=allocsens)
+    local allocsens=(-H:AnalysisContextSensitivity=allocsens) cutoff=(-H:TypeFlowSaturationCutoff=100)
     case $config in
         graal)          flags=(-H:-SideEffectAnalysisNarrowCalls) ;;
         graalinputs)    mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls "${inputs[@]}") ;;
@@ -45,10 +49,15 @@ build() {  # configuration, round
         objects)        analysis=-allocsens; flags=("${allocsens[@]}" "${positions[@]}" -H:SideEffectAnalysisPartition=object-field) ;;
         locks)          analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${positions[@]}" "${inputs[@]}" -H:SideEffectAnalysisLabel=locks
                                                    -H:+SideEffectAnalysisElideLocks "${escape[@]}") ;;
+        graalcutoff-allocsens) tag=graalcutoff; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${cutoff[@]}") ;;
+        graalflagscutoff-allocsens) tag=graalflagscutoff; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${positions[@]}" "${inputs[@]}" "${cutoff[@]}") ;;
+        lockscutoff)    mode=locks; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${positions[@]}" "${inputs[@]}" -H:SideEffectAnalysisLabel=locks
+                                                   -H:+SideEffectAnalysisElideLocks "${escape[@]}" "${cutoff[@]}") ;;
         *) echo "unknown configuration $config" >&2; exit 1 ;;
     esac
     local dir="$HERE/out/javac$analysis-cost-$tag-r$round"
     rm -rf "$dir" && mkdir -p "$dir/$mode"
+    provenance "$dir"
     local start=$SECONDS
     if ! mx -p "$G/substratevm" javac-image -H:+UnlockExperimentalVMOptions -H:+SideEffectAnalysis \
             -H:SideEffectAnalysisTool="$REPO" -H:SideEffectAnalysisUv="$(command -v uv)" \
