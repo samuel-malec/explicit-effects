@@ -13,10 +13,8 @@
 #                              # the control: a wrong kill must show in the output
 #   SPLIT='Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I' ./run.sh Aliasing
 #                              # the same for partitions: different references never meet
-#   DEAD='Examples.forwardAcrossMerge(LExamples$Counter;LExamples$Link;Z)I:21' ./run.sh Examples
-#                              # the same for decisions: a store that is read claimed dead
 #   ALLOCSENS=1 ./run.sh Awfy  # every image with allocation sites, so that the analysis is
-#                              # the same in all four: out/awfy-allocsens/
+#                              # the same in all three: out/awfy-allocsens/
 #   ONLY=locks ./run.sh LockShapes      # the image that also removes the locks on objects only one thread
 #                              # reaches; LIE_LOCKS='LocksShared.add(I)V' ONLY=locks ./run.sh LocksShared is the
 #                              # control: the program shares that lock, so it must go wrong
@@ -24,13 +22,13 @@
 #                              # only some of the images, into out/awfy-sym/, with more
 #                              # native-image options: here, the symbols perf needs
 #
-# A fourth image (decisions) also removes the stores our rules find dead in Java. A fifth,
-# graal-dse, only with ONLY, has Graal remove dead stores itself after inlining instead.
+# A fourth image, graal-dse, only with ONLY, has Graal remove dead stores itself after inlining,
+# with the partitions of the objects image.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 EXAMPLE=${1:?usage: run.sh <a class of graal-export/corpus, or a program of programs/>}
 PROGRAM="$REPO/programs/$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')"
-NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${LIE_LOCKS:+-lie}${SPLIT:+-split}${DEAD:+-dead}${ALLOCSENS:+-allocsens}${TAG:+-$TAG}
+NAME=$(echo "$EXAMPLE" | tr '[:upper:]' '[:lower:]')${LIE:+-lie}${LIE_LOCKS:+-lie}${SPLIT:+-split}${ALLOCSENS:+-allocsens}${TAG:+-$TAG}
 OUT="$HERE/out/$NAME"
 MAIN=$EXAMPLE
 SOURCES=("$EXPORT_DIR/corpus/$EXAMPLE.java")
@@ -44,13 +42,11 @@ if [[ -x "$PROGRAM/build.sh" ]]; then
     SOURCES=()
     SCOPE=""
 fi
-MODES=(graal kills objects decisions)
+MODES=(graal kills objects)
 if [[ -n "${LIE:-}" ]]; then
     MODES=(kills)
 elif [[ -n "${SPLIT:-}" ]]; then
     MODES=(objects)
-elif [[ -n "${DEAD:-}" ]]; then
-    MODES=(decisions)
 fi
 if [[ -n "${ONLY:-}" ]]; then
     read -r -a MODES <<< "$ONLY"
@@ -83,14 +79,11 @@ for mode in "${MODES[@]}"; do
     if [[ -n "${ALLOCSENS:-}" && ( $mode == graal || $mode == kills ) ]]; then
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens)
     fi
-    if [[ $mode == objects || $mode == decisions ]]; then
+    if [[ $mode == objects ]]; then
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:SideEffectAnalysisPartition=object-field
                  ${SPLIT:+"-H:SideEffectAnalysisClaimNoAliasing=$SPLIT"})
     fi
-    if [[ $mode == decisions ]]; then
-        OBJECTS+=(-H:+SideEffectAnalysisRemoveDeadStores ${DEAD:+"-H:SideEffectAnalysisClaimDeadStore=$DEAD"})
-    fi
-    # Not one of the four images by default (ONLY="locks"): the monitors on objects only one thread reaches
+    # Not one of the three images by default (ONLY="locks"): the monitors on objects only one thread reaches
     # are removed, and nothing else changes. The analysis tells objects apart by allocation site and keeps
     # the inputs of its flows, and thread escape makes the assumptions the export names; with LIE_LOCKS=<method key>
     # the control claims that method's monitors are thread-local, which a program that shares them must not survive.
@@ -99,9 +92,9 @@ for mode in "${MODES[@]}"; do
                  -H:+SideEffectAnalysisElideLocks -H:SideEffectAnalysisAssumptions="${ASSUMPTIONS:-vm-code,entry-points}"
                  ${LIE_LOCKS:+"-H:SideEffectAnalysisClaimLocksLocal=$LIE_LOCKS"})
     fi
-    # Not one of the four images by default (ONLY="... graal-dse"): Graal's own dead-store
+    # Not one of the three images by default (ONLY="... graal-dse"): Graal's own dead-store
     # elimination, OverwrittenStoreEliminationPhase, after inlining, with the same partitions as
-    # the decisions image, instead of the tool's decisions.
+    # the objects image.
     if [[ $mode == graal-dse ]]; then
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:SideEffectAnalysisPartition=object-field
                  -H:+SideEffectAnalysisEliminateOverwrittenStores)

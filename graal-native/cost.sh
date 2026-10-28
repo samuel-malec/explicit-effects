@@ -10,7 +10,7 @@
 # (graalinputs, what thread escape needs: the baseline of killsescape); kills; and kills with thread escape
 # as the elision uses it (killsescape: inputs kept, assumptions vm-code,entry-points). Then with allocation
 # sites (ALLOCSENS=1): graal; graal with the inputs and source positions kept (graalflags, the baseline of
-# locks); objects; locks (elision); decisions. Each configuration compares with the one it adds to on the same
+# locks); objects; locks (elision). Each configuration compares with the one it adds to on the same
 # analysis and flags. cost.py then sets each build's stage times, peak RSS and timings.txt side by side.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
@@ -29,7 +29,7 @@ for round in $(seq 1 "$REPEATS"); do
     EXTRA="$EXTRA $INPUTS $ESCAPE" ONLY=kills TAG=cost-killsescape-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     ALLOCSENS=1 ONLY=graal TAG=cost-graal-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     ALLOCSENS=1 EXTRA="$EXTRA $INPUTS $POSITIONS" ONLY=graal TAG=cost-graalflags-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
-    for config in objects locks decisions; do
+    for config in objects locks; do
         ALLOCSENS=1 ONLY=$config TAG=cost-$config-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     done
 done

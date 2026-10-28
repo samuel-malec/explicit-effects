@@ -28,9 +28,8 @@ CONFIGS = (
     ("graal + flags (allocsens)", "graalflags", "graal", "-allocsens", "graal (allocsens)"),
     ("objects (allocsens)", "objects", "objects", "-allocsens", "graal (allocsens)"),
     ("locks (allocsens)", "locks", "locks", "-allocsens", "graal + flags (allocsens)"),
-    ("decisions (allocsens)", "decisions", "decisions", "-allocsens", "graal (allocsens)"),
 )
-STEPS = ("export", "export: thread escape", "effects.kills", "effects.elide", "rules.decisions", "apply", "elide locks")
+STEPS = ("export", "export: thread escape", "effects.kills", "effects.elide", "apply", "elide locks")
 
 
 def build(log: Path) -> dict[str, float]:

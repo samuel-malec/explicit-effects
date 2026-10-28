@@ -1,6 +1,6 @@
-"""Each example (graal-export/examples/) still shows what its comment says: the conversion examples by their shape, the optimization examples by
-what the rules do under each partitioning, the controls by what they keep, and
-the concurrency examples by what synchronization lets the rules do.
+"""Each example (graal-export/examples/) still shows what its comment says: the conversion examples by their shape, the limits by what
+the translation refuses or makes opaque, and the concurrency examples by their kill sets, the reasons their methods are opaque, whether
+their item is published, and which of their locks and volatile accesses can go.
 
 The exports come from `graal-export/suite` (or `make suite`); without them these
 checks are skipped.
@@ -21,10 +21,26 @@ from effects.kills import ANY, kills
 from effects.signatures import PARTITIONERS, analyse, no_analysis
 from graal.graal_import import PointsToFacts, load, load_facts
 from graal2ct.translate import Translation
-from rules import memory
-from rules.compare import looping
 
 SUITE = Path(__file__).parents[2] / "graal-export" / "out" / "suite"
+
+
+def looping(s: Structure) -> set[str]:
+    """The λs on a loop: those that jump or branch, through others of the
+    method's λs, back to themselves. A call of the method itself isn't a loop."""
+    refs = {lam.name: {i.op for i in lam.body if i.type == s.name and i.op != "run"} for lam in s.lambdas}  # "run": a method's entry
+    found = set()
+    for start in refs:
+        seen, work = set(), list(refs[start])
+        while work:
+            name = work.pop()
+            if name == start:
+                found.add(start)
+                break
+            if name not in seen:
+                seen.add(name)
+                work.extend(refs.get(name, ()))
+    return found
 
 
 def translate(example: str, partition: str) -> tuple[Program, Translation]:
@@ -132,91 +148,6 @@ def check_suite_limits() -> None:
     s = demo(translate("limits.OpaqueCall", "field")[0])
     assert len(heaps(s.lambdas[0].params)) == len(effects.partitions)
     print("ok   suite: the switch is refused, an opaque call takes every token, a lock and a volatile read acquire and release")
-
-
-#: example → partitioning → (loads forwarded, stores removed)
-OPTIMIZED = {
-    "forwarding.ForwardedByGraal": {"none": (0, 0), "field": (0, 0)},
-    "forwarding.AcrossCall": {"none": (0, 0), "field": (1, 0)},
-    "forwarding.AcrossReadingCall": {"none": (0, 0), "field": (1, 0)},
-    "forwarding.WritingCallBlocks": {"none": (0, 0), "field": (0, 0)},
-    "forwarding.RepeatedLoad": {"none": (0, 0), "field": (1, 0)},
-    "forwarding.IntoBranchArm": {"none": (0, 0), "field": (1, 0)},
-    "forwarding.AcrossMerge": {"none": (1, 0), "field": (1, 0)},
-    "forwarding.IntoLoop": {"none": (0, 0), "field": (1, 0)},
-    "forwarding.LoopCarried": {"none": (0, 0), "field": (1, 0)},
-    "forwarding.OutOfLoop": {"none": (0, 0), "field": (1, 0)},
-    "forwarding.WritingCallInLoopBlocks": {"none": (0, 0), "field": (0, 0)},
-    "deadstores.Adjacent": {"none": (0, 1), "field": (0, 1)},
-    "deadstores.OtherFieldBetween": {"none": (0, 0), "field": (0, 1)},
-    "deadstores.BothArms": {"none": (0, 1), "field": (0, 1)},
-    "deadstores.OneArmKeeps": {"none": (0, 0), "field": (0, 0)},
-    "deadstores.CallBetweenKeeps": {"none": (0, 0), "field": (0, 0)},
-    "deadstores.ReadThroughAliasKeeps": {"none": (0, 0), "field": (0, 0)},
-    "objects.ForwardPastOtherObject": {"field": (0, 0), "object-field": (1, 0)},
-    "objects.ForwardPastMaybeAlias": {"field": (0, 0), "object-field": (0, 0)},
-    "objects.CallOnOtherObject": {"field": (0, 0), "object-field": (1, 0)},
-    "objects.DeadStorePastOtherObject": {"field": (0, 0), "object-field": (0, 1)},
-    "objects.DeadStoreMaybeAlias": {"field": (0, 0), "object-field": (0, 0)},
-}
-
-
-def check_suite_optimizations() -> None:
-    """Each optimization example forwards and removes what its comment says under
-    each partitioning, and each control nothing."""
-    wrong = {}
-    for example, expected in OPTIMIZED.items():
-        for partition, (forwarded, removed) in expected.items():
-            program, _ = translate(example, partition)
-            done = memory.apply(program)
-            assert not check(program) + prelude.check(program, prelude.load()), (example, partition)
-            if (len(done.forwarded), len(done.removed)) != (forwarded, removed):
-                wrong[example, partition] = (done.forwarded, done.removed)
-    assert not wrong, wrong
-    print("ok   suite: each optimization example is rewritten as its comment says, and no control is")
-
-
-#: example → whether the Java memory model lets the load take the value the method already has,
-#: or the first store go, in a program free of data races → (loads forwarded, stores removed) today, per field and per
-#: object and field. RacySpin races, and the model promises it nothing, so the rules may hoist
-#: its load. An acquire writes, and a release reads, the partitions another thread may touch;
-#: memory only this thread reaches, and a lock on an object only it reaches, play no part.
-#: AcrossAtomicLocal keeps its load: its helper reaches code without facts, so the counter it is
-#: given counts as shared. The controls must never be rewritten.
-SYNCHRONIZING = {
-    "concurrency.AcrossRelease": (True, (1, 0)),
-    "concurrency.AcrossAcquireLocal": (True, (1, 0)),
-    "concurrency.AcrossAcquireSharedBlocks": (False, (0, 0)),
-    "concurrency.AcrossLockLocal": (True, (1, 0)),
-    "concurrency.AcrossLockSharedBlocks": (False, (0, 0)),
-    "concurrency.AcrossLocalMonitor": (True, (1, 0)),
-    "concurrency.AcrossAtomicLocal": (True, (0, 0)),
-    "concurrency.FinalAcrossLock": (True, (1, 0)),
-    "concurrency.HandedToThreadBlocks": (False, (0, 0)),
-    "concurrency.RacySpin": (True, (0, 0)),
-    "concurrency.ReleaseInMethod": (True, (1, 0)),
-    "concurrency.AcquireInMethodBlocks": (False, (0, 0)),
-    "concurrency.DeadStoreAcrossReleaseKeeps": (False, (0, 0)),
-    "concurrency.DeadStoreAcrossAcquire": (True, (0, 1)),
-}
-
-
-def check_suite_concurrency() -> None:
-    """No load is forwarded where another thread's write may become visible in between, no
-    store is removed that another thread may read, and each concurrency example is rewritten
-    as its comment says."""
-    wrong = {}
-    for example, (allowed, expected) in SYNCHRONIZING.items():
-        for partition in ("field", "object-field"):
-            program, _ = translate(example, partition)
-            demo(program)  # translated: a refused method would keep its loads for the wrong reason
-            done = memory.apply(program)
-            assert not check(program) + prelude.check(program, prelude.load()), (example, partition)
-            assert allowed or not (done.forwarded or done.removed), (example, partition, done.forwarded, done.removed)
-            if (len(done.forwarded), len(done.removed)) != expected:
-                wrong[example, partition] = (done.forwarded, done.removed)
-    assert not wrong, wrong
-    print("ok   suite: no load is forwarded across synchronization that may let another thread's write in")
 
 
 #: example → its method that synchronizes, and what a call to it may write (as Graal is told):

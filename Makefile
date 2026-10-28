@@ -4,9 +4,8 @@
 #   make              refresh test/data, then run the checks
 #   make export       export every corpus program to graal-export/out/<name>.json
 #   make translate    translate every export to graal-export/out/<name>.ct
-#   make compare      the stores and loads the rules leave next to what Graal leaves
 #   make native       the round trip: Native Image with the kills our tool computes
-#   make awfy         Are We Fast Yet as a whole program: coverage, opacity, the rules
+#   make awfy         Are We Fast Yet as a whole program: its two exports
 #   make driver       the same for the native-image driver, from the graal tree
 #   make native-awfy  its round trip, every image timed
 #   make awfy-layouts why the narrowed images ran slower: counters across method alignments
@@ -26,15 +25,13 @@
 # (-H:AnalysisContextSensitivity=allocsens), which tells apart objects of one
 # class allocated in different places: what the object partitions use.
 #
-# make native builds each compared program's native image four times: as
+# make native builds each compared program's native image three times: as
 # Graal compiles it, with the kills effects.kills computes from the image's
-# own analysis, with each field access in its partition of the objects too,
-# and with the stores our rules find dead in Java removed as well. It runs
-# them against the JVM, and checks that a wrong kill, a wrong partition and a
-# wrong dead store show. It needs the graal tree built with mx: its builder has
+# own analysis, and with each field access in its partition of the objects too.
+# It runs them against the JVM, and checks that a wrong kill and a wrong
+# partition show. It needs the graal tree built with mx: its builder has
 # SideEffectAnalysisFeature (-H:+SideEffectAnalysis), its compiler kill sets on
-# invokes and partitions on field locations. make compare then sets the images
-# next to the rest.
+# invokes and partitions on field locations.
 #
 # A translation has one heap token; make translate PARTITION=field writes
 # <name>.field.ct, with a token per field and array kind. PARTITION=object
@@ -60,7 +57,7 @@ PARTITION ?= none
 CT := $(if $(filter none,$(PARTITION)),,.$(PARTITION)).ct
 SOURCE := $(if $(filter object%,$(PARTITION)),.allocsens)
 
-.PHONY: all export translate compare native awfy native-awfy awfy-layouts driver test-data check suite
+.PHONY: all export translate native awfy native-awfy awfy-layouts driver test-data check suite
 # build.sh recompiles the one classes/ directory that every export analyses.
 .NOTPARALLEL:
 .DELETE_ON_ERROR:
@@ -71,18 +68,13 @@ export: $(EXPORTS)
 
 translate: $(EXPORTS:.json=$(CT))
 
-compare: $(OUT)/probe.txt $(foreach e,$(COMPARED),$(OUT)/$(call lower,$(e)).allocsens.json)
-	uv run python -m rules.compare $(filter %.json,$^) --probe $< $(if $(wildcard $(NATIVE)/*/kills/counts.txt),--native $(NATIVE))
-
 # Each run checks the image's output against the JVM's. The controls must
-# print something else: one claims that countInto writes nothing, one that two
-# references in forwardPastAliasControl never meet, and one that a store in
-# forwardAcrossMerge, which is read, is dead.
+# print something else: one claims that countInto writes nothing, and one that two
+# references in forwardPastAliasControl never meet.
 native:
 	$(foreach e,$(COMPARED),$(NATIVE_DIR)/run.sh $(e) &&) true
 	@out=$$(LIE='Examples.countInto(LExamples$$Counter;LExamples$$Link;)V' $(NATIVE_DIR)/run.sh Examples) && echo "$$out" && echo "$$out" | grep -q 'instead of'
 	@out=$$(SPLIT='Aliasing.forwardPastAliasControl(LAliasing$$Counter;LAliasing$$Counter;)I' $(NATIVE_DIR)/run.sh Aliasing) && echo "$$out" && echo "$$out" | grep -q 'instead of'
-	@out=$$(DEAD='Examples.forwardAcrossMerge(LExamples$$Counter;LExamples$$Link;Z)I:21' $(NATIVE_DIR)/run.sh Examples) && echo "$$out" && echo "$$out" | grep -q 'instead of'
 
 # Are We Fast Yet, from the are-we-fast-yet submodule, run by programs/awfy's
 # driver. The analysis runs without its predicates: they take a native without
@@ -92,7 +84,6 @@ AWFY := programs/awfy
 AWFY_SOURCES := $(AWFY)/Awfy.java $(AWFY)/build.sh $(wildcard are-we-fast-yet/benchmarks/Java/src/*.java are-we-fast-yet/benchmarks/Java/src/*/*.java)
 
 awfy: $(OUT)/awfy.json $(OUT)/awfy.allocsens.json
-	uv run python -m rules.report $^ --native $(wildcard $(NATIVE)/awfy $(NATIVE)/awfy-allocsens)
 
 native-awfy:
 	$(NATIVE_DIR)/run.sh Awfy
@@ -133,7 +124,6 @@ DRIVER_CP := $(subst $(eval) ,:,$(addprefix $(GRAAL)/substratevm/mxbuild/dists/,
 DRIVER := TARGET_CP=$(DRIVER_CP) DUMP_FILTER=com.oracle.svm.driver
 
 driver: $(OUT)/driver.json $(OUT)/driver.allocsens.json
-	uv run python -m rules.report $^
 
 $(OUT)/driver.json: $(EXPORTER)
 	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
@@ -143,10 +133,6 @@ $(OUT)/driver.allocsens.json: $(EXPORTER)
 	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
 	cd $(EXPORT) && $(DRIVER) DUMP_IR=out/driver.allocsens.json \
 		./run-dump.sh com.oracle.svm.driver.NativeImage -H:AnalysisContextSensitivity=allocsens > out/driver.allocsens.txt
-
-# What Graal leaves of each method's field accesses, from its own test harness.
-$(OUT)/probe.txt: graal-probe/MemoryProbe.java graal-probe/run.sh $(COMPARED:%=$(EXPORT)/corpus/%.java)
-	./graal-probe/run.sh $(COMPARED) > $@
 
 test-data: $(FIXTURES:%=test/data/%.json)
 

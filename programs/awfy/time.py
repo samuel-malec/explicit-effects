@@ -3,7 +3,7 @@
 Usage:
     uv run python programs/awfy/time.py graal-native/out/awfy [--runs 5] [--iterations 20]
 
-Runs every image graal-native built (graal, kills, objects, decisions), the
+Runs every image graal-native built (graal, kills, objects), the
 images taking turns run by run so that the machine's drift touches them
 alike. Each run measures each benchmark --iterations times at the size the
 suite benchmarks with. The first iteration of a run is left out, and the
@@ -16,7 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-MODES = ("graal", "kills", "objects", "decisions")
+MODES = ("graal", "kills", "objects")
 
 
 def main() -> int:

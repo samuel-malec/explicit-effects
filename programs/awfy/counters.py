@@ -3,7 +3,7 @@
 Usage:
     uv run python programs/awfy/counters.py CD graal-native/out/awfy-sym graal-native/out/awfy-a64 [--runs 3]
 
-Runs every image under each directory (graal, kills, objects, decisions) on the one
+Runs every image under each directory (graal, kills, objects) on the one
 benchmark, under `perf stat`, pinned to one CPU, the images taking turns run by run.
 Prints the mean of each counter per image, and each image's cycles against the
 first image's. Unlike run times, the counts don't depend on the clock frequency.
@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-MODES = ("graal", "kills", "objects", "decisions")
+MODES = ("graal", "kills", "objects")
 EVENTS = {
     "cycles": "cycles",
     "instructions": "instructions",

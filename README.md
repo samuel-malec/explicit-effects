@@ -17,13 +17,11 @@ explicit-effects/
 │   ├── graal/         # loads a Graal IR export
 │   ├── cthu/          # the Graal dialect of Cthulhu, parser and single-use checker
 │   ├── effects/       # heap partitions and method signatures
-│   ├── graal2ct/      # the Graal IR to Cthulhu translation
-│   └── rules/         # ad-hoc optimizations on Cthu programs
+│   └── graal2ct/      # the Graal IR to Cthulhu translation
 ├── test/              # example exports and the checks
 ├── graal-export/      # runs the standalone points-to analysis and exports its facts and Graal IR
 │   ├── examples/      # concept programs to learn the pipeline from
-│   └── corpus/        # the programs the checks, make compare and the round trip are built from
-├── graal-probe/       # measures what Graal itself does to the examples' loads and stores
+│   └── corpus/        # the programs the checks and the round trip are built from
 ├── graal-native/      # the round trip: native images built with the graal tree's side-effect analysis
 ├── programs/          # whole programs: Are We Fast Yet and the native-image driver
 ├── graal/             # submodule: our Graal fork with the exporter and the analysis feature
@@ -31,7 +29,7 @@ explicit-effects/
 └── thesis/            # the thesis text
 ```
 
-`src/effects/`, `src/rules/` and `programs/` each have their own README with the details and the results.
+`src/effects/` and `programs/` each have their own README with the details and the results.
 
 ## Setup
 
@@ -54,17 +52,16 @@ each example's comment says what to look for. `make suite` exports them all and 
 
 ## Trying it out
 
-Export the examples, translate one method, then run the rules on all of them:
+Export the examples, translate one method, then all of them, also straightened:
 
 ```bash
 cd graal-export && ./build.sh corpus/Examples.java && \
     DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
 uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
 uv run graal2ct graal-export/out/examples.json --partition field
-uv run graal2ct graal-export/out/examples.json --partition field --rules
-uv run graal2ct graal-export/out/aliasing.allocsens.json --partition object-field --rules
+uv run graal2ct graal-export/out/examples.json --partition field --shape
+uv run graal2ct graal-export/out/aliasing.allocsens.json --partition object-field --shape
 uv run pytest
-./graal-probe/run.sh
 ```
 
 `--partition` decides how finely the heap is split into tokens:
@@ -76,6 +73,8 @@ uv run pytest
 
 The last two read `<name>.allocsens.json`, which is exported with allocation sites.
 
+`--shape` then makes the code straight-line, with no other change: a branch to an arm that throws becomes a guard on each token, and a block that one jump reaches joins the λ that jumps.
+
 ## The Makefile
 
 You rarely need to run the steps above by hand:
@@ -85,20 +84,17 @@ You rarely need to run the steps above by hand:
 | `make` | Re-exports `Examples` and `Signatures` if their source or the exporter changed, copies them to `test/data/` and runs the checks. |
 | `make export` | Exports every example to `graal-export/out/<name>.json`, with the analysis report in `<name>.txt`. |
 | `make translate` | Translates every export to `<name>.ct` with one heap token. Add `PARTITION=field` (or `object`, `object-field`) for `<name>.field.ct` and so on. |
-| `make compare` | For each method of `Examples`, `Signatures` and `Aliasing`, shows the field loads and stores Graal leaves (from `graal-probe`) next to those our rules leave under each partitioning. |
-| `make native` | Builds each example as a native image four times and checks each against the JVM. See below. |
-| `make awfy`, `make driver` | Run the export and the rules on whole programs (`programs/README.md`). |
+| `make native` | Builds each example as a native image three times and checks each against the JVM. See below. |
+| `make awfy`, `make driver` | Export whole programs (`programs/README.md`). |
 | `make native-awfy` | The timed round trip on Are We Fast Yet. |
 | `make suite` | Exports the example suite, one program per example, and checks that each still shows what its comment says. |
 
-The four images `make native` builds are:
+The three images `make native` builds are:
 
 1. as Graal compiles it;
 2. with each call narrowed to what our tool says the callee may write;
-3. additionally with each field access placed in its partition of the objects;
-4. additionally with the stores our rules find dead in Java removed.
+3. additionally with each field access placed in its partition of the objects.
 
-After `make native`, `make compare` shows the images too.
 This needs the graal tree built with `mx build` in its `substratevm`: its image builder carries the side-effect analysis (`-H:+SideEffectAnalysis`), its compiler the kill sets on invokes and the partitions on field locations.
 
 After rebuilding the Graal tree, force fresh exports with `make -B`.
