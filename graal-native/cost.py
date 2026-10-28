@@ -28,6 +28,10 @@ CONFIGS = (
     ("graal + flags (allocsens)", "graalflags", "graal", "-allocsens", "graal (allocsens)"),
     ("objects (allocsens)", "objects", "objects", "-allocsens", "graal (allocsens)"),
     ("locks (allocsens)", "locks", "locks", "-allocsens", "graal + flags (allocsens)"),
+    # javac only: the saturation cutoff at 100 (F65), and locks removed on top of it
+    ("graal + cutoff (allocsens)", "graalcutoff", "graal", "-allocsens", "graal (allocsens)"),
+    ("graal + flags + cutoff (allocsens)", "graalflagscutoff", "graal", "-allocsens", "graal + cutoff (allocsens)"),
+    ("locks + cutoff (allocsens)", "lockscutoff", "locks", "-allocsens", "graal + flags + cutoff (allocsens)"),
 )
 STEPS = ("export", "export: thread escape", "effects.kills", "effects.elide", "apply", "elide locks")
 
