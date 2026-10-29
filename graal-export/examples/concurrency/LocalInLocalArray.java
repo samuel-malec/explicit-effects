@@ -1,14 +1,13 @@
 package concurrency;
 
 /**
- * Control: an object stored into an array that no one shares stays this thread's, though
+ * An object stored into an array that no one shares stays this thread's, though
  * another array is shared.
  */
 public class LocalInLocalArray {
 
     static class Item { int value; Object link; }
 
-    // Recursive, so that inlining can't bring it into main: it reads and writes the item's field.
     static void use(Item item, int n) {
         if (n > 0) {
             use(item, n - 1);

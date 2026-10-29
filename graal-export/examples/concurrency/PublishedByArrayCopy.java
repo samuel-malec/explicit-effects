@@ -1,14 +1,12 @@
 package concurrency;
 
 /**
- * An object in an array only this thread reaches, copied into one other threads reach: the
- * copy is not a store of the object, but it puts the object where they can read it.
+ * An object in an array only this thread reaches, copied into one other threads reach
  */
 public class PublishedByArrayCopy {
 
     static class Item { int value; Object link; }
 
-    // Recursive, so that inlining can't bring it into main: it reads and writes the item's field.
     static void use(Item item, int n) {
         if (n > 0) {
             use(item, n - 1);

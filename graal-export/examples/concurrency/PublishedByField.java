@@ -1,14 +1,13 @@
 package concurrency;
 
 /**
- * An object stored into a field of one another thread can reach, which is in a static field:
- * the item is reached through the box.
+ * An object stored into a field of an object another thread can reach,
+ * the item is reachable through the box.
  */
 public class PublishedByField {
 
     static class Item { int value; Object link; }
 
-    // Recursive, so that inlining can't bring it into main: it reads and writes the item's field.
     static void use(Item item, int n) {
         if (n > 0) {
             use(item, n - 1);

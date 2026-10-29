@@ -13,7 +13,6 @@ public class AcrossLockLocal {
     static final Object LOCK = new Object();
     static int calls;
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static void logged(int n) {
         if (n > 0) {
             logged(n - 1);

@@ -12,7 +12,6 @@ public class AcrossRelease {
 
     static volatile boolean ready;
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static void publish(int n) {
         if (n > 0) {
             publish(n - 1);

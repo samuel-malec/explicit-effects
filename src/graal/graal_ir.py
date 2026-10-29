@@ -1,4 +1,4 @@
-"""Representation of Graal IR structures alongside the points-to information needed for analyis."""
+"""Representation of Graal IR structures alongside the points-to information needed for analysis."""
 
 from dataclasses import dataclass
 

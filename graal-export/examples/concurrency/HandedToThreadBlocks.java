@@ -1,7 +1,7 @@
 package concurrency;
 
 /**
- * Control: the counter is handed to another thread, which writes its value.
+ * The counter is handed to another thread, which writes its value.
  * `start` is a release and `join` an acquire, so after `join` this thread must
  * see the 7 the other thread stored. The load must read memory again, under
  * any partitioning, and a thread-escape analysis must count the counter as

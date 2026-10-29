@@ -1,7 +1,7 @@
 package concurrency;
 
 /**
- * Control for ReleaseInMethod: an acquire inside the method, reading the
+ * An acquire inside the method, reading the
  * volatile flag. The counter is in a static field, so another thread may write
  * its value and then set the flag; once this thread has read the flag, it must
  * see that write. The translation makes the read an `acquire` of every token,
