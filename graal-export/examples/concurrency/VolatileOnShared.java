@@ -2,7 +2,7 @@ package concurrency;
 
 /**
  * The same volatile accesses to a field of an object that another thread reaches: `main` hands the
- * gauge to a thread, so the accesses must stay volatile. The control for VolatileOnLocal.
+ * gauge to a thread, so the accesses must stay volatile.
  */
 public class VolatileOnShared {
 
@@ -10,7 +10,6 @@ public class VolatileOnShared {
         volatile int level;
     }
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static int fill(Gauge gauge, int n) {
         if (n > 0) {
             return fill(gauge, n - 1);

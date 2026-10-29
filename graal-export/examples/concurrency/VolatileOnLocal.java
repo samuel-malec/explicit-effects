@@ -11,7 +11,6 @@ public class VolatileOnLocal {
         volatile int level;
     }
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static int fill(Gauge gauge, int n) {
         if (n > 0) {
             return fill(gauge, n - 1);

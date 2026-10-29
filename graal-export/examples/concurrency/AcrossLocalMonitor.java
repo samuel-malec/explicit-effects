@@ -4,8 +4,7 @@ package concurrency;
  * A lock on an object no other thread can reach: `main` allocates the tally and
  * passes it only to `demo`. No other thread can take its monitor, so taking it
  * synchronizes with nothing, and the load may take the 5 even though the
- * counter is in a static field that other threads can reach. This is the case
- * lock elision needs.
+ * counter is in a static field that other threads can reach.
  */
 public class AcrossLocalMonitor {
 
@@ -14,7 +13,6 @@ public class AcrossLocalMonitor {
     static class Tally {
         int count;
 
-        // Recursive, so that Graal can't inline it before the analysis.
         synchronized void add(int n) {
             if (n > 0) {
                 add(n - 1);

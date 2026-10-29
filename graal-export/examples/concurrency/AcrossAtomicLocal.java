@@ -12,7 +12,6 @@ public class AcrossAtomicLocal {
 
     static final java.util.concurrent.atomic.AtomicInteger TICKETS = new java.util.concurrent.atomic.AtomicInteger();
 
-    // Recursive, so that Graal can't inline it before the analysis.
     static int ticket(int n) {
         return n > 0 ? ticket(n - 1) : TICKETS.incrementAndGet();
     }
