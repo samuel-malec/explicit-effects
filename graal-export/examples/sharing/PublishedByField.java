@@ -1,9 +1,10 @@
-package concurrency;
+package sharing;
 
 /**
- * An object stored into an array another thread can reach.
+ * An object stored into a field of an object another thread can reach,
+ * the item is reachable through the box.
  */
-public class PublishedByArray {
+public class PublishedByField {
 
     static class Item { int value; Object link; }
 
@@ -15,13 +16,15 @@ public class PublishedByArray {
         }
     }
 
-    static final Item[] TABLE = new Item[4];
+    static class Box { Item item; }
+
+    static final Box BOX = new Box();
 
     static int sink;
 
     public static void main(String[] args) {
         Item item = new Item();
-        TABLE[args.length] = item;
+        BOX.item = item;
         use(item, args.length);
     }
 }

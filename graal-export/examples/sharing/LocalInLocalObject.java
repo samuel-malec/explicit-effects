@@ -1,9 +1,9 @@
-package concurrency;
+package sharing;
 
 /**
- * An object another thread can reach through a static field
+ * An object stored into a box that no one shares stays this thread's.
  */
-public class PublishedByStatic {
+public class LocalInLocalObject {
 
     static class Item { int value; Object link; }
 
@@ -15,13 +15,13 @@ public class PublishedByStatic {
         }
     }
 
-    static Item published;
+    static class Box { Item item; }
 
     static int sink;
 
     public static void main(String[] args) {
-        Item item = new Item();
-        published = item;
-        use(item, args.length);
+        Box box = new Box();
+        box.item = new Item();
+        use(box.item, args.length);
     }
 }

@@ -1,4 +1,4 @@
-package concurrency;
+package sharing;
 
 /**
  * An object stored into an array that no one shares stays this thread's, though

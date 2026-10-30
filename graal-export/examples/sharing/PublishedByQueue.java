@@ -1,9 +1,12 @@
-package concurrency;
+package sharing;
+
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * An object in an array only this thread reaches, copied into one other threads reach
+ * An object handed to another thread through a queue: the queue's node holds it, and the node is
+ * linked with compare-and-swap.
  */
-public class PublishedByArrayCopy {
+public class PublishedByQueue {
 
     static class Item { int value; Object link; }
 
@@ -15,14 +18,13 @@ public class PublishedByArrayCopy {
         }
     }
 
-    static final Item[] TABLE = new Item[4];
+    static final ConcurrentLinkedQueue<Item> QUEUE = new ConcurrentLinkedQueue<>();
 
     static int sink;
 
     public static void main(String[] args) {
         Item item = new Item();
-        Item[] mine = new Item[]{item};
-        System.arraycopy(mine, 0, TABLE, args.length, 1);
+        QUEUE.offer(item);
         use(item, args.length);
     }
 }

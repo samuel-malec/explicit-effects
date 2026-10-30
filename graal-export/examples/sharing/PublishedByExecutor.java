@@ -1,4 +1,4 @@
-package concurrency;
+package sharing;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
