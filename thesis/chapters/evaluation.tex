@@ -1,27 +1,539 @@
 \chapter{Evaluation}\label{chap:evaluation}
-% Budget: 12 standard pages. The faculty expects an experimental thesis to explain the approaches compared,
-% describe the experiments, analyse the results and draw conclusions. Material:
-% .notes/evaluation/evaluation-2026-10-22.md, evaluation-2026-10-24-concurrency.md.
+% Budget: 12 standard pages. Material: .notes/technical/evaluation.md (every number, with date and script) and
+% .notes/technical/evaluation-report.md (the same, as one report); the tables of the clean run of 29 October are in
+% .notes/technical/results-2026-10-29/clean-run/.
+
+\newcommand{\pct}[1]{\ensuremath{#1\,\%}}
+
+This chapter evaluates the facts that our analysis gives to Graal when it compiles a program with GraalVM Native Image.
+It answers the four research questions of \Cref{chap:introduction}: how much more Graal optimizes with the facts (RQ1),
+what this costs in build time (RQ2), what modelling concurrency enables (RQ3), and whether the resulting programs are
+correct (RQ4). \Cref{sec:eval-method} states what is compared with what and under which conditions.
+\Cref{sec:eval-gain,sec:eval-cost,sec:eval-concurrency,sec:eval-soundness} answer the questions in turn,
+\Cref{sec:eval-blockers} explains why the gains are as small as they are, and \Cref{sec:eval-discussion,sec:eval-threats}
+interpret the results and state their limits. The commands that regenerate every table are in \Cref{app:reproduction}.
 
 \section{Method}\label{sec:eval-method}
-% Programs (corpus, examples, Are We Fast Yet, javac, Native Image's JUnit suite), image configurations,
-% the machine, what is counted, how correctness and timing are checked.
+
+\subsection{What Is Compared with What}\label{sec:eval-compared}
+
+An \emph{image} is a native image built from one program by one builder. The builder is Native Image from our fork of
+Graal, extended with the feature of \Cref{chap:implementation}. The feature takes the facts of Native Image's own
+points-to analysis out of the build, our tool turns them into kill sets, partitions, and lock decisions, and Graal's own
+phases use them (\Cref{sec:impl-graal}). Recall that a \emph{kill set} is the set of locations a call may write: without
+one, Graal assumes that the call may write anything and reloads every field after it. A \emph{configuration} says which
+of these facts reach Graal. \Cref{tab:eval-configurations} lists the configurations used in this chapter.
+
+\begin{table}[t]
+    \centering
+    \caption{The configurations. Each is compared with the baseline that differs from it in exactly the facts under test.
+    \texttt{graal} loads the feature but hands nothing to Graal; it only counts what Graal leaves, so apart from the
+    counting it is Native Image as released. \texttt{ceiling} leaves out the kill of everything the facts cannot name and
+    is therefore unsound; it is an upper bound, not a result. Allocation sites stand for the allocation-site analysis
+    explained below. \texttt{kills} is also built on allocation sites, where its baseline is \texttt{graal} on allocation sites.}
+    \label{tab:eval-configurations}
+    \small
+    \begin{tabular}{llll}
+        \toprule
+        Configuration & Analysis & Facts given to Graal & Compared with \\
+        \midrule
+        \texttt{graal}     & default          & none                                   & (baseline) \\
+        \texttt{kills}     & default          & kill sets                              & \texttt{graal} \\
+        \texttt{ceiling}   & default          & kill sets, unsound upper bound         & \texttt{graal}, \texttt{kills} \\
+        \texttt{graal}     & allocation sites & none                                   & (baseline) \\
+        \texttt{objects}   & allocation sites & kill sets and object-field partitions  & \texttt{graal} on allocation sites \\
+        \texttt{locks}     & allocation sites & lock and \texttt{volatile} decisions   & \texttt{graal} with the same flags \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Native Image can run its points-to analysis in two ways. The \emph{default analysis} is context insensitive and names an
+object by its type. The \emph{allocation-site analysis}, selected by setting the builder's option \texttt{AnalysisContextSensitivity} to
+\texttt{allocsens}, names an object by the place that allocated it. Partitions by object need the finer names: on the default analysis an object is a type, so they equal the partitions by field and there is
+nothing to compare. Kill sets do not need them, so we measure them on both. Thread escape and lock elision work on both; allocation sites
+find more sites (43 against 34 thread-local sites in AWFY), and all our run-time measurements of lock elision use them, so we state this
+choice in \Cref{sec:eval-discussion} and \Cref{sec:eval-threats}.
+
+Allocation sites are not only a more precise input; they change the code Graal produces, with or without our facts. On
+Are We Fast Yet~\cite{marr2016awfy} (AWFY below), with nothing of ours narrowed, the calls left in the program's methods
+fall from 1,407 to 1,110, and the loads Graal leaves in the build a user would make rise from 2,564 to 3,325
+(\pct{+30}). An \texttt{objects} image with 3,270 loads, set beside a default-analysis \texttt{graal} image with 2,564, would
+therefore look 28\,\% worse; in the other build (914 loads against 943) it would look 3\,\% better. Neither number says
+anything about partitions. An early run-time measurement fell into exactly this trap, showing DeltaBlue 18.8\,\% faster and
+Havlak 14.4\,\% slower; the change of analysis confounded it, and we discard it. We therefore compare images only on the
+same analysis, and report the price of the allocation-site analysis separately (\Cref{sec:eval-cost}).
+
+\subsection{Programs}\label{sec:eval-programs}
+
+\Cref{tab:eval-programs} lists the programs. The first four serve the questions that need a known answer, AWFY the
+questions about run time, and javac, PetClinic, and the Barista applications the questions about size and about locks
+that real programs own. AWFY has 14 benchmarks over a small collection library of their own, so the JDK stays out of most
+of the code. The suite's harness picks a benchmark by name through reflection, which a closed-world analysis cannot see;
+\texttt{Awfy.java} therefore constructs each benchmark directly and prints whether it verified.
+
+\begin{table}[t]
+    \centering
+    \caption{The programs of the evaluation. Methods are counted as the analysis sees them: reachable methods for javac, methods
+    with facts for PetClinic.}
+    \label{tab:eval-programs}
+    \small
+    \begin{tabular}{p{3.4cm}p{6.2cm}p{3.0cm}}
+        \toprule
+        Program & What it is & Used for \\
+        \midrule
+        \texttt{Examples}, \texttt{Signatures}, \texttt{Aliasing}, \texttt{Allocation}
+            & four small programs designed to have a known answer
+            & loads \\
+        Example suite
+            & 72 one-concept programs, 32 of them on concurrency
+            & round trips, checks \\
+        AWFY
+            & 14 benchmarks, 459 methods of the program, pinned at commit \texttt{74306fe}
+            & loads, run time, cost \\
+        \texttt{LockShapes}, \texttt{VolatileShapes}
+            & a lock or \texttt{volatile} field on an object held in a field, an array, a list, or passed through calls
+            & run time of lock elision \\
+        javac
+            & the Java compiler, 37,854 reachable methods
+            & cost, locks \\
+        Native Image's tests
+            & its own JUnit suite, 23 images with 289 tests
+            & robustness \\
+        Spring PetClinic
+            & a server with Tomcat, H2, HikariCP, 164,600 methods with facts
+            & scale, locks \\
+        Barista~\cite{barista}
+            & 13 server applications taken, 11 built (Vert.x, Micronaut, Spring, Helidon, Ktor, Play, Dropwizard, \dots)
+            & locks \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Conditions}\label{sec:eval-conditions}
+
+All builds and measurements ran on the faculty server pontos04: two AMD EPYC 7371 processors with 64 threads in total,
+1\,TB of RAM, Debian 13. It is the only machine of the evaluation; a laptop (Ryzen 7 PRO 7840U) served only for the early
+work with hardware counters and for counts that do not depend on the machine. Hardware counters are not available on
+pontos04 (\texttt{perf\_event\_paranoid} is 3). The builder is GraalVM 25.5-dev, built from commit \texttt{bc9abea792a} of
+our fork of Graal on a JDK~25 with JVMCI; our tool is at commit \texttt{622fc27}. The headline tables of this chapter come
+from one run of a script (\texttt{reproduce.sh}, \Cref{app:reproduction}) that refuses to start unless both trees are
+exactly a commit and the builder is newer than the fork's sources; every result directory records the commits. The
+measurements of 22--28 October were made from stamped working copies of earlier commits. We say so wherever a number
+comes from one of them.
+
+\paragraph{Programs are built twice.} AWFY is built as the analysis builds it (\texttt{-O2}, no trivial inlining) and as a
+user would (\texttt{-O3} with trivial inlining). We call the two builds \texttt{-O2} and \texttt{-O3}.
+
+\paragraph{Correctness.} Every image must print exactly what the JVM prints for the same program. An image that runs
+longer than 300 seconds is stopped. A build whose output differs is a failure, not a data point.
+
+\paragraph{What is counted.} We count the field loads and stores that Graal leaves in the program's methods at the end of
+the low tier, the calls, and the calls narrowed. These are static counts: loop unrolling multiplies them, so the 66 stores of
+\texttt{Allocation} are one store unrolled 64 times. They are not run time.
+
+\paragraph{Run time.} The images are pinned to four cores of one NUMA node (\texttt{taskset -c 4-7}) with nothing else
+running; the script waits until the one-minute load is below 2. Each of the 14 benchmarks runs 20 iterations, five times;
+the first iteration is dropped as warm-up and the median is the result. The images take turns run by run, so that drift
+touches them alike. In every table the same \texttt{graal} binary is timed twice, as an A/A control that shows the noise: it
+was between \pct{-0.9} and \pct{+1.5} per benchmark and \pct{+0.1} in total.
+
+\paragraph{Several builds.} Native Image places every method at a multiple of 32 bytes, so a change in the size of one
+method moves all that follow it. Placement alone moves twelve of the fourteen AWFY benchmarks by 4--13\,\% with identical
+instructions, and the effect of our facts is below that for all but one benchmark. One build of a configuration is therefore not
+enough, and we build \texttt{graal} and \texttt{kills} four times each and time all eight images together.
+
+\paragraph{Build time.} We report the wall-clock seconds of one build at a time on an empty machine, the configurations
+taking turns: five rounds for AWFY, three for javac. The tables give the median and the range, the time of the analysis and
+compile stages from the builder's own log, and the peak resident memory.
 
 \section{What Graal Optimizes with the Facts (RQ1)}\label{sec:eval-gain}
-% Loads and stores left, calls narrowed, run time; secondarily, the same facts used by rules on the token form.
+
+\subsection{Loads Left}
+
+\Cref{tab:eval-loads} shows the loads Graal leaves in the program's methods. The numbers are those of the clean run of
+29 October; they equal the earlier ones from 22--28 October to the unit.
+
+\begin{table}[t]
+    \centering
+    \caption{Loads left by Graal in the program's methods, by configuration. The first block uses the default analysis,
+    the second allocation sites; the percentage is the change against \texttt{graal} on the same analysis. For AWFY the
+    build is \texttt{-O2} unless stated. Rows marked with an asterisk were not repeated in the clean run: the
+    \texttt{-O3} build on allocation sites is from 22 October and the ceiling at \texttt{-O2} from 28 October.}
+    \label{tab:eval-loads}
+    \small
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        & \multicolumn{2}{c}{Default analysis} & \multicolumn{3}{c}{Allocation sites} \\
+        \cmidrule(lr){2-3} \cmidrule(lr){4-6}
+        Program & \texttt{graal} & \texttt{kills} & \texttt{graal} & \texttt{kills} & \texttt{objects} \\
+        \midrule
+        \texttt{Examples}   & 40 & 27 (\pct{-32.5}) & 43 & 30 (\pct{-30.2}) & 30 (\pct{-30.2}) \\
+        \texttt{Signatures} & 16 & 12 (\pct{-25.0}) & 16 & 12 (\pct{-25.0}) & 12 (\pct{-25.0}) \\
+        \texttt{Aliasing}   & 16 & 14 (\pct{-12.5}) & 18 & 16 (\pct{-11.1}) & 13 (\pct{-27.8}) \\
+        \texttt{Allocation} &  9 &  7 (\pct{-22.2}) &  9 &  7 (\pct{-22.2}) &  7 (\pct{-22.2}) \\
+        AWFY, \texttt{-O2}  & 943 & 903 (\pct{-4.2}) & 954 & 914 (\pct{-4.2}) & 914 (\pct{-4.2}) \\
+        AWFY, \texttt{-O3}  & 2,564 & 2,510 (\pct{-2.1}) & 3,325* & 3,269* (\pct{-1.7}) & 3,270* (\pct{-1.7}) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+On the four small programs, which were written to contain calls that write little, kill sets remove 12.5--32.5\,\% of the
+loads. On AWFY they remove 40 of 943 loads (\pct{4.2}) in the \texttt{-O2} build and 54 of 2,564 (\pct{2.1}) in the
+\texttt{-O3} build. The effect of kill sets does not depend on the analysis: on allocation sites they remove the same 40
+loads from AWFY. Partitions by allocation site add nothing on AWFY, where \texttt{objects} leaves exactly the loads that
+\texttt{kills} leaves, because the partitions split almost no field of the program (one of 234 fields keeps two
+partitions). They pay only where the program was written for them: on \texttt{Aliasing}, which holds two counters that never
+meet, they remove three loads more than \texttt{kills} does (16 to 13). Dead stores add nothing of their own: Graal's phase for overwritten stores removes
+the same stores as our decisions did (three in \texttt{Examples}, one in \texttt{Aliasing}).
+
+\subsection{Run Time}
+
+A load that Graal no longer reloads after a call saves nothing by itself; it saves time where it enables something more,
+such as a load moved out of a loop. We therefore measure run time directly. \Cref{tab:eval-time} gives the benchmarks that
+matter at \texttt{-O3} with the default analysis. Each \texttt{kills} cell is a range over eight builds, four timed earlier
+on 29 October and four from the clean tree, each against the first \texttt{graal} build.
+
+\begin{table}[t]
+    \centering
+    \caption{Run time of \texttt{kills} against \texttt{graal} on AWFY at \texttt{-O3}, default analysis. The first column is
+    the A/A control: the first \texttt{graal} binary timed against itself. The second is the range over the three other
+    builds of \texttt{graal}, the third the range over the eight builds of \texttt{kills}. A negative number is faster.
+    The first \texttt{graal} build took 704.6\,ms in total in the first set and 696.7\,ms in the clean run; the other eight
+    benchmarks stay within \pct{\pm 4.1} for \texttt{kills}.}
+    \label{tab:eval-time}
+    \small
+    \begin{tabular}{lrrr}
+        \toprule
+        Benchmark & A/A & other \texttt{graal} builds & \texttt{kills}, eight builds \\
+        \midrule
+        Queens   & \pct{-0.2} & \pct{-2.2} to \pct{-0.2} & \textbf{\pct{-27.8} to \pct{-26.1}} \\
+        Sieve    & \pct{+0.3} & \pct{-2.0} to \pct{+2.5} & \pct{-8.6} to \pct{-1.7} \\
+        Storage  & \pct{+0.2} & \pct{-0.0} to \pct{+1.0} & \pct{-5.4} to \pct{-3.7} \\
+        Permute  & \pct{+0.3} & \pct{-1.7} to \pct{+1.1} & \pct{+5.2} to \pct{+8.4} \\
+        Havlak   & \pct{+1.5} & \pct{-2.2} to \pct{+1.5} & \pct{-5.7} to \pct{+2.5} \\
+        Richards & \pct{-0.6} & \pct{-0.2} to \pct{+6.7} & \pct{-6.9} to \pct{+20.9} \\
+        \midrule
+        Total    & \pct{+0.1} & \pct{-0.4} to \pct{+1.0} & \pct{-3.0} to \pct{+1.7} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\textbf{Queens} is the one clear win: \pct{-25.7} to \pct{-27.8} in all ten builds of \texttt{kills} of 29 October, far
+outside the noise. The recursive method \texttt{placeQueen} now kills only array elements, so four fields are no longer
+reloaded in its loop (the reads in the loop fall from 6 to 0) and Graal inlines the recursion differently. The win
+reproduces on allocation sites (\pct{-32.4}) and is absent in the \texttt{-O2} build (\pct{-0.5}), where Graal inlines less. We read it as the effect we
+set out to obtain: a call that wrote a few locations no longer forces a reload of the others.
+
+\textbf{The total} needs care. The first four builds of \texttt{kills} were 1.4 to 3.0\,\% faster than \texttt{graal} (mean
+\pct{-2.3}); the four from the clean tree gave \pct{+1.7}, \pct{-1.3}, \pct{-1.0}, and \pct{-1.0} (mean \pct{-0.4}). The
+\pct{+1.7} is Richards alone: in that build Richards was 20.9\,\% slower, in the other three between \pct{-2.6} and
+\pct{+4.6}, and its share of that build's total is 3.0 points. Over the eight builds the mean is \pct{-1.4} and the range is
+\pct{-3.0} to \pct{+1.7}, against \pct{-0.4} to \pct{+1.0} for the other builds of \texttt{graal}. We conclude that kill
+sets make AWFY 0 to 3\,\% faster in total, mostly through Queens, and that the number depends on which build is timed. An
+earlier reading of one build said ``neutral in total'' and one of four builds said \pct{-2.3}; the range over eight builds is the
+claim we can support.
+
+\textbf{Permute, Richards, and Havlak} do not support a claim either way. Permute is slower with \texttt{kills} in every
+build (\pct{+4.7} to \pct{+13.1} over ten), but the kill sets change its code only a little, and when we shifted the
+alignment of all methods to 16, 64, or 128 bytes instead of the default 32, \texttt{kills} became 6.5--7.1\,\% \emph{faster}
+than \texttt{graal}. We read it as code placement. Richards and Havlak vary by 28 and 8 points between builds of one
+configuration. With allocation sites in every image, the total is \pct{-0.1} for \texttt{kills} and \pct{-0.6} for
+\texttt{objects} at \texttt{-O3} (22 October): partitions by allocation site give no run-time gain on AWFY either.
+
+\subsection{The Ceiling}
+
+To learn whether making the remaining opaque calls precise would help, we built AWFY with the kill of everything the facts
+cannot name left out: identity hash codes, class initialization, synchronization, native and unresolved calls. This
+\texttt{ceiling} image is unsound by construction, but its output equals the JVM's on AWFY, and it is the most that precise
+kill sets could give Graal. It leaves 2,392 loads at \texttt{-O3} (\pct{-6.7}) against 2,510 for \texttt{kills}, and 857 at
+\texttt{-O2} (\pct{-9.1}): it removes three times as many loads. It is not faster. In one build each, \texttt{kills} was
+\pct{-1.7} and \texttt{ceiling} \pct{-1.4} in total, with Queens at \pct{-27.2} in both; a run on 28 October gave \pct{-1.7} and
+\pct{-0.5}. Only 19 methods differ between the two, and one of them, \texttt{LoopTesterApp.constructCFG}, accounts for 65 of the
+118 further loads. As expected from \Cref{sec:eval-blockers}, further precision removes loads that do not enable
+anything. Making the opaque layers precise would not make AWFY faster, so for AWFY it is not worth building.
 
 \section{Cost against Benefit (RQ2)}\label{sec:eval-cost}
-% Build time added by each step, before and after the cuts, against the gains.
+
+\Cref{tab:eval-cost} gives the build time of AWFY at \texttt{-O3} in the clean run: five rounds of every configuration.
+Each configuration is compared with the one it adds to on the same analysis and flags, as in \Cref{tab:eval-configurations};
+the input flows and source positions that thread escape needs cost Native Image nothing measurable by themselves ($+0.1$ s).
+
+\begin{table}[t]
+    \centering
+    \caption{Build time of AWFY at \texttt{-O3}, median of five rounds in seconds. The last column is the difference of the medians
+    against the configuration the row adds to, with the percentage of its total. ``Flags'' means that the analysis keeps the
+    inputs of its flows and the source positions, which \texttt{locks} needs.}
+    \label{tab:eval-cost}
+    \small
+    \begin{tabular}{lrrrl}
+        \toprule
+        Configuration & Total & Analysis stage & Compile stage & Added by our part \\
+        \midrule
+        \texttt{graal}                          & 23.7 &  4.4 & 7.6 & \\
+        \texttt{kills}                          & 25.9 &  6.4 & 7.8 & $+2.2$ s (\pct{+9}) \\
+        \texttt{graal} on allocation sites      & 31.9 & 11.9 & 7.6 & \\
+        \texttt{objects} on allocation sites    & 33.1 & 14.3 & 7.6 & $+1.2$ s (\pct{+4}) \\
+        \texttt{graal} with flags on allocation sites & 30.9 & 10.7 & 7.4 & \\
+        \texttt{locks} on allocation sites      & 33.4 & 14.3 & 7.5 & $+2.5$ s (\pct{+8}) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Kill sets add 2.2 seconds, 9\,\% of the build; lock elision adds 2.5 seconds, 8\,\%. Almost all of it is in the analysis stage,
+where the export of the facts takes 1.9 seconds (thread escape 0.2 s) and the tool 0.3 seconds; the compile stage does not
+move, and the peak memory stays between 5.2 and 5.6\,GiB. The figures of 24 October were +7\,\% and +4\,\%; the allocation-site
+analysis alone moves by 1--3 seconds between rounds, so we regard the two measurements as agreeing. On javac the kill sets
+add 10 seconds to 67 (\pct{+15}) and kill sets with thread escape 14 seconds (\pct{+23}) over the baseline that keeps the inputs
+of the flows (24 October, three rounds).
+
+\subsection{The Price of the Allocation-Site Analysis}
+
+The analysis that partitions by object and decides locks costs more than everything we add to it. \Cref{tab:eval-allocsens}
+compares \texttt{graal} on the two analyses, with nothing of ours in either.
+
+\begin{table}[t]
+    \centering
+    \caption{Build time of \texttt{graal} on the default analysis and on allocation sites. javac is from 24 October, three
+    rounds. For PetClinic the allocation-site build also keeps the input flows and source positions and limits the
+    precision of saturated flows with a cutoff of 100; it is one build.}
+    \label{tab:eval-allocsens}
+    \small
+    \begin{tabular}{lrrr}
+        \toprule
+        Program & Default analysis & Allocation sites & Factor \\
+        \midrule
+        AWFY, total          &  23.7 s &    31.9 s & 1.35 \\
+        AWFY, analysis stage &   4.4 s &    11.9 s & 2.7 \\
+        javac, total         &    67 s &     288 s & 4.3 \\
+        javac, analysis stage &  16.4 s &    240 s & 14.6 \\
+        PetClinic, total     &   120 s &   1,830 s & 15 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The price grows with the program, and it grows faster than the price of our facts. On javac the analysis stage with allocation
+sites takes 240 of 288 seconds and varies by 30 seconds between builds, more than anything we add, so the honest figure is
+our own steps: about 14.5 seconds for \texttt{objects} and 16.5 for \texttt{locks}, 5--6\,\% of the build. Part of the idea is
+cheap, and part of it is expensive, and the line between them is the analysis, not our tool: kill sets and, in principle, lock elision run on the default
+analysis, while partitions need the one that costs a multiple of the build, and our measurements of lock elision chose it too.
+
+\subsection{Frameworks}
+
+On PetClinic kill sets add 44--55\,\% to the build (118--122 seconds for \texttt{graal}, 176--183 for \texttt{kills}), because
+the export of 510\,MB covers 164,600 methods. Lock elision with allocation sites and the cutoff took 2,395 seconds, of which the export was
+284 (thread escape 191). On the Barista applications \texttt{kills} cost 1.12--1.49 times the build of \texttt{graal}, and the
+configuration with allocation sites and lock elision 3.0 to 10.7 times.
 
 \section{What Modelling Concurrency Enables (RQ3)}\label{sec:eval-concurrency}
-% Thread escape's answers, lock elision and ordinary volatile accesses: designed shapes, AWFY, javac.
+
+The concurrency model has two uses: it narrows the kill sets of calls that synchronize, and it lets thread escape decide
+which locks and \texttt{volatile} accesses only one thread can reach (\Cref{sec:effects-concurrency,sec:impl-thread-escape}).
+We answer the question on designed programs first, then on real ones.
+
+\subsection{Designed Shapes}
+
+The matrix of the 15 concurrency examples asks, for each, whether the object the program uses is shared by threads, under
+the assumptions that the virtual machine's own code and the root parameters publish nothing unnamed. The four plain
+cases---an object in a field of another, in an array of its own, an atomic, a \texttt{VarHandle}---are local under every
+analysis. A list and a queue are shared under every analysis, and so are the nine publications through a static field, a field,
+an array, a copy of an array, an atomic, a queue, a map, an executor, and a \texttt{VarHandle}. A matrix with all rows shared
+would show an analysis that is sound and useless; one with all rows local, an unsound one. This one has both kinds, and the
+controls that leave one kind of publishing site out flip exactly the examples that need it.
+
+Where the answer is local, the lock or the \texttt{volatile} access can go. \Cref{tab:eval-shapes} gives the run time of the
+shapes in the clean run. Each shape has its own lock class and every image prints what the JVM prints.
+
+\begin{table}[t]
+    \centering
+    \caption{Run time of one call in the shapes, in milliseconds (best of nine runs of the best of 30 rounds of two million
+    calls, \texttt{-O3}). ``Elision'' is the \texttt{locks} image. The ratio is elision over \texttt{graal}.}
+    \label{tab:eval-shapes}
+    \small
+    \begin{tabular}{llrrr}
+        \toprule
+        Program & Shape & \texttt{graal} & Elision & Ratio \\
+        \midrule
+        \texttt{LockShapes} & object in a field of another & 28.37 & \textbf{1.77} & \textbf{0.06} \\
+                            & object in an array           & 31.75 & 31.78 & 1.00 \\
+                            & object in a list             & 33.09 & 33.10 & 1.00 \\
+                            & object passed through calls  & 0.645 & 0.645 & 1.00 \\
+                            & \texttt{StringBuffer}        & 6.22  & 6.41  & 1.03 \\
+        \midrule
+        \texttt{VolatileShapes} & \texttt{volatile} field of an object in a field & 14.73 & \textbf{1.77} & \textbf{0.12} \\
+                            & \texttt{volatile} field of an object in an array & 14.88 & 14.88 & 1.00 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+A lock costs about 14 nanoseconds in this body, and a \texttt{volatile} write about 7; both go where thread escape proves
+the object local. The ratio of 16 is the ratio of a micro-benchmark whose only work is the lock, and we do not generalize
+it to programs. The shapes that Graal already handles (a lock on a value passed through calls, a \texttt{StringBuffer}) are
+unchanged, and so are those that went through an array or a list, because the analysis cannot tell the elements apart.
+
+\subsection{Real Programs}
+
+\Cref{tab:eval-real-locks} gives the locks of real programs. The answer is the same in all of them: nothing the programs own
+is provably thread-local.
+
+\begin{table}[t]
+    \centering
+    \caption{Locks and \texttt{volatile} accesses of real programs. ``Sites'' are monitor enters and exits and
+    \texttt{volatile} accesses outside the virtual machine's own classes. ``Removable'' are those whose receivers are all
+    thread-local. AWFY and javac are from 24 and 28 October; the rest is from 29 October.}
+    \label{tab:eval-real-locks}
+    \small
+    \begin{tabular}{p{3.8cm}p{2.6cm}p{5.8cm}}
+        \toprule
+        Program & Sites & Removable \\
+        \midrule
+        AWFY (allocation sites)           & 1,061 & 29, all in the JDK; the phase removes 58 locks and makes 10 accesses ordinary; none of AWFY's own \\
+        javac, default cutoff             & 3,707 & 0 \\
+        javac, cutoff 100                 & 3,707 & 66; 16 locks (168 operations) removed, 23 accesses made ordinary, all in the JDK; no change in run time \\
+        PetClinic                         & 17,496 & 0 \\
+        11 Barista servers                & 1,303--10,721 per server & 0 in every export \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+AWFY has no lock of its own, so there is nothing to measure. On javac the saturation cutoff, the point at which Native Image
+gives up the types of a flow and treats it as any type, decides the answer: at the default of 20 no site is provable, and at
+100 there are 66, from which the build removes 16 locks. Compiling AWFY's 79 sources then takes 0.240 seconds against 0.239:
+the locks removed are in the JDK, javac is mostly one thread, and nothing is gained. On PetClinic every one of the 9,729 monitor
+sites and 7,767 \texttt{volatile} sites has a shared object among its receivers, receivers the analysis cannot name, or none at all. The
+request threads share the database, the connection pool, and the caches, so the locks \emph{are} on shared state, and the
+analysis says so correctly. Throughput does not tell the builds apart either: the same binary repeats within 0.2--0.9\,\%, but
+four builds of the same configuration span 6\,\% for \texttt{graal} and 38\,\% for \texttt{kills}, with identical kill sets and
+code size, so no effect of the facts can be read from PetClinic. Of Barista's 13 applications, the two Quarkus ones failed to build with and
+without the feature, which we read, but cannot establish, as a mismatch between the bundles and our builder.
+
+\subsection{Why No Lock Is Provable}
+
+We took javac's export apart with controls that leave one kind of publishing site out of thread escape; these are unsound
+and used only for diagnosis. Each of the three ways a reference becomes shared (a store into a static field, a field, or an
+array) rebuilds nearly the whole shared set on its own (about 220,000 names), and only leaving out all of them collapses it
+(to 5,773 names, with 1,230 provable sites). What seeds the closure is saturation: a flow that exceeds the cutoff is rebuilt as
+``any \texttt{Object}'', and an \texttt{Object} that is shared is everything. A larger cutoff halves the shared set and makes the
+66 sites provable; most of what remains are stores \texttt{this.f = v} into a field of a class, which cannot say into which
+instance they store. On the Vert.x server the connection looks like a hand-off from the acceptor to an event-loop thread, but
+the trace refutes this: it is shared by array aliasing, one elements flow for all arrays, and 57\,\% of the 277,782 shared
+objects root at one static array in \texttt{BigDecimal}. Leaving out the stores into arrays alone changes nothing; leaving out
+every kind of store would free 2,773 of 5,917 sites. We conclude that the limit is the precision of Native Image's own
+points-to analysis, not the thread model.
 
 \section{Soundness in Practice (RQ4)}\label{sec:eval-soundness}
-% Every image against the JVM, controls that must fail, Native Image's JUnit suite.
+
+Soundness is not proved here for the whole pipeline; \Cref{chap:effects} proves it for the model, and the proofs are sketches
+in three places. The evidence of this chapter is of another kind, and it has three parts.
+
+\paragraph{Every image prints what the JVM prints.} This holds for 28 round-trip images, 159 images of the example suite,
+the concurrency round trips, and AWFY with lock elision.
+
+\paragraph{Controls that must fail do.} A claim that is false must produce a wrong result, or the test cannot see it. A method
+claimed to write nothing gives 171 instead of 177 in \texttt{Examples} at \texttt{-O3}. A shared lock claimed local gives
+317,288 instead of 800,000, or a hang; a flag read claimed ordinary hangs the image. One control was weak: the first claim that
+references which may meet are apart still printed the right value, because a wrong ordering shows only when Graal forwards a
+wrong value. How to catch a \emph{missing} ordering remains open.
+
+\paragraph{Native Image's own tests.} With the feature and \texttt{-J-ea -J-esa}, the 23 images of its JUnit suite build and
+all 289 tests pass. The suite exercises lock elision not at all (there is nothing to remove in any image) and dead stores
+barely, so it shows that kill sets and partitions do not break Native Image, and that the phases build under assertions.
+The assertions also found three defects that the examples did not: disabled flows asked for their objects, calls killed the
+initialization state, and a JSON escape failed on half a surrogate pair. With allocation sites alone and no feature at all,
+the JMX tests fail, so the allocation-site analysis cannot be the base of this check.
 
 \section{What Blocks the Analysis}\label{sec:eval-blockers}
-% The layers that make calls opaque on real programs: synchronization, class initialization, identity
-% hash codes, aliased arrays.
+
+The gain on AWFY is small because most of its methods remain opaque. Of the 459 methods of the program, 199 still kill
+everything. \Cref{tab:eval-blockers} shows what freeing each reason alone would do.
+
+\begin{table}[t]
+    \centering
+    \caption{Methods of AWFY (of 459) that still kill everything when the kill of the named effect is left out of the kill sets
+    (22 October export). Left out together, the effects free all 199.}
+    \label{tab:eval-blockers}
+    \small
+    \begin{tabular}{lr}
+        \toprule
+        Left out & Methods freed \\
+        \midrule
+        identity hash codes, synchronization, unresolved calls, or other effects, each alone & 0 \\
+        class initialization alone & 12 \\
+        identity hash, class initialization, and synchronization together & 12 \\
+        \dots{} and unresolved calls & 12 \\
+        \dots{} and every other effect & 199 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+No single reason is enough. Each of the 187 methods that remain after the first three reaches all of an unresolved call, a
+transition to native code, a raw write, and a snippet, and the reasons form a chain: a method that may build an exception, or call
+\texttt{equals} on an object of unknown type, reaches a lock, then class initialization, then a native call. Modelling
+concurrency removes the first layer only. This is the reason for the ceiling result of \Cref{sec:eval-gain}: the layers have to
+go together, and even then AWFY does not run faster.
+
+\section{Discussion}\label{sec:eval-discussion}
+
+\paragraph{RQ1.} Graal optimizes a little more with the facts, and in a specific way. Where it must assume that a call writes
+anything and the call sits in a loop, the kill set lets loads leave the loop; Queens is that case, with \pct{-26} to \pct{-28}
+in every build. Elsewhere the gain is a handful of loads (2--4\,\% of AWFY's) that does not show in the total beyond 0 to 3\,\%.
+Two results say that the small size is not a weakness of the implementation: the ceiling removes three times the loads and is
+no faster, and the opacity of AWFY has several layers, each of which would have to go. Partitions by allocation site and dead
+stores add nothing on AWFY and little on the designed programs. With the same facts, Graal's own phases removed at least as many loads as
+the rules on the token form, so the token form serves as the model that shows the facts to be correct (\Cref{chap:effects}), not as a second optimizer.
+
+\paragraph{RQ2.} The facts are cheap where they are small: the export takes 2 seconds of an AWFY build and the tool 0.3, and kill
+sets cost 7--9\,\% of the build on AWFY and 13--15\,\% on javac. The cost that matters is the analysis that partitions and decides
+locks need: allocation sites multiply the build of javac by 4.3 and that of PetClinic by 15, while our own steps stay at 5--6\,\%.
+We believe that the idea of explicit effects is therefore affordable as kill sets and expensive as partitions and lock elision,
+and that the expense belongs to the finer analysis.
+
+\paragraph{RQ3.} The mechanism works and is sound: thread escape proves a reference local where it should and not where it
+should not, and where it does, the effect is large (16 times for a lock, 8 for a \texttt{volatile} write). On real programs it
+proves nothing about the locks they own, and the reasons are in the points-to analysis: array aliasing, saturated flows that
+become ``any \texttt{Object}'', and field stores that cannot name their instance. Raising the cutoff moved javac, and moved
+nothing in its speed. The honest statement is that no real program in the set benefits today. We do not claim that none would:
+a program whose locks guard thread-local objects that the analysis can name was not among the eleven servers, PetClinic, javac,
+and AWFY.
+
+\paragraph{RQ4.} Every image printed what the JVM printed, every false claim produced a wrong or hanging image, and Native
+Image's own tests pass with assertions on. This is evidence by controls and examples, not a proof; the assumptions of thread
+escape (\texttt{vm-code} and \texttt{entry-points}) are not proved, and one of them once hid a real publication, which the list
+of removable sites of AWFY revealed.
+
+\paragraph{Which baseline.} The comparison of \texttt{graal} with \texttt{kills} on the default analysis is the main one: it is
+what a user gets today, at ordinary build cost, with nothing else changed. The same comparison on allocation sites shows that the
+result does not depend on the analysis (the same 40 loads). The comparisons of \texttt{kills} with \texttt{objects} and of the
+flags baseline with \texttt{locks} are the effect of the partitions and of lock elision, each on allocation sites. For the partitions
+this is forced. For lock elision it is a choice: we timed it only on allocation sites, and on the default analysis we built it only for the
+Barista servers, where it removed nothing. The matrix gives the same verdicts under both analyses for the four plain cases, so we expect the
+shapes to behave alike, but we have not shown it. A comparison across the two analyses measures the analysis, not our facts, and we use
+it only once, to show why it is not used.
 
 \section{Threats to Validity}\label{sec:eval-threats}
-% Static counts and unrolling, the analysis changing the code, code placement, one machine, few programs.
+
+\paragraph{One machine and few programs.} Every timing is from one server with an AMD Zen~1 processor, without hardware
+counters, and the placement analysis was done earlier on another machine. The programs are AWFY, javac, designed shapes,
+PetClinic, and the servers of one suite; the gains are on designed shapes, and no real program shows a lock removed that matters
+or a run-time gain beyond Queens.
+
+\paragraph{Code placement.} Placement moves run time by 4--13\,\% with identical instructions, which is above the effect of the
+facts for all benchmarks but Queens. We address it by timing eight builds, and we do not cite the benchmarks that vary between
+builds. Framework images vary more than binaries: four PetClinic builds of one configuration differ in speed by up to 38\,\%
+with identical kill sets.
+
+\paragraph{Static counts.} A load left is not a load executed, and loop unrolling multiplies counts. Native Image also
+specializes on its closed world, so very small programs behave unlike real ones: a literal trip count unrolled a loop
+completely, and a null argument let it prove that a call always throws.
+
+\paragraph{Lock elision was timed on one analysis.} The run times of \Cref{tab:eval-shapes} are from allocation sites. The default analysis
+finds fewer sites (34 against 43 thread-local in AWFY) and we did not time it, so we do not know how much of the 16 times would remain there.
+
+\paragraph{The baseline moves.} The build time of the allocation-site analysis varies by 30 seconds between builds of javac, so we
+quote only our own steps for it. The measurements of 22--28 October were made from stamped working copies, not from commits; the
+clean run of 29 October confirmed their loads to the unit, their shapes to the second decimal, their costs within the spread, and
+it did not confirm the total run-time gain of kill sets, which is why we report the range of eight builds.
+
+\paragraph{Assumptions and proofs.} The assumptions of thread escape are not proved, and the soundness proofs are sketches in
+three places. The weak control for a missing ordering, mentioned above, is a gap in what the tests can see. The experiment with
+Native Image's layered images ran the feature in a base layer and crashed in the application layer, so we make no claim about
+analyzing a shared library once.

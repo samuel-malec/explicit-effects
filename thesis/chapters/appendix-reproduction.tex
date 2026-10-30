@@ -1,2 +1,74 @@
 \chapter{Reproducing the Results}\label{app:reproduction}
 % The commands and scripts that regenerate every number in Chapter~\ref{chap:evaluation}.
+
+This appendix lists what is needed to regenerate the tables of \Cref{chap:evaluation}. All commands are in the directory
+\texttt{graal-native} of the tool's repository; the builder is the Graal fork, which the repository contains as a submodule.
+
+\section{The Headline Tables from One Commit}
+
+The script \texttt{reproduce.sh} produces the tables of \Cref{sec:eval-gain,sec:eval-cost} and of the lock shapes in
+\Cref{sec:eval-concurrency} in one run. It refuses to start unless the tool and the fork are exactly a commit (no changed
+tracked files, no untracked files) and the builder is not older than the fork's sources. With \texttt{ALLOW\_DIRTY=1} it runs
+for testing and marks the results \texttt{NOT-REPRODUCIBLE}. The procedure of the clean run of 29 October, on a machine
+where nothing else runs, was:
+
+\begin{lstlisting}[language=bash]
+# on the development machine, from clean, committed checkouts of the tool and of the fork:
+graal-native/sync-pontos.sh        # copies both trees to the server and stamps them with their commits
+
+# on the server:
+export JAVA_HOME=$HOME/.mx/jdks/labsjdk-ce-latest-jvmci-25.4-b23_amd64
+export PATH=$JAVA_HOME/bin:$HOME/mx:$HOME/.local/bin:$PATH
+cd ~/graal/substratevm && mx build # the builder must be newer than the sources
+cd ~/explicit-effects/graal-native && ./reproduce.sh
+\end{lstlisting}
+
+The results are written to \texttt{out/reproduction/<UTC time>-<commit>/}: \texttt{provenance.txt} (which code), one file per
+stage, and \texttt{SUMMARY.txt}. \Cref{tab:app-stages} lists the stages. The default stages took 74 minutes on 29 October.
+
+\begin{table}[t]
+    \centering
+    \caption{The stages of \texttt{reproduce.sh}. The first five run by default; the last three are long and run with
+    \texttt{reproduce.sh matrix javac frameworks} or \texttt{reproduce.sh all}.}
+    \label{tab:app-stages}
+    \small
+    \begin{tabular}{llp{6.4cm}}
+        \toprule
+        Stage & Section & What it runs \\
+        \midrule
+        \texttt{loads}      & \ref{sec:eval-gain}  & the three configurations on the four small programs and on AWFY at \texttt{-O2}, on both analyses, and the counts \\
+        \texttt{time}       & \ref{sec:eval-gain}  & \texttt{graal} and \texttt{kills} on AWFY at \texttt{-O3}, four builds each, timed together with the A/A control \\
+        \texttt{ceiling}    & \ref{sec:eval-gain}  & \texttt{graal}, \texttt{kills}, and \texttt{ceiling} on AWFY at \texttt{-O3}: loads left and run times \\
+        \texttt{cost}       & \ref{sec:eval-cost}  & every configuration of AWFY, five rounds, with the stage times and the peak memory \\
+        \texttt{shapes}     & \ref{sec:eval-concurrency} & the lock and \texttt{volatile} shapes, \texttt{graal} against elision \\
+        \texttt{matrix}     & \ref{sec:eval-concurrency} & thread escape on the concurrency examples, every analysis and every set of assumptions \\
+        \texttt{javac}      & \ref{sec:eval-cost}, \ref{sec:eval-concurrency} & javac with the cutoff and lock removal, three rounds, and the time it takes to compile \\
+        \texttt{frameworks} & \ref{sec:eval-cost}, \ref{sec:eval-concurrency} & PetClinic and three Barista servers: builds, removable sites, PetClinic under load \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Other Measurements}
+
+The results that \texttt{reproduce.sh} does not regenerate have their own scripts, listed in \Cref{tab:app-scripts}.
+The first four stages of the clean run reproduced the loads of \Cref{tab:eval-loads} to the unit and the lock shapes of
+\Cref{tab:eval-shapes} to the second decimal; the matrix, javac, PetClinic, and the Barista applications were not part of it.
+
+\begin{table}[t]
+    \centering
+    \caption{Scripts for the results outside the default stages.}
+    \label{tab:app-scripts}
+    \small
+    \begin{tabular}{p{4.0cm}p{8.4cm}}
+        \toprule
+        Result & Script \\
+        \midrule
+        Barista, the other ten applications & \texttt{barista-gate.sh}; the bundles are made with Barista's \texttt{./build <application>} \\
+        PetClinic builds and load           & \texttt{petclinic.sh}, \texttt{petclinic\_load.py}; the 2023 bundle of Graal's benchmark suite with four reflection registrations \\
+        Why no lock is removable            & \texttt{why\_no\_locks.py <export.json>}, which uses the decision code of the tool; on javac's export it finds the 66 sites the tool lists \\
+        Native Image's JUnit tests          & \texttt{mx native-unittest com.oracle.svm.test} with the feature and \texttt{-J-ea} \\
+        Placement of code                   & \texttt{programs/awfy/layouts.py} and \texttt{time.py} \\
+        Controls                            & \texttt{LIE=<method> ./run.sh Examples}, \texttt{LIE\_LOCKS=<method> ONLY=locks ./run.sh LocksShared}, \texttt{SPLIT=<method>}; each must go wrong \\
+        \bottomrule
+    \end{tabular}
+\end{table}
