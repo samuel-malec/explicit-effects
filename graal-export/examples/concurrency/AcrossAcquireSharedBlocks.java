@@ -1,7 +1,7 @@
 package concurrency;
 
 /**
- * Control for AcrossAcquireLocal: the counter is in a static field, so another
+ * The counter is in a static field, so another
  * thread may write its value and then set the flag. Once `poll` has read the
  * flag, this thread must see that write, so the load must read memory again.
  * Forwarding the 5 here is wrong under any partitioning.
