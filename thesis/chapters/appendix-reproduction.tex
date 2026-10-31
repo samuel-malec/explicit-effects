@@ -9,7 +9,7 @@ This appendix lists what is needed to regenerate the tables of \Cref{chap:evalua
 The script \texttt{reproduce.sh} produces the tables of \Cref{sec:eval-gain,sec:eval-cost} and of the lock shapes in
 \Cref{sec:eval-concurrency} in one run. It refuses to start unless the tool and the fork are exactly a commit (no changed
 tracked files, no untracked files) and the builder is not older than the fork's sources. With \texttt{ALLOW\_DIRTY=1} it runs
-for testing and marks the results \texttt{NOT-REPRODUCIBLE}. The procedure of the clean run of 29 October, on a machine
+for testing and marks the results \texttt{NOT-REPRODUCIBLE}. The procedure of the clean runs of 29 and 31 October, on a machine
 where nothing else runs, was:
 
 \begin{lstlisting}[language=bash]
@@ -24,7 +24,7 @@ cd ~/explicit-effects/graal-native && ./reproduce.sh
 \end{lstlisting}
 
 The results are written to \texttt{out/reproduction/<UTC time>-<commit>/}: \texttt{provenance.txt} (which code), one file per
-stage, and \texttt{SUMMARY.txt}. \Cref{tab:app-stages} lists the stages. The default stages took 74 minutes on 29 October.
+stage, and \texttt{SUMMARY.txt}. \Cref{tab:app-stages} lists the stages. The default stages took 74 minutes on 29 October and 75 on 31 October.
 
 \begin{table}[t]
     \centering
@@ -51,8 +51,9 @@ stage, and \texttt{SUMMARY.txt}. \Cref{tab:app-stages} lists the stages. The def
 \section{Other Measurements}
 
 The results that \texttt{reproduce.sh} does not regenerate have their own scripts, listed in \Cref{tab:app-scripts}.
-The first four stages of the clean run reproduced the loads of \Cref{tab:eval-loads} to the unit and the lock shapes of
-\Cref{tab:eval-shapes} to the second decimal; the matrix, javac, PetClinic, and the Barista applications were not part of it.
+The default stages of the two clean runs reproduced the loads of \Cref{tab:eval-loads} to the unit, and the lock shapes of
+\Cref{tab:eval-shapes} to 0.1 millisecond except one baseline, which moved by 17\,\%; the matrix, javac, PetClinic, and the
+Barista applications were not part of them.
 
 \begin{table}[t]
     \centering
