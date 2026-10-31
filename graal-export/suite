@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Export the examples, examples/: each example is a program of its own,
 # exported on its own, so that the analysis sees only that example. The examples
-# in packages objects and concurrency are exported with allocation sites as well.
+# in packages objects, concurrency and sharing are exported with allocation sites as well.
 #
 #   ./suite                                    # every example whose export is older than its source
 #   ./suite forwarding.AcrossCall NullCheck    # these examples, by class or package.class
 #
 # Writes out/suite/<package>.<Class>.json, and <package>.<Class>.allocsens.json for
-# the examples in objects and concurrency.
+# the examples in objects, concurrency and sharing.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
 SUITE="$HERE/examples"
@@ -65,7 +65,7 @@ for source in "${SOURCES[@]}"; do
         $wanted || continue
     fi
     export_one "$source" "$package.$class" "$OUT/$package.$class.json" || status=1
-    if [[ $package == objects || $package == concurrency ]]; then
+    if [[ $package == objects || $package == concurrency || $package == sharing ]]; then
         export_one "$source" "$package.$class" "$OUT/$package.$class.allocsens.json" \
             -H:AnalysisContextSensitivity=allocsens || status=1
     fi

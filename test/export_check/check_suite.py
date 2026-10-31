@@ -1,6 +1,6 @@
 """Each example (graal-export/examples/) still shows what its comment says: the conversion examples by their shape, the limits by what
-the translation refuses or makes opaque, and the concurrency examples by their kill sets, the reasons their methods are opaque, whether
-their item is published, and which of their locks and volatile accesses can go.
+the translation refuses or makes opaque, the concurrency examples by their kill sets, the reasons their methods are opaque, and which of
+their locks and volatile accesses can go, and the sharing examples by whether their item is published.
 
 The exports come from `graal-export/suite` (or `make suite`); without them these
 checks are skipped.
@@ -253,13 +253,13 @@ def check_suite_publication() -> None:
     """The item of each example is shared when and only when the example publishes it, as far as the
     analysis can tell; graal-export/publication-controls.sh leaves out each kind of site in turn,
     and each time the examples that kind publishes become local."""
-    from effects.publication import item_shared
+    from effects.publication import PACKAGE, item_shared
     from graal.graal_import import load_facts
 
     wrong = {}
     for example, expected in PUBLICATION.items():
         for variant, want in zip(("", ".allocsens"), expected):
-            path = SUITE / f"concurrency.{example}{variant}.json"
+            path = SUITE / f"{PACKAGE}.{example}{variant}.json"
             if not path.exists():
                 pytest.skip(f"{path} is missing: run graal-export/suite")
             got = item_shared(load_facts(path), example)
