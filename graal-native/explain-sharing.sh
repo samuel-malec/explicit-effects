@@ -5,7 +5,7 @@
 # the root of every chain. For tracing an answer that is not the one expected.
 #
 #   ./explain-sharing.sh <classes dir> <program prefix> <main class> <regex> [native-image options…]
-#   ./explain-sharing.sh /tmp/x/classes concurrency.LocalInLocalObject concurrency.LocalInLocalObject 'LocalInLocalObject\$Item' \
+#   ./explain-sharing.sh /tmp/x/classes sharing.LocalInLocalObject sharing.LocalInLocalObject 'LocalInLocalObject\$Item' \
 #       -H:AnalysisContextSensitivity=allocsens -H:+TrackInputFlows \
 #       -H:SideEffectAnalysisAssumptions=thread-confined,vm-fields,vm-code,handler-references,entry-points
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
