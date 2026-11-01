@@ -3,7 +3,7 @@ range over its rounds of the whole build, Native Image's analysis and compile st
 each step of ours (timings.txt), and the difference to graal on the same points-to analysis.
 
 Usage:
-    uv run python graal-native/cost.py graal-native/out awfy
+    uv run python scripts/evaluation/cost.py graal-native/out awfy
 
 Our export and tool run in Native Image's afterAnalysis, so their time is part of its analysis stage
 ("[2/8] Performing analysis"); the phases run in the compile stage ("[6/8] Compiling methods").

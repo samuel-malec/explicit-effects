@@ -17,7 +17,7 @@
 # and graalflagscutoff-allocsens are the baselines of lockscutoff for what the cutoff itself costs and for what removing locks costs.
 #
 # javac's classes are under com.sun., which isn't the program by default: the builds name them.
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 source "$HERE/provenance.sh"
 
 REPEATS=${REPEATS:-3}
@@ -85,4 +85,4 @@ for round in $(seq 1 "$REPEATS"); do
         build "$config" "$round"
     done
 done
-uv run --project "$REPO" python "$HERE/cost.py" "$HERE/out" javac
+uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$HERE/out" javac

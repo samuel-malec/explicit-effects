@@ -4,7 +4,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from effects.ceiling import ceiling
+from diagnostics.ceiling import ceiling
 from effects.kills import ANY, IGNORABLE, kills
 from graal.graal_import import PointsToFacts
 

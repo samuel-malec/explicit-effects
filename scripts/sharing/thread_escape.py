@@ -1,9 +1,9 @@
-"""The table of graal-native/thread-escape.sh: for each example and analysis, whether its Item is
+"""The table of scripts/sharing/thread-escape.sh: for each example and analysis, whether its Item is
 shared under each set of assumptions: the first six are cumulative, none to all five; "only" is the
 two that the plain controls need, vm-code and entry-points, and nothing else.
 
 Usage:
-    uv run python graal-native/thread_escape.py graal-native/out/thread-escape [Example ...]
+    uv run python scripts/sharing/thread_escape.py graal-native/out/thread-escape [Example ...]
 """
 
 import sys
@@ -17,7 +17,7 @@ SHORT = ["none", "+thread", "+fields", "+code", "+refs", "+entry", "only"]
 
 
 def item_shared(export: Path, example: str, analysis: str, layer: str) -> str:
-    from effects.publication import item_shared as shared
+    from diagnostics.publication import item_shared as shared
 
     return shared(load_facts(export, layer), example)
 

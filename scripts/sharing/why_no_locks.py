@@ -1,6 +1,6 @@
 """Why a locks export lists no site: every monitor and volatile site of the export, by what keeps it.
 
-    uv run python graal-native/why_no_locks.py graal-native/out/petclinic/lockscutoff/locks/export.json
+    uv run python scripts/sharing/why_no_locks.py graal-native/out/petclinic/lockscutoff/locks/export.json
 
 Uses the decision code of effects.elide, so the counts are what the tool saw. A control is the same run on an
 export that lists sites (javac with cutoff 100: 66)."""

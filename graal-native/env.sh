@@ -8,6 +8,7 @@ set -euo pipefail
 EXPORT_DIR="$HERE"  # graal-export, whose corpus run.sh builds
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(dirname "$HERE")"
+SCRIPTS="$REPO/scripts"  # the helpers; nothing in this directory uses them
 GRAALVM=${GRAALVM_HOME:-$G/sdk/latest_graalvm_home}
 # The compiler with kill sets on invokes: built in the graal tree with
 # `mx build --dependencies GRAAL`, and put in place of the GraalVM's own.

@@ -2,8 +2,8 @@ import importlib.util
 import tempfile
 from pathlib import Path
 
-# graal-native/counts.py is a script, not a package
-_spec = importlib.util.spec_from_file_location("counts", Path(__file__).resolve().parents[2] / "graal-native" / "counts.py")
+# scripts/evaluation/counts.py is a script, not a package
+_spec = importlib.util.spec_from_file_location("counts", Path(__file__).resolve().parents[2] / "scripts" / "evaluation" / "counts.py")
 counts = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(counts)
 

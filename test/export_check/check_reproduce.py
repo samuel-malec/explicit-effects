@@ -2,7 +2,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parents[2] / "graal-native" / "reproduce.sh"
+SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "evaluation" / "reproduce.sh"
 
 #: A provenance.txt as provenance.sh writes it for two trees copied by sync-pontos.sh, both exactly a commit.
 CLEAN = """\

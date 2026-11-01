@@ -2,8 +2,8 @@
 when each combination of effects is left out of the kill sets. A measurement, never sound.
 
 Usage:
-    uv run python -m effects.ceiling graal-native/out/awfy-eval/kills/export.json
-    uv run python -m effects.ceiling export.json --program deltablue,havlak --partition object-field
+    uv run python -m diagnostics.ceiling graal-native/out/awfy-eval/kills/export.json
+    uv run python -m diagnostics.ceiling export.json --program deltablue,havlak --partition object-field
 
 The effects are those of `effects.kills.IGNORABLE`: each on its own, then added one after the other (the three
 the notes found in front of most opaque methods, then what lies behind them). A method is counted when its
@@ -18,7 +18,7 @@ from pathlib import Path
 from graal.graal_import import PointsToFacts, load_facts
 
 from .blockers import in_program
-from .kills import ANY, IGNORABLE, kills
+from effects.kills import ANY, IGNORABLE, kills
 
 
 #: The layers the notes found in front of most opaque methods, then what lies behind them, in the order they were found.

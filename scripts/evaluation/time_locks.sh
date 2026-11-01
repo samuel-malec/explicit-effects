@@ -6,7 +6,7 @@
 #
 #   ./time_locks.sh LockShapes
 #   REPS=9 ./time_locks.sh VolatileShapes
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 
 PROGRAM=${1:?usage: time_locks.sh <LockShapes|VolatileShapes>}
 REPS=${REPS:-7}

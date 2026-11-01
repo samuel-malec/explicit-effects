@@ -20,8 +20,8 @@
 # nothing. The analysis tells objects apart by type only: Native Image's runtime compilation does not build
 # with the allocation-site analysis (AnalysisError in CallSiteSensitiveMethodTypeFlow.setAsStubFlow).
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$DIR/../env.sh"
-source "$DIR/../provenance.sh"
+source "$DIR/../../../graal-native/env.sh"
+source "$HERE/provenance.sh"
 set +e
 
 OUT="$HERE/out/deopt-locks"

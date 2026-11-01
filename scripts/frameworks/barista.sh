@@ -4,15 +4,15 @@
 # (benchmarks/<app>/target/<app>-<version>.nib, made on the laptop with `./build <app>`, which only writes the bundle: `--bundle-create=…,dry-run`);
 # this applies it with the builder of the graal tree.
 #
-#   graal-native/barista.sh vanilla-hello-world graal locks lockscutoff
-#   TAG=why EXTRA="-J-Dsideeffects.explainSharing=Http1xServerConnection" graal-native/barista.sh vertx-hello-world lockscutoff
+#   scripts/frameworks/barista.sh vanilla-hello-world graal locks lockscutoff
+#   TAG=why EXTRA="-J-Dsideeffects.explainSharing=Http1xServerConnection" scripts/frameworks/barista.sh vertx-hello-world lockscutoff
 #
 # TAG puts the output in out/barista/<app>-<TAG>/, EXTRA gives native-image more options (as in run.sh).
 # The configurations are in bundle.sh. The assets are in $BARISTA (default ~/eval/barista): <app>/<app>.nib and <app>/workloads/
 # (the app's directory in the suite).
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 source "$HERE/provenance.sh"
-source "$HERE/bundle.sh"
+source "$SCRIPTS/frameworks/bundle.sh"
 set +e
 BARISTA=${BARISTA:-$HOME/eval/barista}
 [[ $# -gt 1 ]] || { echo "usage: barista.sh <app> <graal|kills|locks|graalflagscutoff|lockscutoff|ceiling>…" >&2; exit 2; }
