@@ -15,7 +15,7 @@ from dataclasses import replace
 from cthu import prelude
 from cthu.ir import Program, Structure
 from cthu.ssu import check
-from effects.blockers import blockers
+from diagnostics.blockers import blockers
 from effects.elide import elidable
 from effects.kills import ANY, kills
 from effects.signatures import PARTITIONERS, analyse, no_analysis
@@ -251,9 +251,9 @@ PUBLICATION = {
 
 def check_suite_publication() -> None:
     """The item of each example is shared when and only when the example publishes it, as far as the
-    analysis can tell; graal-export/publication-controls.sh leaves out each kind of site in turn,
+    analysis can tell; scripts/sharing/publication-controls.sh leaves out each kind of site in turn,
     and each time the examples that kind publishes become local."""
-    from effects.publication import PACKAGE, item_shared
+    from diagnostics.publication import PACKAGE, item_shared
     from graal.graal_import import load_facts
 
     wrong = {}

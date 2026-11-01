@@ -4,12 +4,12 @@
 # what provenance.sh records as uncommitted changes, untracked files, a stale builder, or no stamp at all. Run it on pontos04
 # (after sync-pontos.sh from a clean checkout), alone: the timed stages wait for a quiet machine.
 #
-#   graal-native/reproduce.sh --list                  # the stages
-#   graal-native/reproduce.sh                         # the default stages (about 2 hours)
-#   graal-native/reproduce.sh loads time              # chosen stages
-#   graal-native/reproduce.sh all                     # every stage, the long ones too (many hours)
-#   graal-native/reproduce.sh --check provenance.txt  # only the decision: is this code a commit? (exit status 1 if it is not)
-#   ALLOW_DIRTY=1 graal-native/reproduce.sh shapes    # for testing the script: the results are marked NOT-REPRODUCIBLE
+#   scripts/evaluation/reproduce.sh --list                  # the stages
+#   scripts/evaluation/reproduce.sh                         # the default stages (about 2 hours)
+#   scripts/evaluation/reproduce.sh loads time              # chosen stages
+#   scripts/evaluation/reproduce.sh all                     # every stage, the long ones too (many hours)
+#   scripts/evaluation/reproduce.sh --check provenance.txt  # only the decision: is this code a commit? (exit status 1 if it is not)
+#   ALLOW_DIRTY=1 scripts/evaluation/reproduce.sh shapes    # for testing the script: the results are marked NOT-REPRODUCIBLE
 #
 # The results are in out/reproduction/<UTC time>-<tool commit>/: provenance.txt (which code), one <stage>.txt for each stage
 # (the commands' tables, as printed), and SUMMARY.txt (the stages, their status and time). The builds themselves stay in out/.
@@ -44,7 +44,7 @@ case ${1:-} in
     --check) refusal "${2:?usage: reproduce.sh --check <provenance.txt>}"; exit $? ;;
 esac
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 source "$HERE/provenance.sh"
 export PATH="$GRAALVM/bin:$PATH"  # programs/*/build.sh compile with the javac on the path
 
@@ -56,7 +56,7 @@ wait_quiet() {  # the timings are of a machine with nothing else running
     echo "machine quiet at $(date +%T), load $(cut -d' ' -f1-3 /proc/loadavg)"
 }
 
-counts() { uv run --project "$REPO" python "$HERE/counts.py" "$@"; }
+counts() { uv run --project "$REPO" python "$SCRIPTS/evaluation/counts.py" "$@"; }
 
 stage_loads() {
     local p
@@ -73,7 +73,7 @@ stage_loads() {
 }
 
 stage_time() {
-    "$HERE/awfy-repeat.sh" 4 5
+    "$SCRIPTS/evaluation/awfy-repeat.sh" 4 5
 }
 
 stage_ceiling() {
@@ -88,26 +88,26 @@ stage_ceiling() {
 }
 
 stage_cost() {
-    REPEATS=${COST_REPEATS:-5} "$HERE/cost.sh" Awfy  # COST_REPEATS=1 to test the stage
-    uv run --project "$REPO" python "$HERE/cost.py" "$HERE/out" awfy
+    REPEATS=${COST_REPEATS:-5} "$SCRIPTS/evaluation/cost.sh" Awfy  # COST_REPEATS=1 to test the stage
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$HERE/out" awfy
 }
 
 stage_shapes() {
     wait_quiet
-    "$HERE/time_locks.sh" LockShapes
-    "$HERE/time_locks.sh" VolatileShapes
+    "$SCRIPTS/evaluation/time_locks.sh" LockShapes
+    "$SCRIPTS/evaluation/time_locks.sh" VolatileShapes
 }
 
 stage_matrix() {
-    "$HERE/thread-escape.sh"
+    "$SCRIPTS/sharing/thread-escape.sh"
 }
 
 stage_javac() {
     local o="$HERE/out"
-    REPEATS=3 CONFIGS="graal kills" "$HERE/cost-javac.sh"
-    uv run --project "$REPO" python "$HERE/cost.py" "$o" javac
-    REPEATS=3 CONFIGS="graal-allocsens graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" "$HERE/cost-javac.sh"
-    uv run --project "$REPO" python "$HERE/cost.py" "$o" javac-allocsens
+    REPEATS=3 CONFIGS="graal kills" "$SCRIPTS/evaluation/cost-javac.sh"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$o" javac
+    REPEATS=3 CONFIGS="graal-allocsens graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" "$SCRIPTS/evaluation/cost-javac.sh"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$o" javac-allocsens
     local r
     echo "== the locks the builds removed"
     for r in 1 2 3; do echo "round $r: $(grep -h 'locks removed' "$o/javac-allocsens-cost-lockscutoff-r$r/locks/timings.txt")"; done
@@ -117,23 +117,23 @@ stage_javac() {
     rm -rf "$o/javac-aa-copy" && mkdir -p "$o/javac-aa-copy/graal" && cp "$o/javac-allocsens-cost-graal-r1/graal/javac" "$o/javac-aa-copy/graal/javac"
     wait_quiet
     echo "== time javac takes to compile AWFY's sources (the second image is an A/A copy of the first)"
-    taskset -c 4-7 uv run --project "$REPO" python "$HERE/time_javac.py" "$o/javac-allocsens-cost-graal-r1" "$o/javac-aa-copy" \
+    taskset -c 4-7 uv run --project "$REPO" python "$SCRIPTS/evaluation/time_javac.py" "$o/javac-allocsens-cost-graal-r1" "$o/javac-aa-copy" \
         "$o/javac-allocsens-cost-graalcutoff-r1" "$o"/javac-allocsens-cost-graalflagscutoff-r{1,2,3} "$o"/javac-allocsens-cost-lockscutoff-r{1,2,3} --runs 10
 }
 
 stage_frameworks() {
     local app r
-    "$HERE/petclinic.sh" graal kills graalflagscutoff lockscutoff
+    "$SCRIPTS/frameworks/petclinic.sh" graal kills graalflagscutoff lockscutoff
     for app in vanilla-hello-world vertx-hello-world micronaut-hello-world; do
-        "$HERE/barista.sh" "$app" graal kills locks lockscutoff
+        "$SCRIPTS/frameworks/barista.sh" "$app" graal kills locks lockscutoff
     done
     for r in "$HERE/out/petclinic/lockscutoff" "$HERE"/out/barista/*/locks "$HERE"/out/barista/*/lockscutoff; do
         echo "== why no lock is removable in $r"
-        uv run --project "$REPO" python "$HERE/why_no_locks.py" "$r/locks/export.json"
+        uv run --project "$REPO" python "$SCRIPTS/sharing/why_no_locks.py" "$r/locks/export.json"
     done
     wait_quiet
     local p="$HERE/out/petclinic"
-    python3 "$HERE/petclinic_load.py" --image graal-1="$p/graal/image" --image graal-1-again="$p/graal/image" --image kills="$p/kills/image" \
+    python3 "$SCRIPTS/frameworks/petclinic_load.py" --image graal-1="$p/graal/image" --image graal-1-again="$p/graal/image" --image kills="$p/kills/image" \
         --image flags="$p/graalflagscutoff/image" --image locks="$p/lockscutoff/image" --runs 5 --seconds 30 --warmup 15 --clients 16
 }
 
@@ -150,7 +150,7 @@ main() {
     done
 
     local commit
-    commit=$(sed -n 's/^commit: \([0-9a-f]\{7\}\).*/\1/p' "$REPO/.synced-from" 2> /dev/null | head -1)
+    commit=$(sed -n 's/^commit: \([0-9a-f]\{7\}\).*/\1/p' "$REPO/.synced-from" 2> /dev/null | head -1 || true)
     [[ -n $commit ]] || commit=$(git -C "$REPO" rev-parse --short HEAD 2> /dev/null || echo unknown)
     local results="$HERE/out/reproduction/$(date -u +%Y%m%dT%H%M%SZ)-$commit"
     mkdir -p "$results"

@@ -1,7 +1,7 @@
 """Spring PetClinic images under load: the pages they answer, how fast they start, and how many requests per second they serve.
 
 Usage:
-    uv run python graal-native/petclinic_load.py --image graal=out/petclinic/graal/image --image kills=out/petclinic/kills/image \\
+    uv run python scripts/frameworks/petclinic_load.py --image graal=out/petclinic/graal/image --image kills=out/petclinic/kills/image \\
         [--runs 5] [--seconds 30] [--warmup 15] [--clients 16]
 
 Each run starts every image in turn as a fresh process (an empty in-memory database), pinned to the server's cores, fetches some

@@ -10,7 +10,7 @@
 #
 #   ./svm-test-locks.sh [output directory, default ~/eval/svm-test-locks]
 set -uo pipefail
-REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 EVAL=${1:-$HOME/eval/svm-test-locks}
 mkdir -p "$EVAL"
 echo "=== start $(date +%T)"

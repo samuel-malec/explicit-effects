@@ -4,7 +4,7 @@ touches them alike. One measurement is --repeat compiles in a row (a native java
 about 0.1 s); the table shows the median wall time per compile and each image against the first.
 
 Usage:
-    taskset -c 4-7 uv run python graal-native/time_javac.py graal-native/out/javac-cost-graal-r1 \\
+    taskset -c 4-7 uv run python scripts/evaluation/time_javac.py graal-native/out/javac-cost-graal-r1 \\
         graal-native/out/javac-cost-kills-r1 --runs 10
 
 Each argument is a build directory of cost-javac.sh, holding <config>/javac.
@@ -18,7 +18,7 @@ import tempfile
 import time
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[2]
 SOURCES = sorted(str(p) for p in (REPO / "are-we-fast-yet/benchmarks/Java/src").rglob("*.java"))
 
 

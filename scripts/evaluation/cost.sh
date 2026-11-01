@@ -12,7 +12,7 @@
 # sites (ALLOCSENS=1): graal; graal with the inputs and source positions kept (graalflags, the baseline of
 # locks); objects; locks (elision). Each configuration compares with the one it adds to on the same
 # analysis and flags. cost.py then sets each build's stage times, peak RSS and timings.txt side by side.
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 
 PROGRAM=${1:?usage: cost.sh <program, as run.sh takes it>}
 REPEATS=${REPEATS:-5}
@@ -33,4 +33,4 @@ for round in $(seq 1 "$REPEATS"); do
         ALLOCSENS=1 ONLY=$config TAG=cost-$config-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     done
 done
-uv run --project "$REPO" python "$HERE/cost.py" "$HERE/out" "$(echo "$PROGRAM" | tr '[:upper:]' '[:lower:]')"
+uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$HERE/out" "$(echo "$PROGRAM" | tr '[:upper:]' '[:lower:]')"

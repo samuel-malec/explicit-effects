@@ -3,9 +3,9 @@ reads, writes and calls, and each of its field and array accesses with the objec
 it may touch.
 
 Usage:
-    uv run python -m graal.facts graal-export/out/suite/objects.ForwardPastMaybeAlias.allocsens.json
-    uv run python -m graal.facts graal-export/out/suite/forwarding.AcrossCall.json --method demo
-    uv run python -m graal.facts graal-export/out/suite/objects.ForwardPastOtherObject.allocsens.json --all --method Byte
+    uv run python -m diagnostics.facts graal-export/out/suite/objects.ForwardPastMaybeAlias.allocsens.json
+    uv run python -m diagnostics.facts graal-export/out/suite/forwarding.AcrossCall.json --method demo
+    uv run python -m diagnostics.facts graal-export/out/suite/objects.ForwardPastOtherObject.allocsens.json --all --method Byte
 
 An access's objects are its receivers, as the points-to analysis names them: by
 type, or with allocation sites by where they were allocated (Counter@main:0 is
@@ -17,7 +17,7 @@ import re
 import sys
 from pathlib import Path
 
-from .graal_import import load
+from graal.graal_import import load
 
 # Effects the facts can't name one by one, as the export lists them.
 EFFECTS = ("unknown", "acquires", "releases", "unresolved", "unknownReads", "vmWrites", "dead")

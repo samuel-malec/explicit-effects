@@ -5,12 +5,12 @@
 # from that commit. provenance.sh writes the stamps next to every run's output, so a number traces to a code state even
 # when the state was not committed.
 #
-#   graal-native/sync-pontos.sh --dry-run     # what would be copied and removed
-#   graal-native/sync-pontos.sh               # do it
-#   graal-native/sync-pontos.sh --dry-run tool    # only the tool (or: fork)
+#   scripts/server/sync-pontos.sh --dry-run     # what would be copied and removed
+#   scripts/server/sync-pontos.sh               # do it
+#   scripts/server/sync-pontos.sh --dry-run tool    # only the tool (or: fork)
 #
 # After the fork's sources changed: ssh pontos04 'cd ~/graal/substratevm && mx build' (it builds the builder jars the runs use).
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 source "$HERE/provenance.sh"
 set +e
 REMOTE=${REMOTE:-pontos04.fi.muni.cz}

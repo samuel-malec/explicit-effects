@@ -1,8 +1,8 @@
 \chapter{Reproducing the Results}\label{app:reproduction}
 % The commands and scripts that regenerate every number in Chapter~\ref{chap:evaluation}.
 
-This appendix lists what is needed to regenerate the tables of \Cref{chap:evaluation}. All commands are in the directory
-\texttt{graal-native} of the tool's repository; the builder is the Graal fork, which the repository contains as a submodule.
+This appendix lists what is needed to regenerate the tables of \Cref{chap:evaluation}. All commands are in the directories
+\texttt{scripts} and \texttt{graal-native} of the tool's repository; the builder is the Graal fork, which the repository contains as a submodule.
 
 \section{The Headline Tables from One Commit}
 
@@ -14,16 +14,16 @@ where nothing else runs, was:
 
 \begin{lstlisting}[language=bash]
 # on the development machine, from clean, committed checkouts of the tool and of the fork:
-graal-native/sync-pontos.sh        # copies both trees to the server and stamps them with their commits
+scripts/server/sync-pontos.sh      # copies both trees to the server and stamps them with their commits
 
 # on the server:
 export JAVA_HOME=$HOME/.mx/jdks/labsjdk-ce-latest-jvmci-25.4-b23_amd64
 export PATH=$JAVA_HOME/bin:$HOME/mx:$HOME/.local/bin:$PATH
 cd ~/graal/substratevm && mx build # the builder must be newer than the sources
-cd ~/explicit-effects/graal-native && ./reproduce.sh
+~/explicit-effects/scripts/evaluation/reproduce.sh
 \end{lstlisting}
 
-The results are written to \texttt{out/reproduction/<UTC time>-<commit>/}: \texttt{provenance.txt} (which code), one file per
+In \texttt{graal-native}, the results are written to \texttt{out/reproduction/<UTC time>-<commit>/}: \texttt{provenance.txt} (which code), one file per
 stage, and \texttt{SUMMARY.txt}. \Cref{tab:app-stages} lists the stages. The default stages took 74 minutes on 29 October and 75 on 31 October.
 
 \begin{table}[t]

@@ -36,7 +36,7 @@ Each method gets three files in `out/igv/`: `PointsToAnalysisMethod:<id>[…].bg
 `…_1.bgv` and `…_2.bgv`. They are the analysis's decode, the exporter's decode for
 the facts, and the exporter's decode for the graph. The last one ends with the graph
 titled **Exported to JSON**: exactly what the JSON holds, with its schedule. Its node
-ids are the JSON's ids, which `uv run python -m graal.show` prints. Open it in IGV
+ids are the JSON's ids, which `uv run python -m diagnostics.show` prints. Open it in IGV
 (`mx igv`, then File → Open). `-H:Dump=:2` adds a graph after each cleanup phase.
 
 

@@ -2,8 +2,8 @@
 bound, and how many methods the program has behind each.
 
 Usage:
-    uv run python -m effects.blockers graal-native/out/awfy-eval-o3/kills/export.json
-    uv run python -m effects.blockers export.json --program deltablue,havlak --synchronization none
+    uv run python -m diagnostics.blockers graal-native/out/awfy-eval-o3/kills/export.json
+    uv run python -m diagnostics.blockers export.json --program deltablue,havlak --synchronization none
 
 A method kills everything (`effects.kills`) when it, or a method it calls, has an effect or a call
 the facts can't name, or synchronization that may order this thread with another. The answer says
@@ -17,8 +17,8 @@ from pathlib import Path
 
 from graal.graal_import import PointsToFacts, load_facts
 
-from .kills import ANY, kills, kind
-from .signatures import callees_of, synchronizes_on, synchronizing
+from effects.kills import ANY, kills, kind
+from effects.signatures import callees_of, synchronizes_on, synchronizing
 
 # Packages that are not the program under analysis, as the export treats them by default.
 PLATFORM = ("java.", "javax.", "jdk.", "sun.", "com.sun.", "com.oracle.", "org.graalvm.", "org.ietf.",

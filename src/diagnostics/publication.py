@@ -5,7 +5,7 @@ by its type alone, which stands for any object of the type."""
 
 from graal.graal_import import PointsToFacts
 
-#: The package of the examples; graal-native/thread-escape.sh and graal-export/publication-controls.sh name it too.
+#: The package of the examples; scripts/sharing/thread-escape.sh and scripts/sharing/publication-controls.sh name it too.
 PACKAGE = "sharing"
 
 

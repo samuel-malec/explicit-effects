@@ -8,7 +8,7 @@
 #   ./explain-sharing.sh /tmp/x/classes sharing.LocalInLocalObject sharing.LocalInLocalObject 'LocalInLocalObject\$Item' \
 #       -H:AnalysisContextSensitivity=allocsens -H:+TrackInputFlows \
 #       -H:SideEffectAnalysisAssumptions=thread-confined,vm-fields,vm-code,handler-references,entry-points
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 CLASSES=${1:?usage: explain-sharing.sh <classes dir> <program prefix> <main class> <regex> [options]}
 PROGRAM=$2; MAIN=$3; REGEX=$4
 shift 4

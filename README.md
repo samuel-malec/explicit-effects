@@ -16,18 +16,22 @@ explicit-effects/
 ├── src/
 │   ├── graal/         # loads a Graal IR export
 │   ├── cthu/          # the Graal dialect of Cthulhu, parser and single-use checker
-│   ├── effects/       # heap partitions and method signatures
-│   └── graal2ct/      # the Graal IR to Cthulhu translation
+│   ├── effects/       # heap partitions, method signatures, kill sets, which locks can go
+│   ├── graal2ct/      # the Graal IR to Cthulhu translation
+│   └── diagnostics/   # questions about an export: what blocks a method, the ceiling, printing facts and graphs
 ├── test/              # example exports and the checks
 ├── graal-export/      # runs the standalone points-to analysis and exports its facts and Graal IR
 │   ├── examples/      # concept programs to learn the pipeline from
 │   └── corpus/        # the programs the checks and the round trip are built from
 ├── graal-native/      # the round trip: native images built with the graal tree's side-effect analysis
 ├── programs/          # whole programs: Are We Fast Yet and the native-image driver
+├── scripts/           # helpers: evaluation, frameworks, sharing, robustness, server
 ├── graal/             # submodule: our Graal fork with the exporter and the analysis feature
 ├── are-we-fast-yet/   # submodule: the Are We Fast Yet benchmarks
 └── thesis/            # the thesis text
 ```
+
+The analysis itself is `src/` without `diagnostics/`, and the `graal/` submodule. `scripts/` and `src/diagnostics/` only use it: nothing in the analysis or in the round trip depends on them. [`scripts/README.md`](scripts/README.md) lists the scripts.
 
 ## Setup
 

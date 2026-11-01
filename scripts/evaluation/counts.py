@@ -2,8 +2,8 @@
 field stores, calls, and where two images differ.
 
 Usage:
-    uv run python graal-native/counts.py graal-native/out/awfy-o3/{graal,kills}/counts.txt
-    uv run python graal-native/counts.py graal-native/out/awfy-o3/{graal,kills}/counts.txt --diff --match Queens
+    uv run python scripts/evaluation/counts.py graal-native/out/awfy-o3/{graal,kills}/counts.txt
+    uv run python scripts/evaluation/counts.py graal-native/out/awfy-o3/{graal,kills}/counts.txt --diff --match Queens
 
 Each counts.txt lists, for every method the image compiled, the calls, the stores (writes) and the loads (reads)
 left in its graph: a field with `×n` is accessed n times, `(loop)` marks the accesses inside a loop. The table has

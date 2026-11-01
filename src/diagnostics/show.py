@@ -2,7 +2,7 @@
 as the schedule has them and where it goes next.
 
 Usage:
-    uv run python -m graal.show graal-export/out/suite/forwarding.AcrossCall.json --method demo
+    uv run python -m diagnostics.show graal-export/out/suite/forwarding.AcrossCall.json --method demo
 
 Each node is its id, its operation, its type, the ids of its inputs, and what
 else the export says about it: a field, a constant, a call's targets, where a
@@ -13,8 +13,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from .graal_import import load
-from .graal_ir import Block, Graph, Node
+from graal.graal_import import load
+from graal.graal_ir import Block, Graph, Node
 
 
 def show(graph: Graph) -> str:

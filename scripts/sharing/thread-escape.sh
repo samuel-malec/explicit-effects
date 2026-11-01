@@ -8,7 +8,7 @@
 #   ANALYSES="insens _1obj" ./thread-escape.sh PublishedByStatic LocalInLocalObject
 #   JOBS=16 OUT=/tmp/x ./thread-escape.sh
 #   EXTRA="-J-Dsideeffects.explainSharing=Item" ./thread-escape.sh      # more native-image options
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 
 ANALYSES=${ANALYSES:-"insens allocsens _1obj"}
 OUT=${OUT:-$HERE/out/thread-escape}
@@ -40,4 +40,4 @@ export OUT GRAALVM COMPILER REPO EXPORT_DIR EXTRA
 for name in "${NAMES[@]}"; do
     for analysis in $ANALYSES; do echo "$name $analysis"; done
 done | xargs -P "$JOBS" -L 1 bash -c 'one "$@"' _ | sort
-uv run --project "$REPO" python "$HERE/thread_escape.py" "$OUT" "${NAMES[@]}"
+uv run --project "$REPO" python "$SCRIPTS/sharing/thread_escape.py" "$OUT" "${NAMES[@]}"
