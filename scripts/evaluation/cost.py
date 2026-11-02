@@ -22,8 +22,8 @@ RSS = re.compile(r"Peak RSS: ([\d.]+)GiB")
 CONFIGS = (
     ("graal", "graal", "graal", "", None),
     ("graal + inputs", "graalinputs", "graal", "", "graal"),
-    ("kills", "kills", "kills", "", "graal"),
-    ("kills + escape", "killsescape", "kills", "", "graal + inputs"),
+    ("fields", "fields", "fields", "", "graal"),
+    ("fields + escape", "fieldsescape", "fields", "", "graal + inputs"),
     ("graal (allocsens)", "graal", "graal", "-allocsens", None),
     ("graal + flags (allocsens)", "graalflags", "graal", "-allocsens", "graal (allocsens)"),
     ("objects (allocsens)", "objects", "objects", "-allocsens", "graal (allocsens)"),

@@ -19,15 +19,15 @@
 # (the commands' tables, as printed), and SUMMARY.txt (the stages, their status and time). The builds themselves stay in out/.
 describe() {
     cat <<'EOF'
-loads       loads left by Graal in the designed programs and in AWFY at -O2: graal, kills, objects (evaluation §3)
-time        AWFY at -O3: graal and kills built 4 times, timed together with an A/A pair; loads left per build (§3, §4, F73)
+loads       loads left by Graal in the designed programs and in AWFY at -O2: graal, fields, objects (evaluation §3)
+time        AWFY at -O3: graal and fields built 4 times, timed together with an A/A pair; loads left per build (§3, §4, F73)
 ceiling     AWFY at -O3 with the ceiling: loads left and run times with an A/A pair (§3.1)
 cost        build time, our steps, peak RSS of AWFY in every configuration, 5 rounds (§7)
 shapes      lock and volatile shapes: Graal's image against the one that removes what thread escape proves (§8.5)
-control     (not by default) control flow and loops left by graal, kills, objects: blocks, edges, ifs, exception edges, and the loads
+control     (not by default) control flow and loops left by graal, fields, objects: blocks, edges, ifs, exception edges, and the loads
             that left a loop, in the designed programs and AWFY at -O3, built with source positions (§3.3)
 matrix      (long) thread escape on the concurrency examples, every analysis and set of assumptions (§8.3)
-javac       (long) javac: cost of kills, the cutoff and lock removal, 3 rounds, and the time it takes to compile (§7, §8.4.2)
+javac       (long) javac: cost of the field kill sets, the cutoff and lock removal, 3 rounds, and the time it takes to compile (§7, §8.4.2)
 frameworks  (long) PetClinic and three Barista servers: builds, removable sites, PetClinic under load (§8.6, §8.7);
             needs ~/eval/petclinic and ~/eval/barista (bundles copied from the laptop)
 EOF
@@ -71,18 +71,20 @@ wait_quiet() {  # the timings are of a machine with nothing else running
 
 counts() { uv run --project "$REPO" python "$SCRIPTS/evaluation/counts.py" "$@"; }
 control_flow() { uv run --project "$REPO" python "$SCRIPTS/evaluation/control_flow.py" "$@"; }
+load_split() { uv run --project "$REPO" python "$SCRIPTS/evaluation/load_split.py" "$@"; }
 
 stage_loads() {
     local p
     for p in Examples Signatures Aliasing Allocation Awfy; do
         local tag=repro; [[ $p == Awfy ]] && tag=repro-o2
-        ONLY="graal kills" TAG=$tag "$HERE/run.sh" "$p"
-        ALLOCSENS=1 ONLY="graal kills objects" TAG=$tag "$HERE/run.sh" "$p"
+        ONLY="graal fields" TAG=$tag "$HERE/run.sh" "$p"
+        ALLOCSENS=1 ONLY="graal fields objects" TAG=$tag "$HERE/run.sh" "$p"
     done
     for p in examples signatures aliasing allocation awfy; do
         local tag=repro; [[ $p == awfy ]] && tag=repro-o2
-        echo "== $p, default analysis"; counts "$HERE/out/$p-$tag"/{graal,kills}/counts.txt
-        echo "== $p, allocation sites"; counts "$HERE/out/$p-allocsens-$tag"/{graal,kills,objects}/counts.txt
+        echo "== $p, default analysis"; counts "$HERE/out/$p-$tag"/{graal,fields}/counts.txt
+        [[ $p == awfy ]] || { echo "-- by kind of method (controls, unchanged, reduced)"; load_split "$HERE/out/$p-$tag"/{graal,fields}/counts.txt; }
+        echo "== $p, allocation sites"; counts "$HERE/out/$p-allocsens-$tag"/{graal,fields,objects}/counts.txt
     done
 }
 
@@ -91,14 +93,14 @@ stage_time() {
 }
 
 stage_ceiling() {
-    ONLY="graal kills ceiling" TAG=repro-ceil EXTRA="-O3 -H:+AOTTrivialInline" "$HERE/run.sh" Awfy
+    ONLY="graal fields ceiling" TAG=repro-ceil EXTRA="-O3 -H:+AOTTrivialInline" "$HERE/run.sh" Awfy
     local o="$HERE/out/awfy-repro-ceil"
-    echo "== loads left"; counts "$o"/{graal,kills,ceiling}/counts.txt
+    echo "== loads left"; counts "$o"/{graal,fields,ceiling}/counts.txt
     grep "left out" "$o/ceiling/timings.txt"
     wait_quiet
     echo "== run time (the first image twice is the noise)"
     taskset -c 4-7 uv run --project "$REPO" python "$REPO/programs/awfy/time.py" --image "graal=$o/graal/awfy-repro-ceil" \
-        --image "graal-again=$o/graal/awfy-repro-ceil" --image "kills=$o/kills/awfy-repro-ceil" --image "ceiling=$o/ceiling/awfy-repro-ceil"
+        --image "graal-again=$o/graal/awfy-repro-ceil" --image "fields=$o/fields/awfy-repro-ceil" --image "ceiling=$o/ceiling/awfy-repro-ceil"
 }
 
 stage_cost() {
@@ -111,12 +113,12 @@ stage_control() {
     for p in Examples Signatures Aliasing Allocation Awfy; do
         extra=$positions
         [[ $p != Awfy ]] || extra="-O3 -H:+AOTTrivialInline $positions"
-        EXTRA=$extra ONLY="graal kills" TAG=$tag "$HERE/run.sh" "$p"
-        ALLOCSENS=1 EXTRA=$extra ONLY="graal kills objects" TAG=$tag "$HERE/run.sh" "$p"
+        EXTRA=$extra ONLY="graal fields" TAG=$tag "$HERE/run.sh" "$p"
+        ALLOCSENS=1 EXTRA=$extra ONLY="graal fields objects" TAG=$tag "$HERE/run.sh" "$p"
     done
     for p in examples signatures aliasing allocation awfy; do
-        echo "== $p, default analysis"; control_flow "$HERE/out/$p-$tag"/{graal,kills}
-        echo "== $p, allocation sites"; control_flow "$HERE/out/$p-allocsens-$tag"/{graal,kills,objects}
+        echo "== $p, default analysis"; control_flow "$HERE/out/$p-$tag"/{graal,fields}
+        echo "== $p, allocation sites"; control_flow "$HERE/out/$p-allocsens-$tag"/{graal,fields,objects}
     done
 }
 
@@ -132,7 +134,7 @@ stage_matrix() {
 
 stage_javac() {
     local o="$HERE/out"
-    REPEATS=3 CONFIGS="graal kills" "$SCRIPTS/evaluation/cost-javac.sh"
+    REPEATS=3 CONFIGS="graal fields" "$SCRIPTS/evaluation/cost-javac.sh"
     uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$o" javac
     REPEATS=3 CONFIGS="graal-allocsens graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" "$SCRIPTS/evaluation/cost-javac.sh"
     uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$o" javac-allocsens
@@ -151,9 +153,9 @@ stage_javac() {
 
 stage_frameworks() {
     local app r
-    "$SCRIPTS/frameworks/petclinic.sh" graal kills graalflagscutoff lockscutoff
+    "$SCRIPTS/frameworks/petclinic.sh" graal fields graalflagscutoff lockscutoff
     for app in vanilla-hello-world vertx-hello-world micronaut-hello-world; do
-        "$SCRIPTS/frameworks/barista.sh" "$app" graal kills locks lockscutoff
+        "$SCRIPTS/frameworks/barista.sh" "$app" graal fields locks lockscutoff
     done
     for r in "$HERE/out/petclinic/lockscutoff" "$HERE"/out/barista/*/locks "$HERE"/out/barista/*/lockscutoff; do
         echo "== why no lock is removable in $r"
@@ -161,7 +163,7 @@ stage_frameworks() {
     done
     wait_quiet
     local p="$HERE/out/petclinic"
-    python3 "$SCRIPTS/frameworks/petclinic_load.py" --image graal-1="$p/graal/image" --image graal-1-again="$p/graal/image" --image kills="$p/kills/image" \
+    python3 "$SCRIPTS/frameworks/petclinic_load.py" --image graal-1="$p/graal/image" --image graal-1-again="$p/graal/image" --image fields="$p/fields/image" \
         --image flags="$p/graalflagscutoff/image" --image locks="$p/lockscutoff/image" --runs 5 --seconds 30 --warmup 15 --clients 16
 }
 

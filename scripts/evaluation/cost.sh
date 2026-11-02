@@ -7,14 +7,14 @@
 #   REPEATS=3 EXTRA="" ./cost.sh Examples
 #
 # A round builds, on the default analysis: graal; graal with the analysis keeping the inputs of its flows
-# (graalinputs, what thread escape needs: the baseline of killsescape); kills; and kills with thread escape
-# as the elision uses it (killsescape: inputs kept, assumptions vm-code,entry-points). Then with allocation
+# (graalinputs, what thread escape needs: the baseline of fieldsescape); fields; and fields with thread escape
+# as the elision uses it (fieldsescape: inputs kept, assumptions vm-code,entry-points). Then with allocation
 # sites (ALLOCSENS=1): graal; graal with the inputs and source positions kept (graalflags, the baseline of
 # locks); objects; locks (elision). Each configuration compares with the one it adds to on the same
 # analysis and flags. cost.py then sets each build's stage times, peak RSS and timings.txt side by side.
 #
-# THREAD_ESCAPE=off builds only what has no model of concurrency in it: graal, kills, and with allocation sites graal and
-# objects, every image with -H:-SideEffectAnalysisThreadEscape (run.sh). killsescape, locks and their baselines are not built,
+# THREAD_ESCAPE=off builds only what has no model of concurrency in it: graal, fields, and with allocation sites graal and
+# objects, every image with -H:-SideEffectAnalysisThreadEscape (run.sh). fieldsescape, locks and their baselines are not built,
 # and the ones an earlier run left in out/ are removed, so that cost.py does not set them next to these.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 
@@ -30,14 +30,14 @@ CONFIGS=(objects locks)
 if [[ ${THREAD_ESCAPE:-on} == off ]]; then
     CONFIGS=(objects)
     name=$(echo "$PROGRAM" | tr '[:upper:]' '[:lower:]')
-    rm -rf "$HERE/out/$name"-cost-{graalinputs,killsescape}-r* "$HERE/out/$name"-allocsens-cost-{graalflags,locks}-r*
+    rm -rf "$HERE/out/$name"-cost-{graalinputs,fieldsescape}-r* "$HERE/out/$name"-allocsens-cost-{graalflags,locks}-r*
 fi
 
 for round in $(seq 1 "$REPEATS"); do
     ONLY=graal TAG=cost-graal-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     [[ ${THREAD_ESCAPE:-on} == off ]] || EXTRA="$EXTRA $INPUTS" ONLY=graal TAG=cost-graalinputs-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
-    ONLY=kills TAG=cost-kills-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
-    [[ ${THREAD_ESCAPE:-on} == off ]] || EXTRA="$EXTRA $INPUTS $ESCAPE" ONLY=kills TAG=cost-killsescape-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
+    ONLY=fields TAG=cost-fields-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
+    [[ ${THREAD_ESCAPE:-on} == off ]] || EXTRA="$EXTRA $INPUTS $ESCAPE" ONLY=fields TAG=cost-fieldsescape-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     ALLOCSENS=1 ONLY=graal TAG=cost-graal-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     [[ ${THREAD_ESCAPE:-on} == off ]] || ALLOCSENS=1 EXTRA="$EXTRA $INPUTS $POSITIONS" ONLY=graal TAG=cost-graalflags-r$round "$HERE/run.sh" "$PROGRAM" || exit 1
     for config in "${CONFIGS[@]}"; do

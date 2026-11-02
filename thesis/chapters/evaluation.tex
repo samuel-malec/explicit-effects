@@ -163,21 +163,28 @@ compile stages from the builder's own log, and the peak resident memory.
     \caption{Loads left by Graal in the program's methods, by configuration. The first block uses the default analysis,
     the second allocation sites; the percentage is the change against \texttt{graal} on the same analysis. For AWFY the
     build is \texttt{-O2} unless stated. Rows marked with an asterisk were not repeated in the clean runs: the
-    \texttt{-O3} build on allocation sites is from 22 October and the ceiling at \texttt{-O2} from 28 October.}
+    \texttt{-O3} build on allocation sites is from 22 October and the ceiling at \texttt{-O2} from 28 October. The third block
+    splits the default-analysis loads of the four small programs, \texttt{graal} to \texttt{kills}, by the kind of method.
+    \emph{Controls} are the methods named \texttt{...Control}: a call in them may write the field, or a reference may alias
+    another, so they must keep their loads. \emph{Unchanged} are the loads of the other methods that do not change (helpers,
+    \texttt{main}, the inlined monitor code of a synchronized method, and in \texttt{Signatures} the three methods that cross a
+    monitor, a native call, and a \texttt{volatile} access). \emph{Reduced} are the loads of the methods that lose loads. The
+    totals in the first two blocks count every method; the three groups add up to them.}
     \label{tab:eval-loads}
-    \small
-    \begin{tabular}{lrrrrrr}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{lrrrrrrrrr}
         \toprule
-        & \multicolumn{2}{c}{Default analysis} & \multicolumn{3}{c}{Allocation sites} \\
-        \cmidrule(lr){2-3} \cmidrule(lr){4-6}
-        Program & \texttt{graal} & \texttt{kills} & \texttt{graal} & \texttt{kills} & \texttt{objects} \\
+        & \multicolumn{2}{c}{Default analysis} & \multicolumn{3}{c}{Allocation sites} & \multicolumn{3}{c}{By kind of method} \\
+        \cmidrule(lr){2-3} \cmidrule(lr){4-6} \cmidrule(lr){7-9}
+        Program & \texttt{graal} & \texttt{kills} & \texttt{graal} & \texttt{kills} & \texttt{objects} & Controls & Unchanged & Reduced \\
         \midrule
-        \texttt{Examples}   & 40 & 27 (\pct{-32.5}) & 43 & 30 (\pct{-30.2}) & 30 (\pct{-30.2}) \\
-        \texttt{Signatures} & 16 & 12 (\pct{-25.0}) & 16 & 12 (\pct{-25.0}) & 12 (\pct{-25.0}) \\
-        \texttt{Aliasing}   & 16 & 14 (\pct{-12.5}) & 18 & 16 (\pct{-11.1}) & 13 (\pct{-27.8}) \\
-        \texttt{Allocation} &  9 &  7 (\pct{-22.2}) &  9 &  7 (\pct{-22.2}) &  7 (\pct{-22.2}) \\
-        AWFY, \texttt{-O2}  & 943 & 903 (\pct{-4.2}) & 954 & 914 (\pct{-4.2}) & 914 (\pct{-4.2}) \\
-        AWFY, \texttt{-O3}  & 2,564 & 2,510 (\pct{-2.1}) & 3,325* & 3,269* (\pct{-1.7}) & 3,270* (\pct{-1.7}) \\
+        \texttt{Examples}   & 40 & 27 (\pct{-32.5}) & 43 & 30 (\pct{-30.2}) & 30 (\pct{-30.2}) & $16 \to 14$ & 10 & $14 \to 3$ \\
+        \texttt{Signatures} & 16 & 12 (\pct{-25.0}) & 16 & 12 (\pct{-25.0}) & 12 (\pct{-25.0}) & -- & 12 & $4 \to 0$ \\
+        \texttt{Aliasing}   & 16 & 14 (\pct{-12.5}) & 18 & 16 (\pct{-11.1}) & 13 (\pct{-27.8}) & $5 \to 4$ & 9 & $2 \to 1$ \\
+        \texttt{Allocation} &  9 &  7 (\pct{-22.2}) &  9 &  7 (\pct{-22.2}) &  7 (\pct{-22.2}) & -- & 0 & $9 \to 7$ \\
+        AWFY, \texttt{-O2}  & 943 & 903 (\pct{-4.2}) & 954 & 914 (\pct{-4.2}) & 914 (\pct{-4.2}) & -- & -- & -- \\
+        AWFY, \texttt{-O3}  & 2,564 & 2,510 (\pct{-2.1}) & 3,325* & 3,269* (\pct{-1.7}) & 3,270* (\pct{-1.7}) & -- & -- & -- \\
         \bottomrule
     \end{tabular}
 \end{table}

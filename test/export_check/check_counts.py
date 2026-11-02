@@ -11,12 +11,12 @@ _spec.loader.exec_module(counts)
 #: `$$Lambda/0x…` in it and no parameter types; a call's detail line is indented deeper than the row.
 TEXT = """\
 A.run(int)
-    kills      calls 2   writes A.count A.count(loop)×2 reads A.count×3 A.count(loop) B.next(loop)×4
+    fields     calls 2   writes A.count A.count(loop)×2 reads A.count×3 A.count(loop) B.next(loop)×4
         A.helper() kills nothing
 A$$Lambda/0xc6a3883ad1d74211d0ce6db95917a9520.apply(Object)
-    kills      calls 0   writes B.mark                    reads Lambda/0xc6a3883ad1d74211d0ce6db95917a9520.arg$1
+    fields     calls 0   writes B.mark                    reads Lambda/0xc6a3883ad1d74211d0ce6db95917a9520.arg$1
 B.empty()
-    kills      calls 1   writes -                        reads -
+    fields     calls 1   writes -                        reads -
 """
 
 

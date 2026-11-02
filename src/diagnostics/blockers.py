@@ -2,7 +2,7 @@
 bound, and how many methods the program has behind each.
 
 Usage:
-    uv run python -m diagnostics.blockers graal-native/out/awfy-eval-o3/kills/export.json
+    uv run python -m diagnostics.blockers graal-native/out/awfy-eval-o3/fields/export.json
     uv run python -m diagnostics.blockers export.json --program deltablue,havlak --synchronization none
 
 A method kills everything (`effects.kills`) when it, or a method it calls, has an effect or a call
