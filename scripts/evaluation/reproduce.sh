@@ -71,6 +71,7 @@ wait_quiet() {  # the timings are of a machine with nothing else running
 
 counts() { uv run --project "$REPO" python "$SCRIPTS/evaluation/counts.py" "$@"; }
 control_flow() { uv run --project "$REPO" python "$SCRIPTS/evaluation/control_flow.py" "$@"; }
+load_split() { uv run --project "$REPO" python "$SCRIPTS/evaluation/load_split.py" "$@"; }
 
 stage_loads() {
     local p
@@ -82,6 +83,7 @@ stage_loads() {
     for p in examples signatures aliasing allocation awfy; do
         local tag=repro; [[ $p == awfy ]] && tag=repro-o2
         echo "== $p, default analysis"; counts "$HERE/out/$p-$tag"/{graal,fields}/counts.txt
+        [[ $p == awfy ]] || { echo "-- by kind of method (controls, unchanged, reduced)"; load_split "$HERE/out/$p-$tag"/{graal,fields}/counts.txt; }
         echo "== $p, allocation sites"; counts "$HERE/out/$p-allocsens-$tag"/{graal,fields,objects}/counts.txt
     done
 }

@@ -13,6 +13,8 @@ Run them from anywhere, for example `scripts/sharing/thread-escape.sh`. The numb
 | `reproduce.sh` | Regenerates the headline tables from one commit; refuses a tree that is not exactly a commit. Calls the others here. |
 | `awfy-repeat.sh` | AWFY's `graal` and `fields` built several times and timed together, because builds differ more than runs. |
 | `counts.py` | Loads, loads in loops, stores and calls Graal leaves in each image. |
+| `control_flow.py` | Blocks, control-flow edges, ifs and loops two images leave, and the loads that left a loop. |
+| `load_split.py` | The loads of a designed program split into its controls, the methods that do not change, and the methods that lose loads. |
 | `cost.sh`, `cost.py` | What the analysis adds to a build, per configuration, and the table. |
 | `cost-javac.sh` | The same on javac. |
 | `time_locks.sh` | What removing locks and volatile accesses is worth on the designed shapes. |
