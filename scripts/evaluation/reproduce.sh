@@ -10,6 +10,10 @@
 #   scripts/evaluation/reproduce.sh all                     # every stage, the long ones too (many hours)
 #   scripts/evaluation/reproduce.sh --check provenance.txt  # only the decision: is this code a commit? (exit status 1 if it is not)
 #   ALLOW_DIRTY=1 scripts/evaluation/reproduce.sh shapes    # for testing the script: the results are marked NOT-REPRODUCIBLE
+#   THREAD_ESCAPE=off scripts/evaluation/reproduce.sh       # the same stages with no model of concurrency anywhere: no thread escape,
+#                                                           # every lock and volatile access counts as ordering this thread with
+#                                                           # another, nothing is elided. Only loads, time, ceiling and cost; results
+#                                                           # in out/reproduction/<UTC time>-<tool commit>-no-thread-escape/
 #
 # The results are in out/reproduction/<UTC time>-<tool commit>/: provenance.txt (which code), one <stage>.txt for each stage
 # (the commands' tables, as printed), and SUMMARY.txt (the stages, their status and time). The builds themselves stay in out/.
@@ -50,6 +54,13 @@ export PATH="$GRAALVM/bin:$PATH"  # programs/*/build.sh compile with the javac o
 
 DEFAULT_STAGES=(loads time ceiling cost shapes)
 ALL_STAGES=(loads time ceiling cost shapes matrix javac frameworks)
+NO_CONCURRENCY=
+if [[ ${THREAD_ESCAPE:-on} == off ]]; then
+    # the stages that remove locks or read what thread escape found have nothing to run without it
+    NO_CONCURRENCY=1
+    DEFAULT_STAGES=(loads time ceiling cost)
+    ALL_STAGES=(loads time ceiling cost)
+fi
 
 wait_quiet() {  # the timings are of a machine with nothing else running
     while [[ $(cut -d. -f1 /proc/loadavg) -ge 2 ]]; do sleep 15; done
@@ -147,14 +158,19 @@ main() {
     [[ ${stages[0]} != all ]] || stages=("${ALL_STAGES[@]}")
     for stage in "${stages[@]}"; do
         declare -F "stage_$stage" > /dev/null || { echo "unknown stage $stage (see --list)" >&2; return 2; }
+        if [[ -n $NO_CONCURRENCY && $stage =~ ^(shapes|matrix|javac|frameworks)$ ]]; then
+            echo "stage $stage needs thread escape, and THREAD_ESCAPE=off leaves it out" >&2
+            return 2
+        fi
     done
 
     local commit
     commit=$(sed -n 's/^commit: \([0-9a-f]\{7\}\).*/\1/p' "$REPO/.synced-from" 2> /dev/null | head -1 || true)
     [[ -n $commit ]] || commit=$(git -C "$REPO" rev-parse --short HEAD 2> /dev/null || echo unknown)
-    local results="$HERE/out/reproduction/$(date -u +%Y%m%dT%H%M%SZ)-$commit"
+    local results="$HERE/out/reproduction/$(date -u +%Y%m%dT%H%M%SZ)-$commit${NO_CONCURRENCY:+-no-thread-escape}"
     mkdir -p "$results"
     provenance "$results"
+    [[ -z $NO_CONCURRENCY ]] || echo "configuration: THREAD_ESCAPE=off, so no thread escape, no lock or volatile facts, every acquire and release counts, nothing elided" >> "$results/provenance.txt"
     if ! refusal "$results/provenance.txt"; then
         if [[ ${ALLOW_DIRTY:-} != 1 ]]; then
             rm -rf "$results"
