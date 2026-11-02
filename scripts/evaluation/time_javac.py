@@ -5,7 +5,7 @@ about 0.1 s); the table shows the median wall time per compile and each image ag
 
 Usage:
     taskset -c 4-7 uv run python scripts/evaluation/time_javac.py graal-native/out/javac-cost-graal-r1 \\
-        graal-native/out/javac-cost-kills-r1 --runs 10
+        graal-native/out/javac-cost-fields-r1 --runs 10
 
 Each argument is a build directory of cost-javac.sh, holding <config>/javac.
 """

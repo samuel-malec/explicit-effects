@@ -1,8 +1,8 @@
 """Control flow and loops, image against image: what Graal leaves of the branches, and which loads left a loop.
 
 Usage:
-    uv run python scripts/evaluation/control_flow.py graal-native/out/awfy-ctl/{graal,kills}
-    uv run python scripts/evaluation/control_flow.py graal-native/out/awfy-ctl/{graal,kills} --methods 10
+    uv run python scripts/evaluation/control_flow.py graal-native/out/awfy-ctl/{graal,fields}
+    uv run python scripts/evaluation/control_flow.py graal-native/out/awfy-ctl/{graal,fields} --methods 10
 
 Each image directory holds control.txt (for every method the image compiled: blocks, control-flow edges, ifs, switches,
 loops, calls with an exception edge, deoptimizations, counted at the end of the low tier) and sites.txt (every field load

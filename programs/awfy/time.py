@@ -2,9 +2,9 @@
 
 Usage:
     uv run python programs/awfy/time.py graal-native/out/awfy [--runs 5] [--iterations 20]
-    uv run python programs/awfy/time.py --image graal=out/a/graal/a --image skip=out/b/kills/b --benchmark Permute
+    uv run python programs/awfy/time.py --image graal=out/a/graal/a --image skip=out/b/fields/b --benchmark Permute
 
-Runs every image graal-native built (graal, kills, ceiling, objects), the
+Runs every image graal-native built (graal, fields, ceiling, objects), the
 images taking turns run by run so that the machine's drift touches them
 alike. Each run measures each benchmark --iterations times at the size the
 suite benchmarks with. The first iteration of a run is left out, and the
@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-MODES = ("graal", "kills", "ceiling", "objects")
+MODES = ("graal", "fields", "ceiling", "objects")
 
 
 def main() -> int:

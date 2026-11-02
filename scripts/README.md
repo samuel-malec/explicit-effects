@@ -11,7 +11,7 @@ Run them from anywhere, for example `scripts/sharing/thread-escape.sh`. The numb
 | Script | What it does |
 | --- | --- |
 | `reproduce.sh` | Regenerates the headline tables from one commit; refuses a tree that is not exactly a commit. Calls the others here. |
-| `awfy-repeat.sh` | AWFY's `graal` and `kills` built several times and timed together, because builds differ more than runs. |
+| `awfy-repeat.sh` | AWFY's `graal` and `fields` built several times and timed together, because builds differ more than runs. |
 | `counts.py` | Loads, loads in loops, stores and calls Graal leaves in each image. |
 | `cost.sh`, `cost.py` | What the analysis adds to a build, per configuration, and the table. |
 | `cost-javac.sh` | The same on javac. |

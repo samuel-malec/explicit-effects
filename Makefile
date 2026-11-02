@@ -91,17 +91,17 @@ native-awfy:
 	uv run python $(AWFY)/time.py $(NATIVE)/awfy
 	uv run python $(AWFY)/time.py $(NATIVE)/awfy-allocsens
 
-# Step 6: graal and kills with the symbols perf needs, as built by default (awfy-sym,
+# Step 6: graal and fields with the symbols perf needs, as built by default (awfy-sym,
 # methods at multiples of 32 bytes) and with methods at multiples of 16, 64 and 128 bytes,
-# and two kills images that narrow CD's methods not at all, or only RedBlackTree.remove.
-# Then CD's counters in each, and graal against kills for every benchmark across the
+# and two fields images that narrow CD's methods not at all, or only RedBlackTree.remove.
+# Then CD's counters in each, and graal against fields for every benchmark across the
 # alignments. See programs/awfy/layouts.py.
 awfy-layouts:
-	ONLY="graal kills" TAG=sym EXTRA=-H:-DeleteLocalSymbols $(NATIVE_DIR)/run.sh Awfy
+	ONLY="graal fields" TAG=sym EXTRA=-H:-DeleteLocalSymbols $(NATIVE_DIR)/run.sh Awfy
 	for a in 16 64 128; do \
-		ONLY="graal kills" TAG=a$$a EXTRA="-H:-DeleteLocalSymbols -H:CodeAlignment=$$a" $(NATIVE_DIR)/run.sh Awfy; done
-	ONLY=kills TAG=skipcd EXTRA="-H:-DeleteLocalSymbols -H:SideEffectAnalysisSkipMethods=cd." $(NATIVE_DIR)/run.sh Awfy
-	ONLY=kills TAG=onlyremove EXTRA="-H:-DeleteLocalSymbols -H:SideEffectAnalysisOnlyMethods=cd.RedBlackTree.remove" $(NATIVE_DIR)/run.sh Awfy
+		ONLY="graal fields" TAG=a$$a EXTRA="-H:-DeleteLocalSymbols -H:CodeAlignment=$$a" $(NATIVE_DIR)/run.sh Awfy; done
+	ONLY=fields TAG=skipcd EXTRA="-H:-DeleteLocalSymbols -H:SideEffectAnalysisSkipMethods=cd." $(NATIVE_DIR)/run.sh Awfy
+	ONLY=fields TAG=onlyremove EXTRA="-H:-DeleteLocalSymbols -H:SideEffectAnalysisOnlyMethods=cd.RedBlackTree.remove" $(NATIVE_DIR)/run.sh Awfy
 	uv run python $(AWFY)/counters.py CD $(NATIVE)/awfy-sym $(NATIVE)/awfy-skipcd $(NATIVE)/awfy-onlyremove $(NATIVE)/awfy-a64 --runs 5
 	uv run python $(AWFY)/layouts.py $(NATIVE)/awfy-a16 $(NATIVE)/awfy-sym $(NATIVE)/awfy-a64 $(NATIVE)/awfy-a128 --runs 3
 

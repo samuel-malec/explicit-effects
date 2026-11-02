@@ -1,17 +1,17 @@
-"""How the kills images compare with graal's when only the placement of code changes.
+"""How the fields images compare with graal's when only the placement of code changes.
 
 Usage:
     uv run python programs/awfy/layouts.py graal-native/out/awfy-a16 graal-native/out/awfy-sym \\
         graal-native/out/awfy-a64 graal-native/out/awfy-a128 [--runs 3] [--benchmarks CD,DeltaBlue]
 
-Each directory holds a graal and a kills image, built alike except for the alignment
+Each directory holds a graal and a fields image, built alike except for the alignment
 of compiled methods (-H:CodeAlignment, named in the directory as -a16; a directory
 without one is built with the default, 32 bytes on AMD64). Every image runs every
 benchmark under perf stat, as counters.py does, the images taking turns. For each
 benchmark the table gives:
-- kills against graal in cycles, in each layout, and the mean over the layouts;
+- fields against graal in cycles, in each layout, and the mean over the layouts;
 - how far graal's own cycles move between layouts: what placement alone does;
-- kills against graal in instructions, loads and stores, the mean over the layouts.
+- fields against graal in instructions, loads and stores, the mean over the layouts.
 """
 
 import argparse
@@ -46,7 +46,7 @@ def main() -> int:
     for run in range(args.runs):
         for benchmark in benchmarks:
             for layout, out in layouts.items():
-                for mode in ("graal", "kills"):
+                for mode in ("graal", "fields"):
                     seen.setdefault((benchmark, layout, mode), []).append(
                         count(out / mode / out.name, benchmark, args.iterations, args.cpu))
         print(f"run {run + 1} of {args.runs} done", file=sys.stderr)
@@ -54,13 +54,13 @@ def main() -> int:
     def mean(benchmark: str, layout: str, mode: str, counter: str) -> float:
         return statistics.mean(r[counter] for r in seen[(benchmark, layout, mode)])
 
-    print(f"kills against graal in cycles per method alignment (bytes), {args.iterations} iterations, mean of {args.runs} runs")
+    print(f"fields against graal in cycles per method alignment (bytes), {args.iterations} iterations, mean of {args.runs} runs")
     print(f"{'benchmark':11}" + "".join(f" {layout:>7}" for layout in layouts) + f" {'mean':>7} {'graal moves':>12}"
           + "".join(f" {k:>13}" for k in ("instructions", "loads", "stores")))
     for benchmark in benchmarks:
-        ratios = [mean(benchmark, layout, "kills", "cycles") / mean(benchmark, layout, "graal", "cycles") - 1 for layout in layouts]
+        ratios = [mean(benchmark, layout, "fields", "cycles") / mean(benchmark, layout, "graal", "cycles") - 1 for layout in layouts]
         graal = [mean(benchmark, layout, "graal", "cycles") for layout in layouts]
-        others = [statistics.mean(mean(benchmark, layout, "kills", k) / mean(benchmark, layout, "graal", k) - 1 for layout in layouts)
+        others = [statistics.mean(mean(benchmark, layout, "fields", k) / mean(benchmark, layout, "graal", k) - 1 for layout in layouts)
                   for k in ("instructions", "loads", "stores")]
         print(f"{benchmark:11}" + "".join(f" {r:>+7.1%}" for r in ratios) + f" {statistics.mean(ratios):>+7.1%}"
               + f" {max(graal) / min(graal) - 1:>12.1%}" + "".join(f" {o:>+13.2%}" for o in others))

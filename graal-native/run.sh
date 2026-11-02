@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The round trip on one example: build its native image as Graal compiles it
-# (graal), with the kills our tool gives each call (kills), and with each
+# (graal), with the kills our tool gives each call (fields), and with each
 # access to a field in its partition of the objects too (objects), run them,
 # and compare their output with the JVM's. What Graal leaves of the program's
 # methods, with the calls narrowed and the fields partitioned in each, goes to
@@ -21,12 +21,12 @@
 #   THREAD_ESCAPE=off TAG=sequential ./run.sh Awfy
 #                              # every image without any model of concurrency: no thread escape, every lock and volatile
 #                              # access counts as ordering this thread with another (not with ONLY=locks)
-#   ONLY="graal kills" TAG=sym EXTRA="-H:-DeleteLocalSymbols" ./run.sh Awfy
+#   ONLY="graal fields" TAG=sym EXTRA="-H:-DeleteLocalSymbols" ./run.sh Awfy
 #                              # only some of the images, into out/awfy-sym/, with more
 #                              # native-image options: here, the symbols perf needs
 #
 # A fourth image, graal-dse, only with ONLY, has Graal remove dead stores itself after inlining,
-# with the partitions of the objects image. A fifth, ceiling, only with ONLY, is the kills image with the kill of
+# with the partitions of the objects image. A fifth, ceiling, only with ONLY, is the fields image with the kill of
 # everything the facts cannot name left out (identity hash, class initialization, synchronization, unresolved and native
 # calls, ...): the most that precise kill sets could give Graal, an upper bound whose image may be wrong. Its output is
 # compared with the JVM's as the others' are, and timings.txt says the kill sets are not sound.
@@ -49,9 +49,9 @@ if [[ -x "$PROGRAM/build.sh" ]]; then
     SOURCES=()
     SCOPE=""
 fi
-MODES=(graal kills objects)
+MODES=(graal fields objects)
 if [[ -n "${LIE:-}" ]]; then
-    MODES=(kills)
+    MODES=(fields)
 elif [[ -n "${SPLIT:-}" ]]; then
     MODES=(objects)
 fi
@@ -59,6 +59,13 @@ if [[ -n "${ONLY:-}" ]]; then
     read -r -a MODES <<< "$ONLY"
 fi
 read -r -a EXTRA_OPTIONS <<< "${EXTRA:-}"
+for mode in "${MODES[@]}"; do
+    case $mode in
+        graal|fields|objects|graal-dse|ceiling|locks) ;;
+        kills) echo "error: the image called kills is now called fields" >&2; exit 2 ;;
+        *) echo "error: unknown image $mode (graal, fields, objects, graal-dse, ceiling, locks)" >&2; exit 2 ;;
+    esac
+done
 
 rm -rf "$OUT"
 mkdir -p "$OUT/classes"
@@ -84,7 +91,7 @@ for mode in "${MODES[@]}"; do
     # Object partitions need the analysis to tell objects apart by where they were
     # allocated, and the compiled graphs to keep where each access is.
     OBJECTS=()
-    if [[ -n "${ALLOCSENS:-}" && ( $mode == graal || $mode == kills || $mode == ceiling ) ]]; then
+    if [[ -n "${ALLOCSENS:-}" && ( $mode == graal || $mode == fields || $mode == ceiling ) ]]; then
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens)
     fi
     if [[ $mode == ceiling ]]; then

@@ -8,8 +8,8 @@
 # (export, kill sets, timings, counts) are in <output directory>/<mode>/.
 #
 #   graal        the feature on, nothing narrowed: the baseline
-#   kills        every call narrowed to what its callees write
-#   ceiling      kills with the kill of everything the facts cannot name left out (unsound: an upper bound)
+#   fields       every call narrowed to what its callees write
+#   ceiling      fields, with the kill of everything the facts cannot name left out (unsound: an upper bound)
 #   locks        locks removed and volatile accesses made ordinary where thread escape proves the object local, default analysis
 #   graalflagscutoff, lockscutoff   allocation sites, the saturation cutoff at 100, the inputs of the flows and the source positions
 #                kept; lockscutoff also removes the locks and makes the volatile accesses ordinary that thread escape proves local
@@ -18,16 +18,16 @@
 configure() {
     local allocsens=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:+TrackInputFlows -H:TypeFlowSaturationCutoff=100)
     local locks=(-H:-SideEffectAnalysisNarrowCalls -H:SideEffectAnalysisLabel=locks -H:+SideEffectAnalysisElideLocks -H:SideEffectAnalysisAssumptions=vm-code,entry-points)
-    mode=kills
+    mode=fields
     case $1 in
         graal)             mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls) ;;
-        kills)             flags=() ;;
+        fields)            flags=() ;;
         ceiling)           flags=(-H:SideEffectAnalysisIgnoreEffects=all) ;;
         graalflagscutoff)  mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}") ;;
         locks)             mode=locks; flags=("${locks[@]}") ;;
         lockscutoff)       mode=locks; flags=("${locks[@]}" "${allocsens[@]}"
                                               -H:DeadlockWatchdogInterval=120) ;;  # the tool runs for longer than the default ten minutes
-        *) echo "unknown configuration $1 (graal, kills, ceiling, locks, graalflagscutoff, lockscutoff)" >&2; return 1 ;;
+        *) echo "unknown configuration $1 (graal, fields, ceiling, locks, graalflagscutoff, lockscutoff)" >&2; return 1 ;;
     esac
 }
 

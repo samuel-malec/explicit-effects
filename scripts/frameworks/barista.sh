@@ -15,7 +15,7 @@ source "$HERE/provenance.sh"
 source "$SCRIPTS/frameworks/bundle.sh"
 set +e
 BARISTA=${BARISTA:-$HOME/eval/barista}
-[[ $# -gt 1 ]] || { echo "usage: barista.sh <app> <graal|kills|locks|graalflagscutoff|lockscutoff|ceiling>…" >&2; exit 2; }
+[[ $# -gt 1 ]] || { echo "usage: barista.sh <app> <graal|fields|locks|graalflagscutoff|lockscutoff|ceiling>…" >&2; exit 2; }
 APP=$1
 shift
 NIB="$BARISTA/$APP/$APP.nib"

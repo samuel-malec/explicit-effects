@@ -2,7 +2,7 @@
 when each combination of effects is left out of the kill sets. A measurement, never sound.
 
 Usage:
-    uv run python -m diagnostics.ceiling graal-native/out/awfy-eval/kills/export.json
+    uv run python -m diagnostics.ceiling graal-native/out/awfy-eval/fields/export.json
     uv run python -m diagnostics.ceiling export.json --program deltablue,havlak --partition object-field
 
 The effects are those of `effects.kills.IGNORABLE`: each on its own, then added one after the other (the three

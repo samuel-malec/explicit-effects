@@ -5,13 +5,13 @@
 # Examples.java, whose classes must print what the JDK's own javac's classes print. Builds go to
 # out/javac[-allocsens]-cost-<config>-r<k>/, as cost.sh's do, so that cost.py reads them.
 #
-#   ./cost-javac.sh                                   # 3 rounds of graal and kills
-#   REPEATS=1 CONFIGS="graal kills objects" ./cost-javac.sh
-#   CONFIGS="graal graalinputs kills killsescape graal-allocsens graalflags-allocsens objects locks" ./cost-javac.sh   # the full table
+#   ./cost-javac.sh                                   # 3 rounds of graal and fields
+#   REPEATS=1 CONFIGS="graal fields objects" ./cost-javac.sh
+#   CONFIGS="graal graalinputs fields fieldsescape graal-allocsens graalflags-allocsens objects locks" ./cost-javac.sh   # the full table
 #   CONFIGS="graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" ./cost-javac.sh      # lock removal with the saturation cutoff raised
 #
 # graalinputs and graalflags-allocsens are graal with the flags thread escape needs (inputs of flows kept, source
-# positions kept): the baselines of killsescape and locks, so that what the flags cost Native Image itself is not
+# positions kept): the baselines of fieldsescape and locks, so that what the flags cost Native Image itself is not
 # counted as ours. With the points-to analysis's saturation cutoff at 100 instead of 20 the analysis keeps the types that
 # javac's generic code passes around, and thread escape finds 66 locks of the JDK it can prove local (F65); graalcutoff-allocsens
 # and graalflagscutoff-allocsens are the baselines of lockscutoff for what the cutoff itself costs and for what removing locks costs.
@@ -21,7 +21,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 source "$HERE/provenance.sh"
 
 REPEATS=${REPEATS:-3}
-read -r -a CONFIGS <<< "${CONFIGS:-graal kills}"
+read -r -a CONFIGS <<< "${CONFIGS:-graal fields}"
 JDK=${JAVA_HOME:-$HOME/.mx/jdks/labsjdk-ce-latest-jvmci-25.4-b23_amd64}
 if [[ -d "$JDK/jmods" ]]; then
     SYSTEM=(-Djava.home= --system none -p "$JDK/jmods")  # as Graal's gate runs the image
@@ -42,8 +42,8 @@ build() {  # configuration, round
     case $config in
         graal)          flags=(-H:-SideEffectAnalysisNarrowCalls) ;;
         graalinputs)    mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls "${inputs[@]}") ;;
-        kills)          flags=() ;;
-        killsescape)    mode=kills; flags=("${inputs[@]}" "${escape[@]}") ;;
+        fields)         flags=() ;;
+        fieldsescape)   mode=fields; flags=("${inputs[@]}" "${escape[@]}") ;;
         graal-allocsens) tag=graal; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}") ;;
         graalflags-allocsens) tag=graalflags; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${inputs[@]}" "${positions[@]}") ;;
         objects)        analysis=-allocsens; flags=("${allocsens[@]}" "${positions[@]}" -H:SideEffectAnalysisPartition=object-field) ;;
