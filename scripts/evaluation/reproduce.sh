@@ -10,6 +10,10 @@
 #   scripts/evaluation/reproduce.sh all                     # every stage, the long ones too (many hours)
 #   scripts/evaluation/reproduce.sh --check provenance.txt  # only the decision: is this code a commit? (exit status 1 if it is not)
 #   ALLOW_DIRTY=1 scripts/evaluation/reproduce.sh shapes    # for testing the script: the results are marked NOT-REPRODUCIBLE
+#   THREAD_ESCAPE=off scripts/evaluation/reproduce.sh       # the same stages with no model of concurrency anywhere: no thread escape,
+#                                                           # every lock and volatile access counts as ordering this thread with
+#                                                           # another, nothing is elided. Only loads, time, ceiling and cost; results
+#                                                           # in out/reproduction/<UTC time>-<tool commit>-no-thread-escape/
 #
 # The results are in out/reproduction/<UTC time>-<tool commit>/: provenance.txt (which code), one <stage>.txt for each stage
 # (the commands' tables, as printed), and SUMMARY.txt (the stages, their status and time). The builds themselves stay in out/.
@@ -20,6 +24,8 @@ time        AWFY at -O3: graal and kills built 4 times, timed together with an A
 ceiling     AWFY at -O3 with the ceiling: loads left and run times with an A/A pair (§3.1)
 cost        build time, our steps, peak RSS of AWFY in every configuration, 5 rounds (§7)
 shapes      lock and volatile shapes: Graal's image against the one that removes what thread escape proves (§8.5)
+control     (not by default) control flow and loops left by graal, kills, objects: blocks, edges, ifs, exception edges, and the loads
+            that left a loop, in the designed programs and AWFY at -O3, built with source positions (§3.3)
 matrix      (long) thread escape on the concurrency examples, every analysis and set of assumptions (§8.3)
 javac       (long) javac: cost of kills, the cutoff and lock removal, 3 rounds, and the time it takes to compile (§7, §8.4.2)
 frameworks  (long) PetClinic and three Barista servers: builds, removable sites, PetClinic under load (§8.6, §8.7);
@@ -49,7 +55,14 @@ source "$HERE/provenance.sh"
 export PATH="$GRAALVM/bin:$PATH"  # programs/*/build.sh compile with the javac on the path
 
 DEFAULT_STAGES=(loads time ceiling cost shapes)
-ALL_STAGES=(loads time ceiling cost shapes matrix javac frameworks)
+ALL_STAGES=(loads time ceiling cost shapes control matrix javac frameworks)
+NO_CONCURRENCY=
+if [[ ${THREAD_ESCAPE:-on} == off ]]; then
+    # the stages that remove locks or read what thread escape found have nothing to run without it
+    NO_CONCURRENCY=1
+    DEFAULT_STAGES=(loads time ceiling cost)
+    ALL_STAGES=(loads time ceiling cost control)
+fi
 
 wait_quiet() {  # the timings are of a machine with nothing else running
     while [[ $(cut -d. -f1 /proc/loadavg) -ge 2 ]]; do sleep 15; done
@@ -57,6 +70,7 @@ wait_quiet() {  # the timings are of a machine with nothing else running
 }
 
 counts() { uv run --project "$REPO" python "$SCRIPTS/evaluation/counts.py" "$@"; }
+control_flow() { uv run --project "$REPO" python "$SCRIPTS/evaluation/control_flow.py" "$@"; }
 
 stage_loads() {
     local p
@@ -90,6 +104,20 @@ stage_ceiling() {
 stage_cost() {
     REPEATS=${COST_REPEATS:-5} "$SCRIPTS/evaluation/cost.sh" Awfy  # COST_REPEATS=1 to test the stage
     uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$HERE/out" awfy
+}
+
+stage_control() {
+    local p tag=ctl positions="-H:+TrackNodeSourcePosition" extra
+    for p in Examples Signatures Aliasing Allocation Awfy; do
+        extra=$positions
+        [[ $p != Awfy ]] || extra="-O3 -H:+AOTTrivialInline $positions"
+        EXTRA=$extra ONLY="graal kills" TAG=$tag "$HERE/run.sh" "$p"
+        ALLOCSENS=1 EXTRA=$extra ONLY="graal kills objects" TAG=$tag "$HERE/run.sh" "$p"
+    done
+    for p in examples signatures aliasing allocation awfy; do
+        echo "== $p, default analysis"; control_flow "$HERE/out/$p-$tag"/{graal,kills}
+        echo "== $p, allocation sites"; control_flow "$HERE/out/$p-allocsens-$tag"/{graal,kills,objects}
+    done
 }
 
 stage_shapes() {
@@ -147,14 +175,19 @@ main() {
     [[ ${stages[0]} != all ]] || stages=("${ALL_STAGES[@]}")
     for stage in "${stages[@]}"; do
         declare -F "stage_$stage" > /dev/null || { echo "unknown stage $stage (see --list)" >&2; return 2; }
+        if [[ -n $NO_CONCURRENCY && $stage =~ ^(shapes|matrix|javac|frameworks)$ ]]; then
+            echo "stage $stage needs thread escape, and THREAD_ESCAPE=off leaves it out" >&2
+            return 2
+        fi
     done
 
     local commit
     commit=$(sed -n 's/^commit: \([0-9a-f]\{7\}\).*/\1/p' "$REPO/.synced-from" 2> /dev/null | head -1 || true)
     [[ -n $commit ]] || commit=$(git -C "$REPO" rev-parse --short HEAD 2> /dev/null || echo unknown)
-    local results="$HERE/out/reproduction/$(date -u +%Y%m%dT%H%M%SZ)-$commit"
+    local results="$HERE/out/reproduction/$(date -u +%Y%m%dT%H%M%SZ)-$commit${NO_CONCURRENCY:+-no-thread-escape}"
     mkdir -p "$results"
     provenance "$results"
+    [[ -z $NO_CONCURRENCY ]] || echo "configuration: THREAD_ESCAPE=off, so no thread escape, no lock or volatile facts, every acquire and release counts, nothing elided" >> "$results/provenance.txt"
     if ! refusal "$results/provenance.txt"; then
         if [[ ${ALLOW_DIRTY:-} != 1 ]]; then
             rm -rf "$results"

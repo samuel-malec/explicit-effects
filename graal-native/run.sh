@@ -18,6 +18,9 @@
 #   ONLY=locks ./run.sh LockShapes      # the image that also removes the locks on objects only one thread
 #                              # reaches; LIE_LOCKS='LocksShared.add(I)V' ONLY=locks ./run.sh LocksShared is the
 #                              # control: the program shares that lock, so it must go wrong
+#   THREAD_ESCAPE=off TAG=sequential ./run.sh Awfy
+#                              # every image without any model of concurrency: no thread escape, every lock and volatile
+#                              # access counts as ordering this thread with another (not with ONLY=locks)
 #   ONLY="graal kills" TAG=sym EXTRA="-H:-DeleteLocalSymbols" ./run.sh Awfy
 #                              # only some of the images, into out/awfy-sym/, with more
 #                              # native-image options: here, the symbols perf needs
@@ -99,6 +102,16 @@ for mode in "${MODES[@]}"; do
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:+TrackInputFlows -H:SideEffectAnalysisLabel=locks
                  -H:+SideEffectAnalysisElideLocks -H:SideEffectAnalysisAssumptions="${ASSUMPTIONS:-vm-code,entry-points}"
                  ${LIE_LOCKS:+"-H:SideEffectAnalysisClaimLocksLocal=$LIE_LOCKS"})
+    fi
+    # THREAD_ESCAPE=off: no model of concurrency anywhere. The export works out nothing about which objects other threads can reach,
+    # so every acquire and release in the facts counts as ordering this thread with another, and no lock or volatile access
+    # can be removed or made ordinary. The images are named as before: give them a TAG, so that they do not replace the others.
+    if [[ ${THREAD_ESCAPE:-on} == off ]]; then
+        if [[ $mode == locks ]]; then
+            echo "error: the locks image removes locks, which needs thread escape (THREAD_ESCAPE=off)" >&2
+            exit 1
+        fi
+        OBJECTS+=(-H:-SideEffectAnalysisThreadEscape)
     fi
     # Not one of the three images by default (ONLY="... graal-dse"): Graal's own dead-store
     # elimination, OverwrittenStoreEliminationPhase, after inlining, with the same partitions as
