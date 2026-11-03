@@ -1,7 +1,7 @@
 """What each method, or anything it calls, may write: the kill set of a call to it, for Graal.
 
 Usage:
-    uv run python -m effects.kills graal-native/out/examples.json -o graal-native/out/examples.kills
+    uv run python -m effects.kills graal-native/out/loadstoreelimination.json -o graal-native/out/loadstoreelimination.kills
     uv run python -m effects.kills graal-native/out/aliasing.json -o kills.txt \\
         --partition object-field --accesses accesses.txt
     uv run python -m effects.kills export.json -o ceiling.kills --ignore all

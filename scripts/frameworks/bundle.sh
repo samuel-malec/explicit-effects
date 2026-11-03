@@ -13,6 +13,8 @@
 #   locks        locks removed and volatile accesses made ordinary where thread escape proves the object local, default analysis
 #   graalflagscutoff, lockscutoff   allocation sites, the saturation cutoff at 100, the inputs of the flows and the source positions
 #                kept; lockscutoff also removes the locks and makes the volatile accesses ordinary that thread escape proves local
+#
+# THREAD_ESCAPE=off adds -H:-SideEffectAnalysisThreadEscape to every configuration and refuses locks and lockscutoff.
 
 # Sets `mode` (the analysis' output directory) and `flags` for a configuration; the caller declares both local.
 configure() {
@@ -29,6 +31,14 @@ configure() {
                                               -H:DeadlockWatchdogInterval=120) ;;  # the tool runs for longer than the default ten minutes
         *) echo "unknown configuration $1 (graal, fields, ceiling, locks, graalflagscutoff, lockscutoff)" >&2; return 1 ;;
     esac
+    # THREAD_ESCAPE=off: no model of concurrency anywhere (as in graal-native/run.sh), so nothing that removes a lock or reads thread escape
+    if [[ ${THREAD_ESCAPE:-on} == off ]]; then
+        if [[ $mode == locks ]]; then
+            echo "error: configuration $1 removes locks, which needs thread escape (THREAD_ESCAPE=off)" >&2
+            return 1
+        fi
+        flags+=(-H:-SideEffectAnalysisThreadEscape)
+    fi
 }
 
 build_bundle() {  # configuration, bundle, directory, options for native-image

@@ -1,7 +1,7 @@
 /**
  * Optimizations Graal misses and the token form should make.
  */
-public class Examples {
+public class LoadStoreElimination {
 
     static class Counter { int value; int other; }
     static class Logger { int count; }

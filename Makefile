@@ -9,7 +9,7 @@
 #   make driver       the same for the native-image driver, from the graal tree
 #   make native-awfy  its round trip, every image timed
 #   make awfy-layouts why the narrowed images ran slower: counters across method alignments
-#   make test-data    refresh test/data/examples.json, signatures.json and aliasing.json
+#   make test-data    refresh test/data/loadstoreelimination.json, signatures.json and aliasing.json
 #   make check        run the checks (uv run pytest)
 #   make suite        export the examples (graal-export/examples/), one program per example,
 #                     and check each still shows what its comment says
@@ -47,8 +47,8 @@ GRAAL := $(or $(GRAAL_HOME),$(if $(wildcard graal/substratevm/mxbuild/dists/stan
 EXPORTER := $(addprefix $(EXPORT)/,StandalonePointsToExport.java build.sh run-dump.sh env.sh exports.args) $(GRAAL)/substratevm/mxbuild/dists/pointsto.jar
 TRANSLATOR := $(wildcard src/*/*.py) src/cthu/graal.ct
 CORPUS := $(basename $(notdir $(wildcard $(EXPORT)/corpus/*.java)))
-FIXTURES := examples signatures aliasing
-COMPARED := Examples Signatures Aliasing
+FIXTURES := loadstoreelimination signatures aliasing
+COMPARED := LoadStoreElimination Signatures Aliasing
 
 lower = $(shell echo '$(1)' | tr '[:upper:]' '[:lower:]')
 EXPORTS := $(foreach e,$(CORPUS),$(OUT)/$(call lower,$(e)).json)
@@ -73,7 +73,7 @@ translate: $(EXPORTS:.json=$(CT))
 # references in forwardPastAliasControl never meet.
 native:
 	$(foreach e,$(COMPARED),$(NATIVE_DIR)/run.sh $(e) &&) true
-	@out=$$(LIE='Examples.countInto(LExamples$$Counter;LExamples$$Link;)V' $(NATIVE_DIR)/run.sh Examples) && echo "$$out" && echo "$$out" | grep -q 'instead of'
+	@out=$$(LIE='LoadStoreElimination.countInto(LLoadStoreElimination$$Counter;LLoadStoreElimination$$Link;)V' $(NATIVE_DIR)/run.sh LoadStoreElimination) && echo "$$out" && echo "$$out" | grep -q 'instead of'
 	@out=$$(SPLIT='Aliasing.forwardPastAliasControl(LAliasing$$Counter;LAliasing$$Counter;)I' $(NATIVE_DIR)/run.sh Aliasing) && echo "$$out" && echo "$$out" | grep -q 'instead of'
 
 # Are We Fast Yet, from the are-we-fast-yet submodule, run by programs/awfy's
@@ -107,12 +107,12 @@ awfy-layouts:
 
 $(OUT)/awfy.json: $(AWFY_SOURCES) $(EXPORTER)
 	$(AWFY)/build.sh
-	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/LoadStoreElimination.java > /dev/null
 	cd $(EXPORT) && TARGET_CP=$(CURDIR)/$(AWFY)/classes DUMP_IR=out/awfy.json ./run-dump.sh Awfy -H:-UsePredicates > out/awfy.txt
 
 $(OUT)/awfy.allocsens.json: $(AWFY_SOURCES) $(EXPORTER)
 	$(AWFY)/build.sh
-	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/LoadStoreElimination.java > /dev/null
 	cd $(EXPORT) && TARGET_CP=$(CURDIR)/$(AWFY)/classes DUMP_IR=out/awfy.allocsens.json \
 		./run-dump.sh Awfy -H:AnalysisContextSensitivity=allocsens > out/awfy.allocsens.txt
 
@@ -126,11 +126,11 @@ DRIVER := TARGET_CP=$(DRIVER_CP) DUMP_FILTER=com.oracle.svm.driver
 driver: $(OUT)/driver.json $(OUT)/driver.allocsens.json
 
 $(OUT)/driver.json: $(EXPORTER)
-	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/LoadStoreElimination.java > /dev/null
 	cd $(EXPORT) && $(DRIVER) DUMP_IR=out/driver.json ./run-dump.sh com.oracle.svm.driver.NativeImage -H:-UsePredicates > out/driver.txt
 
 $(OUT)/driver.allocsens.json: $(EXPORTER)
-	cd $(EXPORT) && ./build.sh corpus/Examples.java > /dev/null
+	cd $(EXPORT) && ./build.sh corpus/LoadStoreElimination.java > /dev/null
 	cd $(EXPORT) && $(DRIVER) DUMP_IR=out/driver.allocsens.json \
 		./run-dump.sh com.oracle.svm.driver.NativeImage -H:AnalysisContextSensitivity=allocsens > out/driver.allocsens.txt
 
@@ -155,8 +155,8 @@ test/data/%.json: $(OUT)/%.json
 $(OUT)/%$(CT): $(OUT)/%$(SOURCE).json $(TRANSLATOR)
 	uv run graal2ct $< --partition $(PARTITION) -o $@
 
-# out/examples.json from corpus/Examples.java, analysed from its main, and
-# out/examples.allocsens.json with allocation sites.
+# out/loadstoreelimination.json from corpus/LoadStoreElimination.java, analysed from its main, and
+# out/loadstoreelimination.allocsens.json with allocation sites.
 define export_rule
 $(OUT)/$(call lower,$(1)).json: $(EXPORT)/corpus/$(1).java $(EXPORTER)
 	cd $(EXPORT) && ./build.sh corpus/$(1).java > /dev/null

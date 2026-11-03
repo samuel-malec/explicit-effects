@@ -4,13 +4,13 @@
 This appendix lists what is needed to regenerate the tables of \Cref{chap:evaluation}. All commands are in the directories
 \texttt{scripts} and \texttt{graal-native} of the tool's repository; the builder is the Graal fork, which the repository contains as a submodule.
 
-\section{The Headline Tables from One Commit}
+\section{The Tables from One Commit}
 
-The script \texttt{reproduce.sh} produces the tables of \Cref{sec:eval-gain,sec:eval-cost} and of the lock shapes in
-\Cref{sec:eval-concurrency} in one run. It refuses to start unless the tool and the fork are exactly a commit (no changed
-tracked files, no untracked files) and the builder is not older than the fork's sources. With \texttt{ALLOW\_DIRTY=1} it runs
-for testing and marks the results \texttt{NOT-REPRODUCIBLE}. The procedure of the clean runs of 29 and 31 October, on a machine
-where nothing else runs, was:
+The script \texttt{reproduce.sh} produces the tables of \Cref{sec:eval-gain,sec:eval-cost} in one run. It refuses to start unless
+the tool and the fork are exactly a commit (no changed tracked files, no untracked files) and the builder is not older than the
+fork's sources. With \texttt{ALLOW\_DIRTY=1} it runs for testing and marks the results \texttt{NOT-REPRODUCIBLE}. The chapter
+measures no model of concurrency, which \texttt{THREAD\_ESCAPE=off} switches off in the builder. The procedure of the run of
+2 November, on a machine where nothing else runs, was:
 
 \begin{lstlisting}[language=bash]
 # on the development machine, from clean, committed checkouts of the tool and of the fork:
@@ -20,56 +20,52 @@ scripts/server/sync-pontos.sh      # copies both trees to the server and stamps 
 export JAVA_HOME=$HOME/.mx/jdks/labsjdk-ce-latest-jvmci-25.4-b23_amd64
 export PATH=$JAVA_HOME/bin:$HOME/mx:$HOME/.local/bin:$PATH
 cd ~/graal/substratevm && mx build # the builder must be newer than the sources
-~/explicit-effects/scripts/evaluation/reproduce.sh
+THREAD_ESCAPE=off ~/explicit-effects/scripts/evaluation/reproduce.sh          # loads, time, ceiling, cost
+THREAD_ESCAPE=off ~/explicit-effects/scripts/evaluation/reproduce.sh control  # control flow and loops
 \end{lstlisting}
 
-In \texttt{graal-native}, the results are written to \texttt{out/reproduction/<UTC time>-<commit>/}: \texttt{provenance.txt} (which code), one file per
-stage, and \texttt{SUMMARY.txt}. \Cref{tab:app-stages} lists the stages. The default stages took 74 minutes on 29 October and 75 on 31 October.
+In \texttt{graal-native}, the results are written to a directory of \texttt{out/reproduction/}, named by the UTC time, the
+commit, and \texttt{no-thread-escape}: \texttt{provenance.txt} (which code), one file per stage, and \texttt{SUMMARY.txt}.
+\Cref{tab:app-stages} lists the stages. The first four took 55 minutes on 2 November.
 
 \begin{table}[t]
     \centering
-    \caption{The stages of \texttt{reproduce.sh}. The first five run by default; the last three are long and run with
-    \texttt{reproduce.sh matrix javac frameworks} or \texttt{reproduce.sh all}.}
+    \caption{The stages of \texttt{reproduce.sh} without a model of concurrency. The first four run by default; \texttt{control}
+    runs with \texttt{reproduce.sh control}.}
     \label{tab:app-stages}
     \small
     \begin{tabular}{llp{6.4cm}}
         \toprule
         Stage & Section & What it runs \\
         \midrule
-        \texttt{loads}      & \ref{sec:eval-gain}  & the three configurations on the four small programs and on AWFY at \texttt{-O2}, on both analyses, and the counts \\
-        \texttt{time}       & \ref{sec:eval-gain}  & \texttt{graal} and \texttt{fields} on AWFY at \texttt{-O3}, four builds each, timed together with the A/A control \\
-        \texttt{ceiling}    & \ref{sec:eval-gain}  & \texttt{graal}, \texttt{fields}, and \texttt{ceiling} on AWFY at \texttt{-O3}: loads left and run times \\
-        \texttt{cost}       & \ref{sec:eval-cost}  & every configuration of AWFY, five rounds, with the stage times and the peak memory \\
-        \texttt{shapes}     & \ref{sec:eval-concurrency} & the lock and \texttt{volatile} shapes, \texttt{graal} against elision \\
-        \texttt{matrix}     & \ref{sec:eval-concurrency} & thread escape on the concurrency examples, every analysis and every set of assumptions \\
-        \texttt{javac}      & \ref{sec:eval-cost}, \ref{sec:eval-concurrency} & javac with the cutoff and lock removal, three rounds, and the time it takes to compile \\
-        \texttt{frameworks} & \ref{sec:eval-cost}, \ref{sec:eval-concurrency} & PetClinic and three Barista servers: builds, removable sites, PetClinic under load \\
+        \texttt{loads}      & \ref{sec:eval-loads}   & the configurations on the four small programs and on AWFY at \texttt{-O2}, on both analyses, and the counts \\
+        \texttt{time}       & \ref{sec:eval-time}    & \texttt{graal} and \texttt{fields} on AWFY at \texttt{-O3}, four builds each, timed together with the A/A control \\
+        \texttt{ceiling}    & \ref{sec:eval-ceiling} & \texttt{graal}, \texttt{fields}, and \texttt{ceiling} on AWFY at \texttt{-O3}: loads left and run times \\
+        \texttt{cost}       & \ref{sec:eval-cost}    & every configuration of AWFY, five rounds, with the stage times and the peak memory \\
+        \texttt{control}    & \ref{sec:eval-control} & control flow, loops, and the place of every load, on the small programs and on AWFY at \texttt{-O3} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \section{Other Measurements}
 
-The results that \texttt{reproduce.sh} does not regenerate have their own scripts, listed in \Cref{tab:app-scripts}.
-The default stages of the two clean runs reproduced the loads of \Cref{tab:eval-loads} to the unit, and the lock shapes of
-\Cref{tab:eval-shapes} to 0.1 millisecond except one baseline, which moved by 17\,\%; the matrix, javac, PetClinic, and the
-Barista applications were not part of them.
+The results that \texttt{reproduce.sh} does not regenerate have their own scripts, listed in \Cref{tab:app-scripts}. The loads
+of the run of 2 November equal those of two earlier runs of the same stages, of 29 and 31 October, to within one load.
 
 \begin{table}[t]
     \centering
-    \caption{Scripts for the results outside the default stages.}
+    \caption{Scripts for the results outside the stages.}
     \label{tab:app-scripts}
     \small
     \begin{tabular}{p{4.0cm}p{8.4cm}}
         \toprule
         Result & Script \\
         \midrule
-        Barista, the other ten applications & \texttt{barista-gate.sh}; the bundles are made with Barista's \texttt{./build <application>} \\
-        PetClinic builds and load           & \texttt{petclinic.sh}, \texttt{petclinic\_load.py}; the 2023 bundle of Graal's benchmark suite with four reflection registrations \\
-        Why no lock is removable            & \texttt{why\_no\_locks.py <export.json>}, which uses the decision code of the tool; on javac's export it finds the 66 sites the tool lists \\
+        Loads by kind of method             & \texttt{scripts/evaluation/load\_split.py} on the \texttt{counts.txt} of two images; \texttt{reproduce.sh loads} runs it \\
+        javac, price of allocation sites & \texttt{scripts/evaluation/cost-javac.sh}, three rounds \\
         Native Image's JUnit tests          & \texttt{mx native-unittest com.oracle.svm.test} with the feature and \texttt{-J-ea} \\
         Placement of code                   & \texttt{programs/awfy/layouts.py} and \texttt{time.py} \\
-        Controls                            & \texttt{LIE=<method> ./run.sh Examples}, \texttt{LIE\_LOCKS=<method> ONLY=locks ./run.sh LocksShared}, \texttt{SPLIT=<method>}; each must go wrong \\
+        Controls                            & \texttt{LIE=<method> ./run.sh LoadStoreElimination}; it must go wrong \\
         \bottomrule
     \end{tabular}
 \end{table}

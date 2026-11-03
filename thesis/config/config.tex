@@ -4,6 +4,9 @@
 
 \usepackage{graphicx}
 
+% The one colour of links and chapter numbers.
+\definecolor{accent}{RGB}{31,58,95}
+
 \usepackage[
     unicode=true,
     plainpages=false,
@@ -11,9 +14,7 @@
     draft=false,
     hyperfootnotes=false,
     colorlinks=true,
-    linkcolor={Sepia},
-    citecolor={PineGreen},
-    urlcolor={MidnightBlue},
+    allcolors={accent},
 ]{hyperref}
 
 \hypersetup{
@@ -22,18 +23,31 @@
     pdfsubject={Master's Thesis},
 }
 
-% Fonts taken from the Mimosis example used by dipr.
-\usepackage[sb]{ebgaramond}
+% Fonts after classicthesis: Palatino for text, Euler for mathematics, Inconsolata
+% for code. One kind of digit everywhere: lining figures, tabular so that columns
+% line up, taken by the mathematics from the text so that $16 \to 14$ and \pct
+% look like the digits around them.
+\usepackage[lining,tabular]{newpxtext}
+\usepackage{eulervm}
+\usepackage[scaled=0.95,varqu]{zi4}
 
-% Similar to \usepackage{ebgaramond-maths}, but with tabular figures.
-\DeclareSymbolFont{letters}{OML}{EBGaramond-TLF}{m}{it}
-\DeclareSymbolFont{operators}{OT1}{EBGaramond-TLF}{m}{n}
-\SetSymbolFont{letters}{bold}{OML}{EBGaramond-TLF}{b}{it}
-\SetSymbolFont{operators}{bold}{OT1}{EBGaramond-TLF}{bx}{n}
-\DeclareFontSubstitution{OML}{EBGaramond-Maths}{m}{it}
-\DeclareFontSubstitution{OT1}{EBGaramond-TLF}{m}{n}
+% Protrusion and font expansion even out the spaces of justified lines; tracking
+% spaces the small capitals of headings and running heads.
+\usepackage[final,tracking=true]{microtype}
+\SetTracking{encoding=*, shape=sc}{50}
 
-\usepackage[oldstyle,scale=0.7]{sourcecodepro}
+% The class sets one and a half line spacing; Palatino reads better tighter.
+\setstretch{1.15}
+
+% Headings after classicthesis: the chapter number large and in the colour of the
+% links, the running heads in small capitals, captions with a bold label and no
+% hanging indent.
+\renewcommand*{\chapterformat}{%
+  {\fontsize{50}{55}\selectfont\color{accent}\thechapter\autodot\enskip}%
+}
+\setkomafont{pagehead}{\normalfont\scshape}
+\setkomafont{captionlabel}{\usekomafont{caption}\bfseries}
+\setcapindent{0pt}
 
 \usepackage[
     backend=bibtex8,
@@ -74,6 +88,7 @@
 }
 \lstset{
     basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
     commentstyle=\itshape,
     columns=fullflexible,
     keepspaces=true,

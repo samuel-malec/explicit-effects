@@ -2,12 +2,13 @@
 # What the side-effect analysis costs on a large program: javac, the JDK's com.sun.tools.javac.Main,
 # as `mx javac-image` builds it (37,854 reachable methods). Each configuration is built REPEATS
 # times, one build at a time, the configurations taking turns. Each image compiles the corpus's
-# Examples.java, whose classes must print what the JDK's own javac's classes print. Builds go to
+# LoadStoreElimination.java, whose classes must print what the JDK's own javac's classes print. Builds go to
 # out/javac[-allocsens]-cost-<config>-r<k>/, as cost.sh's do, so that cost.py reads them.
 #
 #   ./cost-javac.sh                                   # 3 rounds of graal and fields
 #   REPEATS=1 CONFIGS="graal fields objects" ./cost-javac.sh
 #   CONFIGS="graal graalinputs fields fieldsescape graal-allocsens graalflags-allocsens objects locks" ./cost-javac.sh   # the full table
+#   THREAD_ESCAPE=off ./cost-javac.sh                 # no model of concurrency: graal, fields, graal-allocsens and objects only
 #   CONFIGS="graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" ./cost-javac.sh      # lock removal with the saturation cutoff raised
 #
 # graalinputs and graalflags-allocsens are graal with the flags thread escape needs (inputs of flows kept, source
@@ -28,11 +29,11 @@ if [[ -d "$JDK/jmods" ]]; then
 else
     SYSTEM=(--system "$JDK")
 fi
-EXAMPLES="$EXPORT_DIR/corpus/Examples.java"
+LOAD_STORE_ELIMINATION="$EXPORT_DIR/corpus/LoadStoreElimination.java"
 REFERENCE="$HERE/out/javac-reference"
 rm -rf "$REFERENCE" && mkdir -p "$REFERENCE/classes"
-"$JDK/bin/javac" -d "$REFERENCE/classes" "$EXAMPLES"
-"$JDK/bin/java" -cp "$REFERENCE/classes" Examples > "$REFERENCE/output.txt" 2>&1
+"$JDK/bin/javac" -d "$REFERENCE/classes" "$LOAD_STORE_ELIMINATION"
+"$JDK/bin/java" -cp "$REFERENCE/classes" LoadStoreElimination > "$REFERENCE/output.txt" 2>&1
 
 build() {  # configuration, round
     local config=$1 round=$2 analysis="" tag mode flags=()
@@ -55,6 +56,12 @@ build() {  # configuration, round
                                                    -H:+SideEffectAnalysisElideLocks "${escape[@]}" "${cutoff[@]}") ;;
         *) echo "unknown configuration $config" >&2; exit 1 ;;
     esac
+    if [[ ${THREAD_ESCAPE:-on} == off ]]; then  # no model of concurrency anywhere (as in run.sh): only graal and fields, with or without allocation sites
+        case $config in
+            graal|fields|graal-allocsens|objects) flags+=(-H:-SideEffectAnalysisThreadEscape) ;;
+            *) echo "error: configuration $config needs thread escape (THREAD_ESCAPE=off)" >&2; exit 1 ;;
+        esac
+    fi
     local dir="$HERE/out/javac$analysis-cost-$tag-r$round"
     rm -rf "$dir" && mkdir -p "$dir/$mode"
     provenance "$dir"
@@ -70,12 +77,12 @@ build() {  # configuration, round
     local image
     image=$(grep -oE '/[^ ]*/javac \(executable' "$dir/$mode.log" | cut -d' ' -f1)
     cp "$image" "$dir/$mode/javac"
-    local same="compiles Examples as the JDK's javac does"
+    local same="compiles LoadStoreElimination as the JDK's javac does"
     mkdir -p "$dir/$mode/classes"
-    if ! "$dir/$mode/javac" -proc:none "${SYSTEM[@]}" -d "$dir/$mode/classes" "$EXAMPLES" > "$dir/$mode/javac.txt" 2>&1; then
-        same="FAILED to compile Examples: $(head -c 300 "$dir/$mode/javac.txt")"
-    elif ! "$JDK/bin/java" -cp "$dir/$mode/classes" Examples 2>&1 | cmp -s - "$REFERENCE/output.txt"; then
-        same="compiled Examples DIFFERENTLY: its classes print something else"
+    if ! "$dir/$mode/javac" -proc:none "${SYSTEM[@]}" -d "$dir/$mode/classes" "$LOAD_STORE_ELIMINATION" > "$dir/$mode/javac.txt" 2>&1; then
+        same="FAILED to compile LoadStoreElimination: $(head -c 300 "$dir/$mode/javac.txt")"
+    elif ! "$JDK/bin/java" -cp "$dir/$mode/classes" LoadStoreElimination 2>&1 | cmp -s - "$REFERENCE/output.txt"; then
+        same="compiled LoadStoreElimination DIFFERENTLY: its classes print something else"
     fi
     echo "javac$analysis-cost-$tag-r$round: built in $((SECONDS - start)) s, $same"
 }
