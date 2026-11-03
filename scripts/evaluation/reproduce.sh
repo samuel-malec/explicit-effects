@@ -75,7 +75,7 @@ load_split() { uv run --project "$REPO" python "$SCRIPTS/evaluation/load_split.p
 
 stage_loads() {
     local p
-    for p in Examples Signatures Aliasing Allocation Awfy; do
+    for p in LoadStoreElimination Signatures Aliasing Allocation Awfy; do
         local tag=repro; [[ $p == Awfy ]] && tag=repro-o2
         ONLY="graal fields" TAG=$tag "$HERE/run.sh" "$p"
         ALLOCSENS=1 ONLY="graal fields objects" TAG=$tag "$HERE/run.sh" "$p"
@@ -110,7 +110,7 @@ stage_cost() {
 
 stage_control() {
     local p tag=ctl positions="-H:+TrackNodeSourcePosition" extra
-    for p in Examples Signatures Aliasing Allocation Awfy; do
+    for p in LoadStoreElimination Signatures Aliasing Allocation Awfy; do
         extra=$positions
         [[ $p != Awfy ]] || extra="-O3 -H:+AOTTrivialInline $positions"
         EXTRA=$extra ONLY="graal fields" TAG=$tag "$HERE/run.sh" "$p"

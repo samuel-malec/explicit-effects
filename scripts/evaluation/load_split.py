@@ -1,7 +1,7 @@
 """Where the loads of a program are: in its controls, in methods that do not change, or in methods that lose loads.
 
 Usage:
-    uv run python scripts/evaluation/load_split.py graal-native/out/examples-repro/{graal,fields}/counts.txt
+    uv run python scripts/evaluation/load_split.py graal-native/out/loadstoreelimination-repro/{graal,fields}/counts.txt
 
 The program's designed examples come with controls: a method that must keep its loads because the call may write the field or the
 reference may alias another (its name ends in `Control`). Counted with the rest, they make the percentage smaller than what the

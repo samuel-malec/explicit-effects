@@ -12,7 +12,7 @@ from graal2ct.shape import straighten
 from graal2ct.translate import Translation
 
 DATA = Path(__file__).resolve().parent.parent / "data"
-EXAMPLES = DATA / "examples.json"
+LOAD_STORE_ELIMINATION = DATA / "loadstoreelimination.json"
 SIGNATURES = DATA / "signatures.json"
 ALIASING = DATA / "aliasing.json"  # exported with allocation sites
 
@@ -59,10 +59,10 @@ def check_shape() -> None:
     null check and three blocks split at its call, becomes one λ, with the guards of the null check on counter and
     then those of the call. A merge stays a λ (deadStoreBothArms' b5, which both arms jump to), and so does a loop
     header (hoistLoadOutOfLoop keeps a λ that reaches itself)."""
-    program = translate(EXAMPLES, "field")
-    writing = [lam.name for lam in structure(program, "Examples_forwardAcrossWritingCall").lambdas]
+    program = translate(LOAD_STORE_ELIMINATION, "field")
+    writing = [lam.name for lam in structure(program, "LoadStoreElimination_forwardAcrossWritingCall").lambdas]
     straighten(program)
-    s = structure(program, "Examples_forwardAcrossWritingCall")
+    s = structure(program, "LoadStoreElimination_forwardAcrossWritingCall")
     assert {"b1", "b2", "b3"} <= set(writing) and [lam.name for lam in s.lambdas] == ["run"], (writing, s.lambdas)
     guards = [i for i in s.lambdas[0].body if i.op == "guard"]
     assert len(guards) == 6 and all(g.exit == "throws" for g in guards), guards
@@ -71,8 +71,8 @@ def check_shape() -> None:
     thrown = origin(s.lambdas[0], guards[3].ins[1])  # it leaves when the call gave back an exception
     assert thrown.op == "not" and origin(s.lambdas[0], thrown.ins[0]).op == "nil?", thrown
 
-    assert "b5" in {lam.name for lam in structure(program, "Examples_deadStoreBothArms").lambdas}
-    assert cyclic(structure(program, "Examples_hoistLoadOutOfLoop"))
+    assert "b5" in {lam.name for lam in structure(program, "LoadStoreElimination_deadStoreBothArms").lambdas}
+    assert cyclic(structure(program, "LoadStoreElimination_hoistLoadOutOfLoop"))
     print("ok   null checks and calls' exceptions become guards, and straight-line blocks one λ; merges and loop headers stay")
 
 
@@ -81,7 +81,7 @@ def check_straightened_programs_stay_valid() -> None:
     type checks, which include that a branch's frame is for arms of its type, and its text parses back. A second pass
     changes nothing."""
     graal = prelude.load()
-    for path in (EXAMPLES, SIGNATURES, ALIASING):
+    for path in (LOAD_STORE_ELIMINATION, SIGNATURES, ALIASING):
         for partition in ("none", "field", "object", "object-field"):
             program = translate(path, partition)
             straighten(program)
@@ -120,12 +120,12 @@ def check_merge_same_params() -> None:
 def check_the_flag() -> None:
     """`graal2ct --shape` prints the straightened program, and without it the translation as it is."""
     def run(*flags: str) -> str:
-        done = subprocess.run([sys.executable, "-m", "graal2ct", str(EXAMPLES), "--partition", "field", *flags],
+        done = subprocess.run([sys.executable, "-m", "graal2ct", str(LOAD_STORE_ELIMINATION), "--partition", "field", *flags],
                               capture_output=True, text=True, check=True)
         assert done.stderr.strip().endswith("ok"), done.stderr[-200:]
         return done.stdout.rstrip("\n")
 
-    program = translate(EXAMPLES, "field")
+    program = translate(LOAD_STORE_ELIMINATION, "field")
     plain = to_text(program).rstrip("\n")
     straighten(program)
     assert run("--shape") == to_text(program).rstrip("\n")

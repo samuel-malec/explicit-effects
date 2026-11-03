@@ -81,7 +81,7 @@ of the code. The suite's harness picks a benchmark by name through reflection, w
         \toprule
         Program & What it is & Used for \\
         \midrule
-        \texttt{Examples}, \texttt{Signatures}, \texttt{Aliasing}, \texttt{Allocation}
+        \texttt{LoadStoreElimination}, \texttt{Signatures}, \texttt{Aliasing}, \texttt{Allocation}
             & four small programs designed to have a known answer
             & loads \\
         Example suite
@@ -179,7 +179,7 @@ compile stages from the builder's own log, and the peak resident memory.
         \cmidrule(lr){2-3} \cmidrule(lr){4-6} \cmidrule(lr){7-9}
         Program & \texttt{graal} & \texttt{fields} & \texttt{graal} & \texttt{fields} & \texttt{objects} & Controls & Unchanged & Reduced \\
         \midrule
-        \texttt{Examples}   & 40 & 27 (\pct{-32.5}) & 43 & 30 (\pct{-30.2}) & 30 (\pct{-30.2}) & $16 \to 14$ & 10 & $14 \to 3$ \\
+        \shortstack[l]{\texttt{LoadStore}\\\texttt{Elimination}} & 40 & 27 (\pct{-32.5}) & 43 & 30 (\pct{-30.2}) & 30 (\pct{-30.2}) & $16 \to 14$ & 10 & $14 \to 3$ \\
         \texttt{Signatures} & 16 & 12 (\pct{-25.0}) & 16 & 12 (\pct{-25.0}) & 12 (\pct{-25.0}) & -- & 12 & $4 \to 0$ \\
         \texttt{Aliasing}   & 16 & 14 (\pct{-12.5}) & 18 & 16 (\pct{-11.1}) & 13 (\pct{-27.8}) & $5 \to 4$ & 9 & $2 \to 1$ \\
         \texttt{Allocation} &  9 &  7 (\pct{-22.2}) &  9 &  7 (\pct{-22.2}) &  7 (\pct{-22.2}) & -- & 0 & $9 \to 7$ \\
@@ -196,7 +196,7 @@ loads from AWFY. Partitions by allocation site add nothing on AWFY, where \textt
 \texttt{fields} leaves, because the partitions split almost no field of the program (one of 234 fields keeps two
 partitions). They pay only where the program was written for them: on \texttt{Aliasing}, which holds two counters that never
 meet, they remove three loads more than \texttt{fields} does (16 to 13). Dead stores add nothing of their own: Graal's phase for overwritten stores removes
-the same stores as our decisions did (three in \texttt{Examples}, one in \texttt{Aliasing}).
+the same stores as our decisions did (three in \texttt{LoadStoreElimination}, one in \texttt{Aliasing}).
 
 \subsection{Run Time}
 
@@ -459,7 +459,7 @@ in three places. The evidence of this chapter is of another kind, and it has thr
 the concurrency round trips, and AWFY with lock elision.
 
 \paragraph{Controls that must fail do.} A claim that is false must produce a wrong result, or the test cannot see it. A method
-claimed to write nothing gives 171 instead of 177 in \texttt{Examples} at \texttt{-O3}. A shared lock claimed local gives
+claimed to write nothing gives 171 instead of 177 in \texttt{LoadStoreElimination} at \texttt{-O3}. A shared lock claimed local gives
 317,288 instead of 800,000, or a hang; a flag read claimed ordinary hangs the image. One control was weak: the first claim that
 references which may meet are apart still printed the right value, because a wrong ordering shows only when Graal forwards a
 wrong value. How to catch a \emph{missing} ordering remains open.

@@ -177,8 +177,8 @@ def _by_objects(facts: PointsToFacts, per_field: bool) -> Partitioner:
 def _names(classes: dict, per_field: bool) -> dict:
     """A name per class. Per field: the field itself when it has one class,
     otherwise the field and where the class's first object was allocated,
-    `Examples$Counter.value@main:9`. Per object: the first object,
-    `Examples$Counter@main:9`."""
+    `LoadStoreElimination$Counter.value@main:9`. Per object: the first object,
+    `LoadStoreElimination$Counter@main:9`."""
 
     def label(members: list) -> str:
         found = sorted(o for o in ([o for _, o in members] if per_field else [m for m in members if isinstance(m, str)])
@@ -215,8 +215,8 @@ def _names(classes: dict, per_field: bool) -> dict:
 
 
 def _site(obj: str) -> tuple[str, str]:
-    """The type and a short allocation site: `Examples$Counter@Examples.main([Ljava/lang/String;)V:9`
-    is `Examples$Counter` at `main:9`; an object named by its type has no site."""
+    """The type and a short allocation site: `LoadStoreElimination$Counter@LoadStoreElimination.main([Ljava/lang/String;)V:9`
+    is `LoadStoreElimination$Counter` at `main:9`; an object named by its type has no site."""
     kind, _, site = obj.partition("@")
     if site and site != "constant":
         method, _, bci = site.split(" in ")[0].rpartition(":")

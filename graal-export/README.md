@@ -41,12 +41,12 @@ ids are the JSON's ids, which `uv run python -m diagnostics.show` prints. Open i
 
 
 ## Printing the allocation sites
-By default the analysis names objects by type, `Examples$Counter`.
+By default the analysis names objects by type, `LoadStoreElimination$Counter`.
 With allocation sites it names them by where they were allocated,
-`Examples$Counter@Examples.main([Ljava/lang/String;)V:0`:
+`LoadStoreElimination$Counter@LoadStoreElimination.main([Ljava/lang/String;)V:0`:
 
 ```bash
-DUMP_IR=out/examples.allocsens.json ./run-dump.sh Examples -H:AnalysisContextSensitivity=allocsens
+DUMP_IR=out/loadstoreelimination.allocsens.json ./run-dump.sh LoadStoreElimination -H:AnalysisContextSensitivity=allocsens
 ```
 
 That also switches off the analysis's primitive tracking and predicates, which

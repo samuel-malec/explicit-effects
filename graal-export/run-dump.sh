@@ -2,7 +2,7 @@
 # Run the standalone points-to analyzer on a program and export what it found
 # (StandalonePointsToExport, which calls the graal tree's PointsToExport).
 #
-#   ./run-dump.sh                        # entry class Examples
+#   ./run-dump.sh                        # entry class LoadStoreElimination
 #   ./run-dump.sh my.pkg.Main            # your own entry class
 #   ./run-dump.sh my.pkg.Main -H:...     # plus extra analyzer options
 #
@@ -21,7 +21,7 @@
 #                reachable method either way.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 
-ENTRY=Examples
+ENTRY=LoadStoreElimination
 if [[ $# -gt 0 && "$1" != -* ]]; then
     ENTRY="$1"
     shift
