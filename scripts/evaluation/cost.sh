@@ -4,7 +4,7 @@
 # touches them alike. Builds as run.sh builds them, into out/<name>-cost-<config>-r<k>/.
 #
 #   ./cost.sh Awfy                      # 5 rounds, -O3 with trivial inlining: a user's build
-#   REPEATS=3 EXTRA="" ./cost.sh Examples
+#   REPEATS=3 EXTRA="" ./cost.sh LoadStoreElimination
 #
 # A round builds, on the default analysis: graal; graal with the analysis keeping the inputs of its flows
 # (graalinputs, what thread escape needs: the baseline of fieldsescape); fields; and fields with thread escape

@@ -1,11 +1,11 @@
 """Compiler Driver of Graal -> Cthu pipeline
 
 Usage:
-    cd graal-export && ./build.sh corpus/Examples.java && \\
-        DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
-    uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
-    uv run graal2ct graal-export/out/examples.json --partition field
-    uv run graal2ct graal-export/out/examples.json --partition field --shape
+    cd graal-export && ./build.sh corpus/LoadStoreElimination.java && \\
+        DUMP_IR=out/loadstoreelimination.json ./run-dump.sh LoadStoreElimination && cd ..
+    uv run graal2ct graal-export/out/loadstoreelimination.json --method forwardAcrossWritingCall
+    uv run graal2ct graal-export/out/loadstoreelimination.json --partition field
+    uv run graal2ct graal-export/out/loadstoreelimination.json --partition field --shape
     uv run graal2ct graal-export/out/objects.allocsens.json --partition object-field --shape
 
 """

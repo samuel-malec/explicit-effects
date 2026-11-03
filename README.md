@@ -22,7 +22,8 @@ explicit-effects/
 ├── test/              # example exports and the checks
 ├── graal-export/      # runs the standalone points-to analysis and exports its facts and Graal IR
 │   ├── examples/      # concept programs to learn the pipeline from
-│   └── corpus/        # the programs the checks and the round trip are built from
+│   ├── corpus/        # the programs the checks and the round trip are built from
+│   └── archive/       # corpus programs no measurement uses, kept to be restored
 ├── graal-native/      # the round trip: native images built with the graal tree's side-effect analysis
 ├── programs/          # whole programs: Are We Fast Yet and the native-image driver
 ├── scripts/           # helpers: evaluation, frameworks, sharing, robustness, server
@@ -57,11 +58,11 @@ each example's comment says what to look for. `make suite` exports them all and 
 Export the examples, translate one method, then all of them, also straightened:
 
 ```bash
-cd graal-export && ./build.sh corpus/Examples.java && \
-    DUMP_IR=out/examples.json ./run-dump.sh Examples && cd ..
-uv run graal2ct graal-export/out/examples.json --method forwardAcrossWritingCall
-uv run graal2ct graal-export/out/examples.json --partition field
-uv run graal2ct graal-export/out/examples.json --partition field --shape
+cd graal-export && ./build.sh corpus/LoadStoreElimination.java && \
+    DUMP_IR=out/loadstoreelimination.json ./run-dump.sh LoadStoreElimination && cd ..
+uv run graal2ct graal-export/out/loadstoreelimination.json --method forwardAcrossWritingCall
+uv run graal2ct graal-export/out/loadstoreelimination.json --partition field
+uv run graal2ct graal-export/out/loadstoreelimination.json --partition field --shape
 uv run graal2ct graal-export/out/aliasing.allocsens.json --partition object-field --shape
 uv run pytest
 ```
@@ -83,7 +84,7 @@ You rarely need to run the steps above by hand:
 
 | Target | What it does |
 | --- | --- |
-| `make` | Re-exports `Examples` and `Signatures` if their source or the exporter changed, copies them to `test/data/` and runs the checks. |
+| `make` | Re-exports `LoadStoreElimination` and `Signatures` if their source or the exporter changed, copies them to `test/data/` and runs the checks. |
 | `make export` | Exports every example to `graal-export/out/<name>.json`, with the analysis report in `<name>.txt`. |
 | `make translate` | Translates every export to `<name>.ct` with one heap token. Add `PARTITION=field` (or `object`, `object-field`) for `<name>.field.ct` and so on. |
 | `make native` | Builds each example as a native image three times and checks each against the JVM. See below. |

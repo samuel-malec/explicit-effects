@@ -6,10 +6,10 @@
 # methods, with the calls narrowed and the fields partitioned in each, goes to
 # out/<name>/<mode>/counts.txt.
 #
-#   ./run.sh Examples
+#   ./run.sh LoadStoreElimination
 #   ./run.sh Aliasing          # through RunAliasing, which prints what it computes
 #   ./run.sh Awfy              # a whole program: programs/awfy/, built by its build.sh
-#   LIE='Examples.countInto(LExamples$Counter;LExamples$Link;)V' ./run.sh Examples
+#   LIE='LoadStoreElimination.countInto(LLoadStoreElimination$Counter;LLoadStoreElimination$Link;)V' ./run.sh LoadStoreElimination
 #                              # the control: a wrong kill must show in the output
 #   SPLIT='Aliasing.forwardPastAliasControl(LAliasing$Counter;LAliasing$Counter;)I' ./run.sh Aliasing
 #                              # the same for partitions: different references never meet
