@@ -19,7 +19,7 @@ source "$SCRIPTS/frameworks/bundle.sh"
 set +e
 PETCLINIC=${PETCLINIC:-$HOME/eval/petclinic}
 NIB=$(ls "$PETCLINIC"/app/*.nib)
-OUT="$HERE/out/petclinic"
+OUT="$HERE/out/petclinic${TAG:+-$TAG}"  # TAG: one round of several, out/petclinic-<TAG>/
 mkdir -p "$OUT"
 [[ $# -gt 0 ]] || { echo "usage: petclinic.sh <graal|fields|locks|graalflagscutoff|lockscutoff|ceiling>…" >&2; exit 2; }
 
