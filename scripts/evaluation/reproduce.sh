@@ -12,7 +12,8 @@
 #   ALLOW_DIRTY=1 scripts/evaluation/reproduce.sh shapes    # for testing the script: the results are marked NOT-REPRODUCIBLE
 #   THREAD_ESCAPE=off scripts/evaluation/reproduce.sh       # the same stages with no model of concurrency anywhere: no thread escape,
 #                                                           # every lock and volatile access counts as ordering this thread with
-#                                                           # another, nothing is elided. Only loads, time, ceiling and cost; results
+#                                                           # another, nothing is elided. The stages loads, time, ceiling, cost (default),
+#                                                           # control, javac and frameworks (these three: graal and fields only); results
 #                                                           # in out/reproduction/<UTC time>-<tool commit>-no-thread-escape/
 #
 # The results are in out/reproduction/<UTC time>-<tool commit>/: provenance.txt (which code), one <stage>.txt for each stage
@@ -27,9 +28,12 @@ shapes      lock and volatile shapes: Graal's image against the one that removes
 control     (not by default) control flow and loops left by graal, fields, objects: blocks, edges, ifs, exception edges, and the loads
             that left a loop, in the designed programs and AWFY at -O3, built with source positions (§3.3)
 matrix      (long) thread escape on the concurrency examples, every analysis and set of assumptions (§8.3)
-javac       (long) javac: cost of the field kill sets, the cutoff and lock removal, 3 rounds, and the time it takes to compile (§7, §8.4.2)
+javac       (long) javac: cost of the field kill sets, the cutoff and lock removal, 3 rounds, and the time it takes to compile (§7, §8.4.2);
+            with THREAD_ESCAPE=off: graal and fields, 3 rounds, loads left, and the time javac takes to compile with each image
 frameworks  (long) PetClinic and three Barista servers: builds, removable sites, PetClinic under load (§8.6, §8.7);
-            needs ~/eval/petclinic and ~/eval/barista (bundles copied from the laptop)
+            needs ~/eval/petclinic and ~/eval/barista (bundles copied from the laptop);
+            with THREAD_ESCAPE=off: graal and fields, 3 rounds, on PetClinic and eleven Barista applications (cost, loads left),
+            and PetClinic under load with the images of all rounds
 EOF
 }
 
@@ -61,8 +65,10 @@ if [[ ${THREAD_ESCAPE:-on} == off ]]; then
     # the stages that remove locks or read what thread escape found have nothing to run without it
     NO_CONCURRENCY=1
     DEFAULT_STAGES=(loads time ceiling cost)
-    ALL_STAGES=(loads time ceiling cost control)
+    ALL_STAGES=(loads time ceiling cost control javac frameworks)
 fi
+BARISTA_APPS=(vanilla-hello-world vertx-hello-world micronaut-hello-world micronaut-shopcart micronaut-similarity helidon-hello-world
+              dropwizard-hello-world play-scala-hello-world ktor-hello-world spring-hello-world spring-petclinic)  # not the two Quarkus ones: they fail without the feature too
 
 wait_quiet() {  # the timings are of a machine with nothing else running
     while [[ $(cut -d. -f1 /proc/loadavg) -ge 2 ]]; do sleep 15; done
@@ -134,6 +140,18 @@ stage_matrix() {
 
 stage_javac() {
     local o="$HERE/out"
+    if [[ -n $NO_CONCURRENCY ]]; then
+        REPEATS=3 CONFIGS="graal fields" "$SCRIPTS/evaluation/cost-javac.sh"
+        uv run --project "$REPO" python "$SCRIPTS/evaluation/cost_programs.py" "$o"
+        echo "== loads left in javac's methods"
+        counts "$o/javac-cost-graal-r1/graal/counts.txt" "$o/javac-cost-fields-r1/fields/counts.txt"
+        rm -rf "$o/javac-aa-copy" && mkdir -p "$o/javac-aa-copy/graal" && cp "$o/javac-cost-graal-r1/graal/javac" "$o/javac-aa-copy/graal/javac"
+        wait_quiet
+        echo "== time javac takes to compile AWFY's sources (the A/A copy is the first image again; three builds of each configuration)"
+        taskset -c 4-7 uv run --project "$REPO" python "$SCRIPTS/evaluation/time_javac.py" "$o"/javac-cost-graal-r{1,2,3} "$o/javac-aa-copy" \
+            "$o"/javac-cost-fields-r{1,2,3} --runs 10
+        return 0
+    fi
     REPEATS=3 CONFIGS="graal fields" "$SCRIPTS/evaluation/cost-javac.sh"
     uv run --project "$REPO" python "$SCRIPTS/evaluation/cost.py" "$o" javac
     REPEATS=3 CONFIGS="graal-allocsens graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" "$SCRIPTS/evaluation/cost-javac.sh"
@@ -153,6 +171,23 @@ stage_javac() {
 
 stage_frameworks() {
     local app r
+    if [[ -n $NO_CONCURRENCY ]]; then
+        local o="$HERE/out"
+        for r in 1 2 3; do
+            TAG=r$r "$SCRIPTS/frameworks/petclinic.sh" graal fields
+            for app in "${BARISTA_APPS[@]}"; do
+                TAG=r$r "$SCRIPTS/frameworks/barista.sh" "$app" graal fields
+            done
+        done
+        uv run --project "$REPO" python "$SCRIPTS/evaluation/cost_programs.py" "$o"
+        wait_quiet
+        echo "== PetClinic under load: three builds of each configuration, the first graal image twice (A/A)"
+        python3 "$SCRIPTS/frameworks/petclinic_load.py" --image graal-1="$o/petclinic-r1/graal/image" --image graal-1-again="$o/petclinic-r1/graal/image" \
+            --image graal-2="$o/petclinic-r2/graal/image" --image graal-3="$o/petclinic-r3/graal/image" \
+            --image fields-1="$o/petclinic-r1/fields/image" --image fields-2="$o/petclinic-r2/fields/image" --image fields-3="$o/petclinic-r3/fields/image" \
+            --runs 5 --seconds 30 --warmup 15 --clients 16
+        return 0
+    fi
     "$SCRIPTS/frameworks/petclinic.sh" graal fields graalflagscutoff lockscutoff
     for app in vanilla-hello-world vertx-hello-world micronaut-hello-world; do
         "$SCRIPTS/frameworks/barista.sh" "$app" graal fields locks lockscutoff
@@ -177,7 +212,7 @@ main() {
     [[ ${stages[0]} != all ]] || stages=("${ALL_STAGES[@]}")
     for stage in "${stages[@]}"; do
         declare -F "stage_$stage" > /dev/null || { echo "unknown stage $stage (see --list)" >&2; return 2; }
-        if [[ -n $NO_CONCURRENCY && $stage =~ ^(shapes|matrix|javac|frameworks)$ ]]; then
+        if [[ -n $NO_CONCURRENCY && $stage =~ ^(shapes|matrix)$ ]]; then
             echo "stage $stage needs thread escape, and THREAD_ESCAPE=off leaves it out" >&2
             return 2
         fi

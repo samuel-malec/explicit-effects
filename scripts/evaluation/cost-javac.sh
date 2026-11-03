@@ -8,6 +8,7 @@
 #   ./cost-javac.sh                                   # 3 rounds of graal and fields
 #   REPEATS=1 CONFIGS="graal fields objects" ./cost-javac.sh
 #   CONFIGS="graal graalinputs fields fieldsescape graal-allocsens graalflags-allocsens objects locks" ./cost-javac.sh   # the full table
+#   THREAD_ESCAPE=off ./cost-javac.sh                 # no model of concurrency: graal, fields, graal-allocsens and objects only
 #   CONFIGS="graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" ./cost-javac.sh      # lock removal with the saturation cutoff raised
 #
 # graalinputs and graalflags-allocsens are graal with the flags thread escape needs (inputs of flows kept, source
@@ -55,6 +56,12 @@ build() {  # configuration, round
                                                    -H:+SideEffectAnalysisElideLocks "${escape[@]}" "${cutoff[@]}") ;;
         *) echo "unknown configuration $config" >&2; exit 1 ;;
     esac
+    if [[ ${THREAD_ESCAPE:-on} == off ]]; then  # no model of concurrency anywhere (as in run.sh): only graal and fields, with or without allocation sites
+        case $config in
+            graal|fields|graal-allocsens|objects) flags+=(-H:-SideEffectAnalysisThreadEscape) ;;
+            *) echo "error: configuration $config needs thread escape (THREAD_ESCAPE=off)" >&2; exit 1 ;;
+        esac
+    fi
     local dir="$HERE/out/javac$analysis-cost-$tag-r$round"
     rm -rf "$dir" && mkdir -p "$dir/$mode"
     provenance "$dir"
