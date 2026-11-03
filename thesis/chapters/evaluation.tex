@@ -30,7 +30,7 @@ of these facts reach Graal. \Cref{tab:eval-configurations} lists the configurati
     \texttt{graal} loads the feature but hands nothing to Graal; it only counts what Graal leaves, so apart from the
     counting it is Native Image as released. \texttt{ceiling} leaves out the kill of everything the facts cannot name and
     is therefore unsound; it is an upper bound, not a result. Allocation sites stand for the allocation-site analysis
-    explained below. \texttt{kills} is also built on allocation sites, where its baseline is \texttt{graal} on allocation sites.}
+    explained below. \texttt{fields} is also built on allocation sites, where its baseline is \texttt{graal} on allocation sites.}
     \label{tab:eval-configurations}
     \small
     \begin{tabular}{llll}
@@ -38,8 +38,8 @@ of these facts reach Graal. \Cref{tab:eval-configurations} lists the configurati
         Configuration & Analysis & Facts given to Graal & Compared with \\
         \midrule
         \texttt{graal}     & default          & none                                   & (baseline) \\
-        \texttt{kills}     & default          & kill sets                              & \texttt{graal} \\
-        \texttt{ceiling}   & default          & kill sets, unsound upper bound         & \texttt{graal}, \texttt{kills} \\
+        \texttt{fields}    & default          & kill sets, partitions by field         & \texttt{graal} \\
+        \texttt{ceiling}   & default          & kill sets, unsound upper bound         & \texttt{graal}, \texttt{fields} \\
         \texttt{graal}     & allocation sites & none                                   & (baseline) \\
         \texttt{objects}   & allocation sites & kill sets and object-field partitions  & \texttt{graal} on allocation sites \\
         \texttt{locks}     & allocation sites & lock and \texttt{volatile} decisions   & \texttt{graal} with the same flags \\
@@ -143,9 +143,9 @@ which runs for 15\,ms) and between \pct{-0.2} and \pct{+0.1} in total.
 \paragraph{Several builds.} Native Image places every method at a multiple of 32 bytes, so a change in the size of one
 method moves all that follow it. Placement alone moves twelve of the fourteen AWFY benchmarks by 4--13\,\% with identical
 instructions, and the effect of our facts is below that for all but one benchmark. One build of a configuration is therefore not
-enough, and we build \texttt{graal} and \texttt{kills} four times each and time all eight images together. We did this three
+enough, and we build \texttt{graal} and \texttt{fields} four times each and time all eight images together. We did this three
 times: once in a session of 29 October before the first clean run, and once in each clean run. That makes twelve builds of
-\texttt{kills}.
+\texttt{fields}.
 
 \paragraph{Build time.} We report the wall-clock seconds of one build at a time on an empty machine, the configurations
 taking turns: five rounds for AWFY, three for javac. The tables give the median and the range, the time of the analysis and
@@ -164,7 +164,7 @@ compile stages from the builder's own log, and the peak resident memory.
     the second allocation sites; the percentage is the change against \texttt{graal} on the same analysis. For AWFY the
     build is \texttt{-O2} unless stated. Rows marked with an asterisk were not repeated in the clean runs: the
     \texttt{-O3} build on allocation sites is from 22 October and the ceiling at \texttt{-O2} from 28 October. The third block
-    splits the default-analysis loads of the four small programs, \texttt{graal} to \texttt{kills}, by the kind of method.
+    splits the default-analysis loads of the four small programs, \texttt{graal} to \texttt{fields}, by the kind of method.
     \emph{Controls} are the methods named \texttt{...Control}: a call in them may write the field, or a reference may alias
     another, so they must keep their loads. \emph{Unchanged} are the loads of the other methods that do not change (helpers,
     \texttt{main}, the inlined monitor code of a synchronized method, and in \texttt{Signatures} the three methods that cross a
@@ -177,7 +177,7 @@ compile stages from the builder's own log, and the peak resident memory.
         \toprule
         & \multicolumn{2}{c}{Default analysis} & \multicolumn{3}{c}{Allocation sites} & \multicolumn{3}{c}{By kind of method} \\
         \cmidrule(lr){2-3} \cmidrule(lr){4-6} \cmidrule(lr){7-9}
-        Program & \texttt{graal} & \texttt{kills} & \texttt{graal} & \texttt{kills} & \texttt{objects} & Controls & Unchanged & Reduced \\
+        Program & \texttt{graal} & \texttt{fields} & \texttt{graal} & \texttt{fields} & \texttt{objects} & Controls & Unchanged & Reduced \\
         \midrule
         \texttt{Examples}   & 40 & 27 (\pct{-32.5}) & 43 & 30 (\pct{-30.2}) & 30 (\pct{-30.2}) & $16 \to 14$ & 10 & $14 \to 3$ \\
         \texttt{Signatures} & 16 & 12 (\pct{-25.0}) & 16 & 12 (\pct{-25.0}) & 12 (\pct{-25.0}) & -- & 12 & $4 \to 0$ \\
@@ -193,32 +193,32 @@ On the four small programs, which were written to contain calls that write littl
 loads. On AWFY they remove 40 of 943 loads (\pct{4.2}) in the \texttt{-O2} build and 54 of 2,564 (\pct{2.1}) in the
 \texttt{-O3} build. The effect of kill sets does not depend on the analysis: on allocation sites they remove the same 40
 loads from AWFY. Partitions by allocation site add nothing on AWFY, where \texttt{objects} leaves exactly the loads that
-\texttt{kills} leaves, because the partitions split almost no field of the program (one of 234 fields keeps two
+\texttt{fields} leaves, because the partitions split almost no field of the program (one of 234 fields keeps two
 partitions). They pay only where the program was written for them: on \texttt{Aliasing}, which holds two counters that never
-meet, they remove three loads more than \texttt{kills} does (16 to 13). Dead stores add nothing of their own: Graal's phase for overwritten stores removes
+meet, they remove three loads more than \texttt{fields} does (16 to 13). Dead stores add nothing of their own: Graal's phase for overwritten stores removes
 the same stores as our decisions did (three in \texttt{Examples}, one in \texttt{Aliasing}).
 
 \subsection{Run Time}
 
 A load that Graal no longer reloads after a call saves nothing by itself; it saves time where it enables something more,
 such as a load moved out of a loop. We therefore measure run time directly. \Cref{tab:eval-time} gives the benchmarks that
-matter at \texttt{-O3} with the default analysis. Each \texttt{kills} cell is a range over twelve builds in three sets of
+matter at \texttt{-O3} with the default analysis. Each \texttt{fields} cell is a range over twelve builds in three sets of
 four: one timed earlier on 29 October, one from the clean run of 29 October, and one from the clean run of 31 October.
 Each build is compared with the first \texttt{graal} build of its set.
 
 \begin{table}[t]
     \centering
-    \caption{Run time of \texttt{kills} against \texttt{graal} on AWFY at \texttt{-O3}, default analysis. The first column is
+    \caption{Run time of \texttt{fields} against \texttt{graal} on AWFY at \texttt{-O3}, default analysis. The first column is
     the A/A control: the first \texttt{graal} binary of a set timed against itself, as a range over the three sets. The
     second is the range over the nine other builds of \texttt{graal}, three in each set, the third the range over the twelve
-    builds of \texttt{kills}. A negative number is faster. The first \texttt{graal} build took 704.6\,ms in total in the
+    builds of \texttt{fields}. A negative number is faster. The first \texttt{graal} build took 704.6\,ms in total in the
     first set, 696.7\,ms in the first clean run and 706.6\,ms in the second; the other eight benchmarks stay within
-    \pct{\pm 4.8} for \texttt{kills}, the \pct{-4.8} being DeltaBlue.}
+    \pct{\pm 4.8} for \texttt{fields}, the \pct{-4.8} being DeltaBlue.}
     \label{tab:eval-time}
     \small
     \begin{tabular}{lrrr}
         \toprule
-        Benchmark & A/A & other \texttt{graal} builds & \texttt{kills}, twelve builds \\
+        Benchmark & A/A & other \texttt{graal} builds & \texttt{fields}, twelve builds \\
         \midrule
         Queens   & \pct{-0.2} to \pct{+0.1} & \pct{-2.2} to \pct{+0.9} & \textbf{\pct{-27.8} to \pct{-25.7}} \\
         Sieve    & \pct{-0.9} to \pct{+0.3} & \pct{-2.0} to \pct{+2.5} & \pct{-8.6} to \pct{-1.7} \\
@@ -232,13 +232,13 @@ Each build is compared with the first \texttt{graal} build of its set.
     \end{tabular}
 \end{table}
 
-\textbf{Queens} is the one clear win: \pct{-25.7} to \pct{-27.8} in all fifteen builds of \texttt{kills} of 29 and 31 October
+\textbf{Queens} is the one clear win: \pct{-25.7} to \pct{-27.8} in all fifteen builds of \texttt{fields} of 29 and 31 October
 (the twelve of the table and three more, from the test run and from the two ceiling stages), far outside the noise. The recursive method \texttt{placeQueen} now kills only array elements, so four fields are no longer
 reloaded in its loop (the reads in the loop fall from 6 to 0) and Graal inlines the recursion differently. The win
 reproduces on allocation sites (\pct{-32.4}) and is absent in the \texttt{-O2} build (\pct{-0.5}), where Graal inlines less. We read it as the effect we
 set out to obtain: a call that wrote a few locations no longer forces a reload of the others.
 
-\textbf{The total} needs care. The first four builds of \texttt{kills} were 1.4 to 3.0\,\% faster than \texttt{graal} (mean
+\textbf{The total} needs care. The first four builds of \texttt{fields} were 1.4 to 3.0\,\% faster than \texttt{graal} (mean
 \pct{-2.3}); the four of the first clean run gave \pct{+1.7}, \pct{-1.3}, \pct{-1.0}, and \pct{-1.0} (mean \pct{-0.4}), and
 the four of the second \pct{-1.5}, \pct{-2.3}, \pct{-1.8}, and \pct{-2.1} (mean \pct{-1.9}). The \pct{+1.7} is Richards
 alone: in that build Richards was 20.9\,\% slower, in the other three between \pct{-2.6} and \pct{+4.6}, and its share of
@@ -249,11 +249,11 @@ sets make AWFY 0 to 3\,\% faster in total, mostly through Queens, and that the n
 earlier reading of one build said ``neutral in total'' and the first four builds said \pct{-2.3}; the range over twelve builds
 is the claim we can support.
 
-\textbf{Permute, Richards, and Havlak} do not support a claim either way. Permute is slower with \texttt{kills} in every
+\textbf{Permute, Richards, and Havlak} do not support a claim either way. Permute is slower with \texttt{fields} in every
 build (\pct{+4.7} to \pct{+13.1} over fifteen), but the kill sets change its code only a little, and when we shifted the
-alignment of all methods to 16, 64, or 128 bytes instead of the default 32, \texttt{kills} became 6.5--7.1\,\% \emph{faster}
+alignment of all methods to 16, 64, or 128 bytes instead of the default 32, \texttt{fields} became 6.5--7.1\,\% \emph{faster}
 than \texttt{graal}. We read it as code placement. Richards and Havlak vary by 28 and 8 points between builds of one
-configuration. With allocation sites in every image, the total is \pct{-0.1} for \texttt{kills} and \pct{-0.6} for
+configuration. With allocation sites in every image, the total is \pct{-0.1} for \texttt{fields} and \pct{-0.6} for
 \texttt{objects} at \texttt{-O3} (22 October): partitions by allocation site give no run-time gain on AWFY either.
 
 \subsection{The Ceiling}
@@ -261,10 +261,10 @@ configuration. With allocation sites in every image, the total is \pct{-0.1} for
 To learn whether making the remaining opaque calls precise would help, we built AWFY with the kill of everything the facts
 cannot name left out: identity hash codes, class initialization, synchronization, native and unresolved calls. This
 \texttt{ceiling} image is unsound by construction, but its output equals the JVM's on AWFY, and it is the most that precise
-kill sets could give Graal. It leaves 2,392 loads at \texttt{-O3} (\pct{-6.7}) against 2,510 for \texttt{kills}, and 857 at
-\texttt{-O2} (\pct{-9.1}): it removes three times as many loads. It is not faster. In one build each, \texttt{kills} was
+kill sets could give Graal. It leaves 2,392 loads at \texttt{-O3} (\pct{-6.7}) against 2,510 for \texttt{fields}, and 857 at
+\texttt{-O2} (\pct{-9.1}): it removes three times as many loads. It is not faster. In one build each, \texttt{fields} was
 \pct{-1.7} and \texttt{ceiling} \pct{-1.4} in total on 29 October, with Queens at \pct{-27.2} in both; on 31 October
-\texttt{kills} was \pct{-1.9} and \texttt{ceiling} \pct{-1.1}, with Queens at \pct{-26.2} and \pct{-25.3}; a run on 28 October
+\texttt{fields} was \pct{-1.9} and \texttt{ceiling} \pct{-1.1}, with Queens at \pct{-26.2} and \pct{-25.3}; a run on 28 October
 gave \pct{-1.7} and \pct{-0.5}. Only 19 methods differ between the two, and one of them, \texttt{LoopTesterApp.constructCFG}, accounts for 65 of the
 118 further loads. As expected from \Cref{sec:eval-blockers}, further precision removes loads that do not enable
 anything. Making the opaque layers precise would not make AWFY faster, so for AWFY it is not worth building.
@@ -293,7 +293,7 @@ the input flows and source positions that thread escape needs cost Native Image 
         Configuration & Total & Analysis & Added & Total & Analysis & Added \\
         \midrule
         \texttt{graal}                          & 23.7 &  4.4 & & 23.6 &  4.4 & \\
-        \texttt{kills}                          & 25.9 &  6.4 & $+2.2$ (\pct{+9}) & 25.4 &  6.4 & $+1.8$ (\pct{+8}) \\
+        \texttt{fields}                          & 25.9 &  6.4 & $+2.2$ (\pct{+9}) & 25.4 &  6.4 & $+1.8$ (\pct{+8}) \\
         \texttt{graal} on allocation sites      & 31.9 & 11.9 & & 31.0 & 11.3 & \\
         \texttt{objects} on allocation sites    & 33.1 & 14.3 & $+1.2$ (\pct{+4}) & 34.3 & 15.2 & $+3.3$ (\pct{+11}) \\
         \texttt{graal} with flags on allocation sites & 30.9 & 10.7 & & 31.3 & 11.6 & \\
@@ -345,9 +345,9 @@ analysis, while partitions need the one that costs a multiple of the build, and 
 
 \subsection{Frameworks}
 
-On PetClinic kill sets add 44--55\,\% to the build (118--122 seconds for \texttt{graal}, 176--183 for \texttt{kills}), because
+On PetClinic kill sets add 44--55\,\% to the build (118--122 seconds for \texttt{graal}, 176--183 for \texttt{fields}), because
 the export of 510\,MB covers 164,600 methods. Lock elision with allocation sites and the cutoff took 2,395 seconds, of which the export was
-284 (thread escape 191). On the Barista applications \texttt{kills} cost 1.12--1.49 times the build of \texttt{graal}, and the
+284 (thread escape 191). On the Barista applications \texttt{fields} cost 1.12--1.49 times the build of \texttt{graal}, and the
 configuration with allocation sites and lock elision 3.0 to 10.7 times.
 
 \section{What Modelling Concurrency Enables (RQ3)}\label{sec:eval-concurrency}
@@ -432,7 +432,7 @@ the locks removed are in the JDK, javac is mostly one thread, and nothing is gai
 sites and 7,767 \texttt{volatile} sites has a shared object among its receivers, receivers the analysis cannot name, or none at all. The
 request threads share the database, the connection pool, and the caches, so the locks \emph{are} on shared state, and the
 analysis says so correctly. Throughput does not tell the builds apart either: the same binary repeats within 0.2--0.9\,\%, but
-four builds of the same configuration span 6\,\% for \texttt{graal} and 38\,\% for \texttt{kills}, with identical kill sets and
+four builds of the same configuration span 6\,\% for \texttt{graal} and 38\,\% for \texttt{fields}, with identical kill sets and
 code size, so no effect of the facts can be read from PetClinic. Of Barista's 13 applications, the two Quarkus ones failed to build with and
 without the feature, which we read, but cannot establish, as a mismatch between the bundles and our builder.
 
@@ -530,9 +530,9 @@ Image's own tests pass with assertions on. This is evidence by controls and exam
 escape (\texttt{vm-code} and \texttt{entry-points}) are not proved, and one of them once hid a real publication, which the list
 of removable sites of AWFY revealed.
 
-\paragraph{Which baseline.} The comparison of \texttt{graal} with \texttt{kills} on the default analysis is the main one: it is
+\paragraph{Which baseline.} The comparison of \texttt{graal} with \texttt{fields} on the default analysis is the main one: it is
 what a user gets today, at ordinary build cost, with nothing else changed. The same comparison on allocation sites shows that the
-result does not depend on the analysis (the same 40 loads). The comparisons of \texttt{kills} with \texttt{objects} and of the
+result does not depend on the analysis (the same 40 loads). The comparisons of \texttt{fields} with \texttt{objects} and of the
 flags baseline with \texttt{locks} are the effect of the partitions and of lock elision, each on allocation sites. For the partitions
 this is forced. For lock elision it is a choice: we timed it only on allocation sites, and on the default analysis we built it only for the
 Barista servers, where it removed nothing. The matrix gives the same verdicts under both analyses for the four plain cases, so we expect the

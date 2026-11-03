@@ -37,8 +37,8 @@ stage, and \texttt{SUMMARY.txt}. \Cref{tab:app-stages} lists the stages. The def
         Stage & Section & What it runs \\
         \midrule
         \texttt{loads}      & \ref{sec:eval-gain}  & the three configurations on the four small programs and on AWFY at \texttt{-O2}, on both analyses, and the counts \\
-        \texttt{time}       & \ref{sec:eval-gain}  & \texttt{graal} and \texttt{kills} on AWFY at \texttt{-O3}, four builds each, timed together with the A/A control \\
-        \texttt{ceiling}    & \ref{sec:eval-gain}  & \texttt{graal}, \texttt{kills}, and \texttt{ceiling} on AWFY at \texttt{-O3}: loads left and run times \\
+        \texttt{time}       & \ref{sec:eval-gain}  & \texttt{graal} and \texttt{fields} on AWFY at \texttt{-O3}, four builds each, timed together with the A/A control \\
+        \texttt{ceiling}    & \ref{sec:eval-gain}  & \texttt{graal}, \texttt{fields}, and \texttt{ceiling} on AWFY at \texttt{-O3}: loads left and run times \\
         \texttt{cost}       & \ref{sec:eval-cost}  & every configuration of AWFY, five rounds, with the stage times and the peak memory \\
         \texttt{shapes}     & \ref{sec:eval-concurrency} & the lock and \texttt{volatile} shapes, \texttt{graal} against elision \\
         \texttt{matrix}     & \ref{sec:eval-concurrency} & thread escape on the concurrency examples, every analysis and every set of assumptions \\
