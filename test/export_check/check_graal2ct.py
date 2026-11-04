@@ -131,7 +131,7 @@ def check_exceptions_are_control_flow() -> None:
     takes it as its first parameter. The arm where the null check of counter
     fails makes an exception. Both go on to the λ that leaves the method with
     it as exc, and with every token; the λ that returns gives back null.
-    Every λ from which each path throws says so, for the rules. Nothing
+    Every λ from which each path throws says so, for --shape. Nothing
     deoptimizes in LoadStoreElimination, so nothing traps."""
     program, _ = translate()
     s = structure(program, "LoadStoreElimination_forwardAcrossWritingCall")

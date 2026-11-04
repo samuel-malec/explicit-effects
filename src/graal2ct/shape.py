@@ -62,32 +62,15 @@ class Closures:
             for i in lam.body:
                 if i.type == s.name:
                     self.places.setdefault(i.op, []).append((lam, i))
-        self._calls: dict[str, set[str]] | None = None
 
     def of(self, name: str) -> list[tuple[Lambda, Instr]]:
         return self.places.get(name, [])
 
-    def reached_from(self, name: str) -> set[str]:
-        """The λs reachable from λ `name`; `name` itself only if it is on a loop."""
-        if self._calls is None:
-            self._calls = {}
-            for target, places in self.places.items():
-                for lam, _ in places:
-                    self._calls.setdefault(lam.name, set()).add(target)
-        seen, work = set(), [name]
-        while work:
-            for n in self._calls.get(work.pop(), ()):
-                if n not in seen:
-                    seen.add(n)
-                    work.append(n)
-        return seen
-
 
 @dataclass
 class Branch:
-    """The instructions of a branch at the end of `parent`: the closures of
+    """The instructions of a branch at the end of a λ: the closures of
     both arms, the two opts and the join that pick one, the frame, and the call."""
-    parent: Lambda
     refs: list[Instr]
     opts: list[Instr]
     join: Instr
@@ -119,7 +102,7 @@ def branch_at(s: Structure, lam: Lambda) -> Branch | None:
     if arms is None:
         return None
     opts, refs = arms
-    return Branch(lam, refs, opts, join, defs.get(join.ins[2]), call)
+    return Branch(refs, opts, join, defs.get(join.ins[2]), call)
 
 
 def arms_of(defs: dict[str, Instr], join: Instr | None, structure: str) -> tuple[list[Instr], list[Instr]] | None:

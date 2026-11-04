@@ -394,8 +394,8 @@ class MethodTranslation:
         return lam
 
     def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "",
-              at: str = "", field: str = "") -> None:
-        self.body.append(Instr(type_, op, ins, outs, out_types, note, at, field))
+              field: str = "") -> None:
+        self.body.append(Instr(type_, op, ins, outs, out_types, note, field))
 
     def _advance(self, token: str) -> tuple[str, str]:
         """The token's current version, and its next, which becomes current."""
@@ -572,10 +572,9 @@ class MethodTranslation:
         ins = [before, *(self.ref(i) for i in n.inputs)]
 
         if n.op == "LoadField":
-            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], field=n.field,
-                       at=n.at or "")
+            self._emit("heap", f"get{static}_{k}", ins, [f"v{n.id}", after], [_type(n), "heap"], field=n.field)
         else:
-            self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], field=n.field, at=n.at or "")
+            self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], field=n.field)
 
     def _array(self, n: Node) -> None:
         try:
@@ -587,10 +586,9 @@ class MethodTranslation:
         ins = [before, *(self.ref(i) for i in n.inputs)]
 
         if n.op == "LoadIndexed":
-            self._emit("heap", f"aget_{_element(n.kind)}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.kind,
-                       at=n.at or "")
+            self._emit("heap", f"aget_{_element(n.kind)}", ins, [f"v{n.id}", after], [_type(n), "heap"], note=n.kind)
         else:
-            self._emit("heap", f"aset_{_element(n.kind)}", ins, [after], ["heap"], note=n.kind, at=n.at or "")
+            self._emit("heap", f"aset_{_element(n.kind)}", ins, [after], ["heap"], note=n.kind)
 
     def _commit(self, n: Node) -> None:
         """Makes the objects escape analysis left virtual, then gives their fields and
@@ -695,7 +693,7 @@ class MethodTranslation:
         if n.flow == "ok":
             wanted = set().union(*(self.t.effects.tokens(c) for c in n.callees))
             partitions = [p for p in self.t.effects.partitions if p in wanted]
-            # A token no target writes comes back unchanged, which the rules may see through.
+            # A token no target writes comes back unchanged: the call's text says it only reads it.
             observes = tuple(at - len(partitions) for at, p in enumerate(partitions)
                              if all(self.t.effects.keeps(c, p) for c in n.callees))
         else:

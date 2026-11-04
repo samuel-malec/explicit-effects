@@ -47,7 +47,6 @@ class Instr:
     outs: list[str] = field(default_factory=list)
     out_types: list[str] = field(default_factory=list)
     note: str = ""  # a comment for the reader, which nothing reads back
-    at: str = ""  # where in the bytecode it came from, as graal-export names a position
     field: str = ""  # the field a field access reads or writes
     exit: str = ""  # how a guard leaves the method: THROWS or TRAPS
     observes: tuple[int, ...] = () # tokens that are only read
