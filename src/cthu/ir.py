@@ -9,6 +9,8 @@ LINEAR = frozenset({"heap"})  # the types whose values are used exactly once: ne
 # How code leaves the method
 THROWS, TRAPS = "throws", "traps"
 
+ENTRY = "run"  # the λ a method starts in; taking it as a closure calls the method itself
+
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
 _TYPES = {code: t for t, code in _TYPE_CODES.items()}
 

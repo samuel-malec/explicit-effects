@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import parser
-from .ir import Instr, Lambda, Program, frame_type, parse_function_type
+from .ir import ENTRY, Instr, Lambda, Program, frame_type, parse_function_type
 from .parser import OpType, Signature
 
 GRAAL = Path(__file__).with_name("graal.ct")
@@ -174,7 +174,7 @@ class _Expected:
                 self.closures[t, op] = self._closure(op, self.lambdas[t, op])
             return self.closures[t, op]
 
-        if op == "run" and t in self.externals:
+        if op == ENTRY and t in self.externals:
             return [], list(instr.out_types)  # an external is typed by the calls to it
 
         function = parse_function_type(t)

@@ -11,12 +11,8 @@ control flow where that is safe and changes nothing else: no load is forwarded a
 import re
 from dataclasses import dataclass
 
-from cthu.ir import LINEAR, Instr, Lambda, Program, Structure
+from cthu.ir import ENTRY, LINEAR, Instr, Lambda, Program, Structure
 from cthu.ssu import linearize
-
-
-ENTRY = "run"  # the λ a method starts in; taking it as a closure calls the method itself
-
 
 VALUES = {"int", "long", "float", "double", "bool", "ref"}
 

@@ -4,7 +4,7 @@ method touches."""
 import re
 from itertools import count
 
-from cthu.ir import THROWS, TRAPS, Instr, Lambda, Program, Structure, frame_type, function_type
+from cthu.ir import ENTRY, THROWS, TRAPS, Instr, Lambda, Program, Structure, frame_type, function_type
 from cthu.ssu import linearize
 from effects.signatures import REST, Effects, no_analysis
 from graal.graal_ir import Block, Graph, Node
@@ -393,7 +393,7 @@ class MethodTranslation:
         return structure
 
     def _lambda_name(self, block_id: int) -> str:
-        return "run" if block_id == self.graph.entry else f"b{block_id}"
+        return ENTRY if block_id == self.graph.entry else f"b{block_id}"
 
     def _lambda_params(self, block_id: int) -> list[tuple[str, str]]:
         tokens = [(t, "heap") for t in self.tokens]
@@ -744,7 +744,7 @@ class MethodTranslation:
         ftype = function_type([self.type_of(a) for a in args] + heaps, out_types)
         versions = [self._advance(t) for t in tokens]
         k = self._continuation(n.id)
-        self._emit(structure, "run", [], [k], [ftype])
+        self._emit(structure, ENTRY, [], [k], [ftype])
         self._emit(ftype, "call", [k, *(self.ref(a) for a in args), *(before for before, _ in versions)],
                    ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions],
                    out_types, note=note)
