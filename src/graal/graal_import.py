@@ -9,9 +9,9 @@ from .graal_ir import Graph, parse_graph
 
 @dataclass
 class PointsToFacts:
-    methods: dict[str, dict] = field(default_factory=dict)  # What fields does a method access
-    fields: dict[str, dict] = field(default_factory=dict)  # what fields are accessed
-    shared: frozenset[str] | None = None # The objects another thread may reach
+    methods: dict[str, dict] = field(default_factory=dict)  # by method: its reads, writes, calls and effects
+    fields: dict[str, dict] = field(default_factory=dict)  # the program's own fields: whether each is read and written
+    shared: frozenset[str] | None = None  # the objects another thread may reach, None when the export doesn't say
 
 
 def load_facts(path: str | Path, assumptions: str | None = None) -> PointsToFacts:
@@ -29,6 +29,8 @@ def _shared(data: dict, assumptions: str | None = None) -> frozenset[str] | None
 
 
 def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
+    """The facts and the graphs of an export, each graph under its method's name, with the
+    descriptor only when the export has more than one method of that name."""
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(

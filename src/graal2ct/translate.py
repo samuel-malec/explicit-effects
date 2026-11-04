@@ -1,4 +1,5 @@
-""" Graal IR → Cthulhu transformation. """
+"""Graal IR → Cthulhu: each method a structure, each block a λ, with a token for each partition of memory the
+method touches."""
 
 import re
 from itertools import count

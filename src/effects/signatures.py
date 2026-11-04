@@ -34,7 +34,7 @@ class Partitioner(Protocol):
     def __call__(self, field: str, receivers: Receivers = None, /) -> str: ...
 
 
-# Memory partition that no field of the program names, such as platform's fields or opaque methods or other
+# The rest of memory, which no field of the program names: the platform's fields, and what allocation writes.
 REST = "*"
 
 # The pseudo-objects of an access whose receiver the analysis can't say
@@ -263,7 +263,7 @@ class Effects:
 
 
 def no_analysis() -> Effects:
-    """Baseline analysis version that treats all of the heap as a single partion."""
+    """The baseline without an analysis: all of memory is one partition, and every method takes its token."""
     return Effects(one_heap, {}, ("heap",))
 
 

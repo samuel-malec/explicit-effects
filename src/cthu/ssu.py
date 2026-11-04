@@ -1,3 +1,6 @@
+"""Static single use: every value is used exactly once, and a linear one, a heap token, is never copied or
+dropped. `linearize` makes a λ so, `check` reports what breaks it."""
+
 from collections import Counter
 from itertools import count
 
@@ -9,7 +12,8 @@ class LinearityError(Exception):
 
 
 def linearize(lam: Lambda) -> None:
-    """Transform a sequence of Cthu instructions, such that the new sequence of instruction adheres to the SSU format"""
+    """Make the λ's body static single use: a `dup` before each use of a value but its last, a `drop` for a value
+    nothing uses. A linear value used twice or never cannot be made so, and is an error."""
     types = dict(lam.params)
     for instr in lam.body:
         types.update(zip(instr.outs, instr.out_types))
@@ -62,7 +66,7 @@ def linearize(lam: Lambda) -> None:
 
 
 def check(program: Program) -> list[str]:
-    """Check whether given program conforms to the SSU form"""
+    """What breaks static single use in the program, one message for each problem."""
     errors = []
 
     for structure in program.structures:
@@ -73,7 +77,7 @@ def check(program: Program) -> list[str]:
 
 
 def _check_lambda(lam: Lambda) -> list[str]:
-    """Check whether a given lambda body conforms to the SSU form"""
+    """What breaks static single use in one λ."""
     errors = []
     defined: dict[str, str] = {}
     uses: Counter = Counter()

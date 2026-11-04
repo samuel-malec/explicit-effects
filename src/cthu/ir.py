@@ -1,7 +1,10 @@
+"""The Cthulhu program the translation makes: a structure per method, its λs and their instructions, the names
+of its function types (`f_rh_ih`), and its text (`to_text`)."""
+
 from dataclasses import dataclass, field
 from functools import cache
 
-LINEAR = frozenset({"heap"})
+LINEAR = frozenset({"heap"})  # the types whose values are used exactly once: never copied, never dropped
 
 # How code leaves the method
 THROWS, TRAPS = "throws", "traps"
@@ -49,7 +52,7 @@ class Instr:
     note: str = ""  # a comment for the reader, which nothing reads back
     field: str = ""  # the field a field access reads or writes
     exit: str = ""  # how a guard leaves the method: THROWS or TRAPS
-    observes: tuple[int, ...] = () # tokens that are only read
+    observes: tuple[int, ...] = ()  # the tokens a call only reads: their places in ins, counted from the end
 
     def renamed(self, ins: list[str], outs: list[str]) -> "Instr":
         copy = object.__new__(Instr)

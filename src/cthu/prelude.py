@@ -1,5 +1,5 @@
-""" Representation of the Prelude for Graal dialect in Cthu,
-    extended with parsing logic. """
+"""The prelude of the Graal dialect, graal.ct: its types, signatures and structures, and the check that each
+instruction of a program applies an operation the prelude declares to values of the types it takes."""
 
 import re
 from dataclasses import dataclass

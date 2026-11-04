@@ -98,7 +98,7 @@ def lock_sites(facts: PointsToFacts, program: list[str]) -> Counter[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path)
-    parser.add_argument("--assumptions", help="the set of thread-escape assumptions to read from an export made with all of them: none, thread-confined, "
+    parser.add_argument("--assumptions", help="the set of thread-escape assumptions to read from an export made with all of them: none, "
                         "thread-confined, thread-confined,vm-fields, ... up to thread-confined,vm-fields,vm-code,handler-references,entry-points")
     parser.add_argument("--program", default="", help="comma-separated class-name prefixes, * for every method; default: outside the platform's packages")
     parser.add_argument("--synchronization", choices=["shared", "all", "none"], default="shared",

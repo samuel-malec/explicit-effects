@@ -6,7 +6,7 @@ Usage:
     uv run graal2ct graal-export/out/loadstoreelimination.json --method forwardAcrossWritingCall
     uv run graal2ct graal-export/out/loadstoreelimination.json --partition field
     uv run graal2ct graal-export/out/loadstoreelimination.json --partition field --shape
-    uv run graal2ct graal-export/out/objects.allocsens.json --partition object-field --shape
+    uv run graal2ct graal-export/out/aliasing.allocsens.json --partition object-field --shape
 
 """
 
