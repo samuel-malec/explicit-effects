@@ -62,7 +62,9 @@ def _identifier(text: str) -> str:
 
 
 def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
-    """A token name per heap partition"""
+    """A token name per partition of memory: h for all of it, h_rest for the rest, h_int_arr for an array kind, and
+    for the others the last parts of their names, as few as tell them all apart (h_value, or h_Counter_value
+    when two fields are named value)."""
     names = {p: "h" if p == "heap" else "h_rest" for p in partitions if p in ("heap", REST)}
     names |= {p: "h_" + p[:-2] + "_arr" for p in partitions if p.endswith("[]")}
     parts = {p: re.split(r"[.$]", p) for p in partitions if p not in names}
@@ -80,6 +82,7 @@ def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
 
 
 def parameter_types(descriptor: str, static: bool) -> list[str]:
+    """The dialect's types of a method's parameters, from its descriptor: the receiver first unless it is static."""
     types = [] if static else ["ref"]
     i = 1
 
@@ -98,6 +101,7 @@ def parameter_types(descriptor: str, static: bool) -> list[str]:
 
 
 def return_type(descriptor: str) -> str | None:
+    """The dialect's type of what a method returns, from its descriptor; None for void."""
     result = descriptor[descriptor.index(")") + 1:]
     if result == "V":
         return None
@@ -106,6 +110,7 @@ def return_type(descriptor: str) -> str | None:
 
 
 class Translation:
+    """The methods of an export, translated into one program with the effects' partitions of memory."""
 
     def __init__(self, graphs: dict[str, Graph], effects: Effects | None = None):
         self.graphs = graphs
@@ -116,6 +121,8 @@ class Translation:
         self.refused: dict[str, str] = {}  # each method refused, and why
 
     def translate(self, keys: list[str]) -> Program:
+        """Add these methods to the program, a structure each; a method that can't be translated is
+        left out, with why, in `refused`."""
         calls: dict[str, str] = {}
         for key in keys:
             graph = self.graphs[key]
@@ -148,10 +155,14 @@ class Translation:
         return self.program
 
     def callee_structure(self, method: str) -> str:
+        """The structure a call of the method (name and descriptor) names: the one its own translation has
+        when the export has its graph."""
         return structure_name(self.keys.get(method) or method)
 
 
 class MethodTranslation:
+    """One method's graph as a structure: a λ for each block reached, and a frame for each type of branch."""
+
     def __init__(self, translation: Translation, graph: Graph, name: str):
         self.translation = translation
         self.effects = translation.effects
@@ -198,11 +209,14 @@ class MethodTranslation:
         self.throwing: int | None = None  # the node that ends the block and may throw, if any
 
     def value(self, node_id: int) -> int:
+        """The node whose value this is, past the nodes that only pass a value on (`ALIASES`)."""
         while node_id in self.alias:
             node_id = self.alias[node_id]
         return node_id
 
     def ref(self, node_id: int) -> str:
+        """The name of the value in the λs: p and its index for a parameter, v and the node's id otherwise;
+        a virtual object goes by its AllocatedObject's, an initialized receiver by what the constructor gave back."""
         node = self.nodes[self.value(node_id)]
         if node.type == "void" and node.op not in VIRTUAL:
             raise Unsupported(f"{node.op} as a value, which the export gives no type")
@@ -375,6 +389,8 @@ class MethodTranslation:
         return labels["normal"], labels["exception"]
 
     def structure(self) -> Structure:
+        """The method's structure, every λ of it static single use; Unsupported if the graph has what the
+        translation doesn't handle."""
         if self.constructor and self.receiver is None:
             raise Unsupported("a constructor without its receiver")
         self._analyse()
