@@ -183,6 +183,13 @@ class MethodTranslation:
         self.calls: dict[str, str] = {}  # the structures this method calls, and the methods they stand for
         self.frames: dict[str, Lambda] = {}
 
+        # What _analyse finds in the graph before the λs are made.
+        self.stops: set[int] = set()  # the blocks from which every path deoptimizes, or stops some other way
+        self.throws: set[int] = set()  # the blocks from which every path throws, or stops
+        self.caught: dict[int, int] = {}  # a block whose last node may throw, and the node that takes the exception
+        self.order: list[int] = []  # the blocks reached, in the graph's order
+        self.param_ids: dict[int, list[int]] = {}  # the values each block's λ takes, before the tokens
+
         # The block being translated, which _block sets up for _node, _end and what they call.
         self.block_id = graph.entry
         self.body: list[Instr] = []  # the λ's instructions so far
@@ -226,11 +233,19 @@ class MethodTranslation:
         return found
 
     def _analyse(self) -> None:
+        """What the λs need to know of the graph: where every path stops or throws, which blocks are
+        reached and in what order, which node takes each exception, and the values each block takes."""
         blocks = self.graph.blocks
         self.stops = self._every_path({b.id for b in blocks.values() if b.exit not in (None, "return", "unwind")})
         self.throws = self._every_path({b.id for b in blocks.values() if b.exit == "unwind"} | self.stops)
+        reached = self._reached()
+        self.caught = self._caught(reached)
+        self.order = [b for b in blocks if b in reached]
+        self.param_ids = self._param_ids(self._live())
 
-        # Find reachable blocks (along exception edges too)
+    def _reached(self) -> set[int]:
+        """The blocks reachable from the entry, along exception edges too, but not past one that stops."""
+        blocks = self.graph.blocks
         reached, work = {self.graph.entry}, [self.graph.entry]
         while work:
             b = blocks[work.pop()]
@@ -242,9 +257,14 @@ class MethodTranslation:
                     reached.add(e.to)
                     work.append(e.to)
 
-        # A node that may throw ends its block, with an edge to where the exception goes, which
-        # starts by taking the exception: the value that node gives back besides its own.
-        self.caught: dict[int, int] = {}
+        return reached
+
+    def _caught(self, reached: set[int]) -> dict[int, int]:
+        """A node that may throw ends its block, with an edge to where the exception goes, which
+        starts by taking the exception: the value that node gives back besides its own. Each such
+        block, and the node that takes its exception."""
+        blocks = self.graph.blocks
+        caught = {}
         for b in reached - self.stops:
             for e in blocks[b].succs:
                 if e.label == "exception":
@@ -252,11 +272,13 @@ class MethodTranslation:
                     if first is None or first.op != CAUGHT:
                         raise Unsupported(
                             f"an exception edge to a block that doesn't take the exception, bci {blocks[b].end.get('bci')}")
-                    self.caught[b] = first.id
+                    caught[b] = first.id
 
-        self.order = [b for b in blocks if b in reached]
+        return caught
 
-        # Find which values must come to a block from a different block
+    def _live(self) -> dict[int, set[int]]:
+        """Which values must come to each block from a different block."""
+        blocks = self.graph.blocks
         defs, uses = {}, {}
         for b in self.order:
             defs[b], uses[b] = self._defs_and_uses(blocks[b])
@@ -279,8 +301,13 @@ class MethodTranslation:
                     live[b] = new
                     changed = True
 
-        # Determine the node ids of parameters the blocks receive.
-        self.param_ids: dict[int, list[int]] = {}
+        return live
+
+    def _param_ids(self, live: dict[int, set[int]]) -> dict[int, list[int]]:
+        """The node ids of the values each block receives. Both arms of a branch receive the same, and so do
+        both ways on from a node that may throw, its exception first; any other block its phis first."""
+        blocks = self.graph.blocks
+        param_ids: dict[int, list[int]] = {}
         for b in self.order:
             block = blocks[b]
             if b in self.stops:
@@ -288,16 +315,18 @@ class MethodTranslation:
             if block.end.get("node") == "IfNode":
                 true, false = self._branches(block)
                 union = sorted(live[true] | live[false])
-                self.param_ids[true] = self.param_ids[false] = union
+                param_ids[true] = param_ids[false] = union
             elif b in self.caught:
                 normal, exceptional = self._outcomes(block)
                 union = [self.caught[b]] + sorted((live[normal] | live[exceptional]) - {self.caught[b]})
-                self.param_ids[normal] = self.param_ids[exceptional] = union
+                param_ids[normal] = param_ids[exceptional] = union
 
         for b in self.order:
-            if b != self.graph.entry and b not in self.param_ids:
+            if b != self.graph.entry and b not in param_ids:
                 phis = [n.id for n in blocks[b].nodes if n.op == "ValuePhi"]
-                self.param_ids[b] = phis + sorted(live[b] - set(phis))
+                param_ids[b] = phis + sorted(live[b] - set(phis))
+
+        return param_ids
 
     def _defs_and_uses(self, block: Block) -> tuple[set[int], set[int]]:
         defs, uses = set(), set()
