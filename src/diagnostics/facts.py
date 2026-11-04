@@ -57,21 +57,21 @@ def receivers(objects: list[str] | None) -> str:
     return ", ".join(short_object(o) for o in objects)
 
 
-def show(key: str, facts: dict) -> str:
+def show(key: str, method: dict) -> str:
     lines = [key]
     for label, kind in (("reads", "reads"), ("writes", "writes")):
-        if facts.get(kind):
-            lines.append(f"    {label:<8}{', '.join(short_field(f) for f in facts[kind])}")
-    if facts.get("callees"):
-        lines.append(f"    {'calls':<8}{', '.join(short_method(c) for c in facts['callees'])}")
-    if facts.get("allocates"):
+        if method.get(kind):
+            lines.append(f"    {label:<8}{', '.join(short_field(f) for f in method[kind])}")
+    if method.get("callees"):
+        lines.append(f"    {'calls':<8}{', '.join(short_method(c) for c in method['callees'])}")
+    if method.get("allocates"):
         lines.append("    allocates")
-    locks = facts.get("locks", {})
+    locks = method.get("locks", {})
     for kind in EFFECTS:
-        for what in facts.get(kind, ()):
+        for what in method.get(kind, ()):
             on = f"   on {receivers(locks[what])}" if what in locks else ""
             lines.append(f"    {kind:<7} {what}{on}")
-    for access in facts.get("accesses", ()):
+    for access in method.get("accesses", ()):
         at = (access.get("at") or "").rpartition(":")[2]
         lines.append(f"    {access['kind']:<6}{short_field(access['field']):<30} through {receivers(access['receivers'])}"
                      + (f"   at bci {at}" if at else ""))

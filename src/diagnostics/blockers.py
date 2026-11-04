@@ -15,7 +15,7 @@ import argparse
 from collections import Counter
 from pathlib import Path
 
-from effects.kills import ANY, kills, kind
+from effects.kills import ANY, kills, node_kind
 from effects.signatures import callees_of, synchronizes_on, synchronizing
 from graal.graal_import import PointsToFacts, load_facts
 
@@ -38,12 +38,12 @@ def direct_cause(facts: PointsToFacts, method: str, sync: str) -> str | None:
         return "unresolved call"
     if missing:
         return "call to a method without facts"
-    for kind_ in ("acquires", "releases"):
-        found = e.get(kind_) if sync == "all" else synchronizing(facts, e, kind_) if sync == "shared" else []
+    for kind in ("acquires", "releases"):
+        found = e.get(kind) if sync == "all" else synchronizing(facts, e, kind) if sync == "shared" else []
         if found:
-            return f"{kind_[:-1]}: {kind(found[0])}"
+            return f"{kind[:-1]}: {node_kind(found[0])}"
     if e.get("unknown"):
-        return kind(e["unknown"][0])
+        return node_kind(e["unknown"][0])
     return None
 
 

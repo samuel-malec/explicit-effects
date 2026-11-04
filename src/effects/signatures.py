@@ -215,10 +215,10 @@ def _names(classes: dict, per_field: bool) -> dict:
     return names
 
 
-def _site(obj: str) -> tuple[str, str]:
+def _site(name: str) -> tuple[str, str]:
     """The type and a short allocation site: `LoadStoreElimination$Counter@LoadStoreElimination.main([Ljava/lang/String;)V:9`
     is `LoadStoreElimination$Counter` at `main:9`; an object named by its type has no site."""
-    kind, _, site = obj.partition("@")
+    kind, _, site = name.partition("@")
     if site and site != "constant":
         method, _, bci = site.split(" in ")[0].rpartition(":")
         site = method.split("(")[0].rsplit(".", 1)[-1] + ":" + bci
@@ -275,16 +275,20 @@ def callees_of(facts: PointsToFacts) -> dict[str, set[str]]:
 
 
 def close_over_callees(callees: dict[str, set[str]], *sets: dict[str, set[str]]) -> None:
+    """Add to each method's set, in each of `sets`, the sets of every method it may call, directly or not. Methods
+    that call each other end with one set; their callees outside the group are done before them."""
     for group in _components(callees):
         members = set(group)
         called = {c for m in group for c in callees[m] if c not in members}
-        for of in sets:
-            joined = set().union(*(of.get(m, ()) for m in group), *(of.get(c, ()) for c in called))
+        for per_method in sets:
+            joined = set().union(*(per_method.get(m, ()) for m in group), *(per_method.get(c, ()) for c in called))
             for m in group:
-                of[m] |= joined
+                per_method[m] |= joined
 
 
 def _components(callees: dict[str, set[str]]) -> list[list[str]]:
+    """The groups of methods that call each other, directly or not, each group after the groups it calls
+    (Tarjan's algorithm, without recursion)."""
     index: dict[str, int] = {}
     low: dict[str, int] = {}
     stack: list[str] = []
