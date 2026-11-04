@@ -17,7 +17,9 @@ class Category(Enum):
 
 
 KEYWORDS = {"type", "signature", "structure", "field", "class", "constant"}
-_PUNCT = {":", "∷", "×", "=", ","}
+# The characters that are a token on their own.
+_SINGLE = {**dict.fromkeys(":∷×=,", Category.PUNCT), **dict.fromkeys("[]", Category.BRACKET),
+           **dict.fromkeys("()", Category.PAREN), "λ": Category.LAMBDA}
 
 
 @dataclass(frozen=True)
@@ -74,10 +76,8 @@ def tokenize(text: str) -> list[Token]:
             tokens.append(Token(Category.ARROW, arrow, line, column))
             i += len(arrow)
 
-        elif ch in _PUNCT or ch in "[]()λ":
-            category = (Category.PUNCT if ch in _PUNCT else Category.BRACKET if ch in "[]"
-            else Category.PAREN if ch in "()" else Category.LAMBDA)
-            tokens.append(Token(category, ch, line, column))
+        elif ch in _SINGLE:
+            tokens.append(Token(_SINGLE[ch], ch, line, column))
             i += 1
 
         elif is_ident_char(ch):

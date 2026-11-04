@@ -63,9 +63,11 @@ class Instr:
         line = " ".join([self.type, self.op, *self.ins])
         if self.outs:
             line += " →  " + " ".join(self.outs)
-        # A call's note is its callee, which the closure's structure already names.
-        comment = ("only reads " + " ".join(self.ins[at] for at in self.observes) if self.observes else "") \
-            if self.op == "call" else self.note or self.field or self.exit
+        if self.op == "call":
+            # A call's note is its callee, which the closure's structure already names.
+            comment = "only reads " + " ".join(self.ins[at] for at in self.observes) if self.observes else ""
+        else:
+            comment = self.note or self.field or self.exit
         return line + (f"   ; {comment}" if comment else "")
 
 

@@ -58,7 +58,7 @@ def elidable(facts: PointsToFacts) -> dict[str, str]:
         if method.startswith(VM):
             continue
         for label, receivers in e.get("locks", {}).items():
-            if receivers is None or not receivers or synchronizes_on(facts, receivers):
+            if not receivers or synchronizes_on(facts, receivers):
                 continue
             bci = label.rsplit(" at bci ", 1)[1]
             if label.startswith("volatile "):

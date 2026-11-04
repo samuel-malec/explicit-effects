@@ -182,8 +182,8 @@ def _names(classes: dict, per_field: bool) -> dict:
     `LoadStoreElimination$Counter@main:9`."""
 
     def label(members: list) -> str:
-        found = sorted(o for o in ([o for _, o in members] if per_field else [m for m in members if isinstance(m, str)])
-                       if o not in (UNKNOWN, NOTHING))
+        objects = [o for _, o in members] if per_field else [m for m in members if isinstance(m, str)]
+        found = sorted(o for o in objects if o not in (UNKNOWN, NOTHING))
 
         if not found:  # only the field's unknown or null receivers
             field, pseudo = members[0] if per_field else reversed(members[0])

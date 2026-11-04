@@ -48,7 +48,8 @@ def blocks(facts: PointsToFacts, method: dict, ignore: Collection[str] = ()) -> 
     that is unresolved, or a call of a method without facts. What `ignore` names does not count."""
     ignored = {node for name in ignore for node in (IGNORABLE[name] or ())}
     for text in method.get("unknown", ()):
-        if node_kind(text) not in ignored and not ("other-effects" in ignore and node_kind(text) not in NAMED):
+        node = node_kind(text)
+        if (node in NAMED and node not in ignored) or (node not in NAMED and "other-effects" not in ignore):
             return True
     if "synchronization" not in ignore and (synchronizing(facts, method, "acquires") or synchronizing(facts, method, "releases")):
         return True

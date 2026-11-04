@@ -60,9 +60,9 @@ def receivers(objects: list[str] | None) -> str:
 
 def show(key: str, method: dict) -> str:
     lines = [key]
-    for label, kind in (("reads", "reads"), ("writes", "writes")):
+    for kind in ("reads", "writes"):
         if method.get(kind):
-            lines.append(f"    {label:<8}{', '.join(short_field(f) for f in method[kind])}")
+            lines.append(f"    {kind:<8}{', '.join(short_field(f) for f in method[kind])}")
     if method.get("callees"):
         lines.append(f"    {'calls':<8}{', '.join(short_method(c) for c in method['callees'])}")
     if method.get("allocates"):
