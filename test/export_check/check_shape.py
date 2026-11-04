@@ -1,47 +1,12 @@
 import subprocess
 import sys
-from pathlib import Path
 
 from cthu import parser, prelude
-from cthu.ir import Instr, Lambda, Program, Structure, function_type, to_text
+from cthu.ir import Instr, Lambda, Structure, function_type, to_text
 from cthu.ssu import check
-from effects.signatures import PARTITIONERS, analyse, no_analysis
-from graal.graal_import import load
 from graal2ct import shape
 from graal2ct.shape import straighten
-from graal2ct.translate import Translation
-
-DATA = Path(__file__).resolve().parent.parent / "data"
-LOAD_STORE_ELIMINATION = DATA / "loadstoreelimination.json"
-SIGNATURES = DATA / "signatures.json"
-ALIASING = DATA / "aliasing.json"  # exported with allocation sites
-
-
-def translate(path: Path, partition: str) -> Program:
-    facts, graphs = load(path)
-    effects = no_analysis() if partition == "none" else analyse(facts, PARTITIONERS[partition](facts))
-    return Translation(graphs, effects).translate(sorted(graphs))
-
-
-def structure(program: Program, name: str) -> Structure:
-    return next(s for s in program.structures if s.name == name)
-
-
-def cyclic(s: Structure) -> set[str]:
-    """The λs that reach themselves through the λs they take."""
-    refs = {lam.name: {i.op for i in lam.body if i.type == s.name} for lam in s.lambdas}
-    found = set()
-    for start in refs:
-        seen, work = set(), list(refs[start])
-        while work:
-            name = work.pop()
-            if name == start:
-                found.add(start)
-                break
-            if name not in seen:
-                seen.add(name)
-                work.extend(refs.get(name, ()))
-    return found
+from translations import ALIASING, LOAD_STORE_ELIMINATION, SIGNATURES, looping, structure, translate
 
 
 def origin(lam: Lambda, name: str) -> Instr:
@@ -59,7 +24,7 @@ def check_shape() -> None:
     null check and three blocks split at its call, becomes one λ, with the guards of the null check on counter and
     then those of the call. A merge stays a λ (deadStoreBothArms' b5, which both arms jump to), and so does a loop
     header (hoistLoadOutOfLoop keeps a λ that reaches itself)."""
-    program = translate(LOAD_STORE_ELIMINATION, "field")
+    program, _ = translate(LOAD_STORE_ELIMINATION, "field")
     writing = [lam.name for lam in structure(program, "LoadStoreElimination_forwardAcrossWritingCall").lambdas]
     straighten(program)
     s = structure(program, "LoadStoreElimination_forwardAcrossWritingCall")
@@ -72,7 +37,7 @@ def check_shape() -> None:
     assert thrown.op == "not" and origin(s.lambdas[0], thrown.ins[0]).op == "nil?", thrown
 
     assert "b5" in {lam.name for lam in structure(program, "LoadStoreElimination_deadStoreBothArms").lambdas}
-    assert cyclic(structure(program, "LoadStoreElimination_hoistLoadOutOfLoop"))
+    assert looping(structure(program, "LoadStoreElimination_hoistLoadOutOfLoop"))
     print("ok   null checks and calls' exceptions become guards, and straight-line blocks one λ; merges and loop headers stay")
 
 
@@ -83,7 +48,7 @@ def check_straightened_programs_stay_valid() -> None:
     graal = prelude.load()
     for path in (LOAD_STORE_ELIMINATION, SIGNATURES, ALIASING):
         for partition in ("none", "field", "object", "object-field"):
-            program = translate(path, partition)
+            program, _ = translate(path, partition)
             straighten(program)
             errors = check(program) + prelude.check(program, graal)
             assert not errors, (path.name, partition, errors[:5])
@@ -125,7 +90,7 @@ def check_the_flag() -> None:
         assert done.stderr.strip().endswith("ok"), done.stderr[-200:]
         return done.stdout.rstrip("\n")
 
-    program = translate(LOAD_STORE_ELIMINATION, "field")
+    program, _ = translate(LOAD_STORE_ELIMINATION, "field")
     plain = to_text(program).rstrip("\n")
     straighten(program)
     assert run("--shape") == to_text(program).rstrip("\n")

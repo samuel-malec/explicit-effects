@@ -21,26 +21,9 @@ from effects.kills import ANY, kills
 from effects.signatures import PARTITIONERS, analyse, no_analysis
 from graal.graal_import import PointsToFacts, load, load_facts
 from graal2ct.translate import Translation
+from translations import looping
 
 SUITE = Path(__file__).parents[2] / "graal-export" / "out" / "suite"
-
-
-def looping(s: Structure) -> set[str]:
-    """The λs on a loop: those that jump or branch, through others of the
-    method's λs, back to themselves. A call of the method itself isn't a loop."""
-    refs = {lam.name: {i.op for i in lam.body if i.type == s.name and i.op != "run"} for lam in s.lambdas}  # "run": a method's entry
-    found = set()
-    for start in refs:
-        seen, work = set(), list(refs[start])
-        while work:
-            name = work.pop()
-            if name == start:
-                found.add(start)
-                break
-            if name not in seen:
-                seen.add(name)
-                work.extend(refs.get(name, ()))
-    return found
 
 
 def export(example: str, allocation_sites: bool = False) -> Path:
