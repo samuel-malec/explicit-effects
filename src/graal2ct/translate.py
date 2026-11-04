@@ -663,18 +663,8 @@ class MethodTranslation:
         self.calls[structure] = n.op
         result = None if n.type == "void" else _type(n)
         values = [i for i in n.inputs if self.nodes[self.value(i)].op not in VIRTUAL and self.type_of(i) != "void"]
-        heaps = ["heap"] * len(self.tokens)
         thrown = self._thrown(n) if n.id == self.throwing else []  # one that Graal says may throw
-        ftype = function_type([self.type_of(i) for i in values] + heaps,
-                              ([result] if result else []) + [t for _, t in thrown] + heaps)
-
-        versions = [self._advance(t) for t in self.tokens]
-        k = self._continuation(n.id)
-
-        self._emit(structure, "run", [], [k], [ftype])
-        self._emit(ftype, "call", [k, *(self.ref(i) for i in values), *(before for before, _ in versions)],
-                   ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions],
-                   ([result] if result else []) + [t for _, t in thrown] + heaps, note=n.op)
+        self._emit_call(n, structure, values, self.tokens, result, thrown, note=n.op)
 
     def _thrown(self, n: Node) -> list[tuple[str, str]]:
         """The exception the node that ends the block gives back, as the block's exception edge
@@ -709,26 +699,27 @@ class MethodTranslation:
             observes = ()
 
         tokens = [self._token_for(p, f"the call to {callee}") for p in partitions]
-        heaps = ["heap"] * len(tokens)
         constructs = ".<init>(" in callee
-
         result = "ref" if constructs else None if n.type == "void" else _type(n)
-        thrown = self._thrown(n)
-        arg_types = [self.type_of(a) for a in n.args]
-
-        out_types = ([result] if result else []) + [t for _, t in thrown] + heaps
-        ftype = function_type(arg_types + heaps, out_types)
-        versions = [self._advance(t) for t in tokens]
-
-        outs = ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions]
-        k = self._continuation(n.id)
-        self._emit(structure, "run", [], [k], [ftype])
-
-        self._emit(ftype, "call", [k, *(self.ref(a) for a in n.args), *(before for before, _ in versions)], outs,
-                   out_types, note=callee)
-        self.body[-1].observes = observes
+        call = self._emit_call(n, structure, list(n.args), tokens, result, self._thrown(n), note=callee)
+        call.observes = observes
         if constructs:
             self.renamed[self.value(n.args[0])] = f"v{n.id}"
+
+    def _emit_call(self, n: Node, structure: str, args: list[int], tokens: list[str], result: str | None,
+                   thrown: list[tuple[str, str]], note: str) -> Instr:
+        """Take the structure's run as a closure and call it with the values and the tokens: it gives back the
+        node's value if there is a result, the exception if the node may throw, and each token's next version."""
+        heaps = ["heap"] * len(tokens)
+        out_types = ([result] if result else []) + [t for _, t in thrown] + heaps
+        ftype = function_type([self.type_of(a) for a in args] + heaps, out_types)
+        versions = [self._advance(t) for t in tokens]
+        k = self._continuation(n.id)
+        self._emit(structure, "run", [], [k], [ftype])
+        self._emit(ftype, "call", [k, *(self.ref(a) for a in args), *(before for before, _ in versions)],
+                   ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions],
+                   out_types, note=note)
+        return self.body[-1]
 
     def _continuation(self, node_id: int) -> str:
         """A call's callee as a value: k and the node, unless a jump to a block of that number has it."""
