@@ -8,6 +8,7 @@ from cthu import parser, prelude
 from cthu.ir import Instr, Lambda, Program, to_text
 from cthu.lexer import ParseError
 from cthu.ssu import LinearityError, check, linearize
+from effects.kills import ANY, kills, partitioned
 from effects.signatures import (
     PARTITIONERS,
     REST,
@@ -412,7 +413,6 @@ def check_kills_for_graal() -> None:
     writes Counter.value only of the counters passed to it, which is not the
     partition of forwardAcrossCallOnOtherObject's own counter; each access has
     its partition, two in forwardPastOtherObject and one in its control."""
-    from effects.kills import ANY, kills
     facts, _ = load(LOAD_STORE_ELIMINATION)
     written = kills(facts)
     e = "LoadStoreElimination"
@@ -432,7 +432,6 @@ def check_kills_for_graal() -> None:
         assert written[f"{s}.{method.format(s)}"] == ANY, method
 
     # With objects told apart, a kill is a field of a set of objects, and each access has its set.
-    from effects.kills import partitioned
     facts, _ = load(ALIASING)
     written, located = kills(facts, "object-field"), partitioned(facts, "object-field")
     a = "Aliasing"

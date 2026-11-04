@@ -6,16 +6,16 @@ The exports come from `graal-export/suite` (or `make suite`); without them these
 checks are skipped.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
-
-from dataclasses import replace
 
 from cthu import prelude
 from cthu.ir import Program, Structure
 from cthu.ssu import check
 from diagnostics.blockers import blockers
+from diagnostics.publication import PACKAGE, item_shared
 from effects.elide import elidable
 from effects.kills import ANY, kills
 from effects.signatures import PARTITIONERS, analyse, no_analysis
@@ -253,9 +253,6 @@ def check_suite_publication() -> None:
     """The item of each example is shared when and only when the example publishes it, as far as the
     analysis can tell; scripts/sharing/publication-controls.sh leaves out each kind of site in turn,
     and each time the examples that kind publishes become local."""
-    from diagnostics.publication import PACKAGE, item_shared
-    from graal.graal_import import load_facts
-
     wrong = {}
     for example, expected in PUBLICATION.items():
         for variant, want in zip(("", ".allocsens"), expected):
