@@ -30,6 +30,11 @@ control     (not by default) control flow and loops left by graal, fields, objec
 matrix      (long) thread escape on the concurrency examples, every analysis and set of assumptions (§8.3)
 javac       (long) javac: cost of the field kill sets, the cutoff and lock removal, 3 rounds, and the time it takes to compile (§7, §8.4.2);
             with THREAD_ESCAPE=off: graal and fields, 3 rounds, loads left, and the time javac takes to compile with each image
+inliner     (long, only with THREAD_ESCAPE=off) AWFY under different inliner and unroller settings, graal and fields: the loads and branches
+            left by place (shape_metrics.py), the build time by stage, and the run time against the A/A; INLINER_BUILDS=3 timing builds
+            of each configuration, INLINER_RUNS=5 runs
+lie         (only with THREAD_ESCAPE=off) the control that a false claim must fail, at -O3 and at the default level: countInto claimed
+            to write nothing, in LoadStoreElimination, with the loads left by place
 frameworks  (long) PetClinic and three Barista servers: builds, removable sites, PetClinic under load (§8.6, §8.7);
             needs ~/eval/petclinic and ~/eval/barista (bundles copied from the laptop);
             with THREAD_ESCAPE=off: graal and fields, 3 rounds, on PetClinic and eleven Barista applications (cost, loads left),
@@ -65,13 +70,15 @@ if [[ ${THREAD_ESCAPE:-on} == off ]]; then
     # the stages that remove locks or read what thread escape found have nothing to run without it
     NO_CONCURRENCY=1
     DEFAULT_STAGES=(loads time ceiling cost)
-    ALL_STAGES=(loads time ceiling cost control javac frameworks)
+    ALL_STAGES=(loads time ceiling cost control javac frameworks inliner lie)
 fi
+INLINER_SETTINGS=(${INLINER_ONLY:-base nounroll nopeel notrivial notrivial-nounroll trivial5 noiba O1 Os})  # see shape-sweep.sh; INLINER_ONLY="base O1" to test
+LIE_CLAIM='LoadStoreElimination.countInto(LLoadStoreElimination$Counter;LLoadStoreElimination$Link;)V'
 BARISTA_APPS=(vanilla-hello-world vertx-hello-world micronaut-hello-world micronaut-shopcart micronaut-similarity helidon-hello-world
               dropwizard-hello-world play-scala-hello-world ktor-hello-world spring-hello-world spring-petclinic)  # not the two Quarkus ones: they fail without the feature too
 
 wait_quiet() {  # the timings are of a machine with nothing else running
-    while [[ $(cut -d. -f1 /proc/loadavg) -ge 2 ]]; do sleep 15; done
+    while [[ $(cut -d. -f1 /proc/loadavg) -ge ${QUIET_LOAD:-2} ]]; do sleep 15; done  # QUIET_LOAD=100 to test the stages on a machine that is not quiet
     echo "machine quiet at $(date +%T), load $(cut -d' ' -f1-3 /proc/loadavg)"
 }
 
@@ -169,6 +176,48 @@ stage_javac() {
         "$o/javac-allocsens-cost-graalcutoff-r1" "$o"/javac-allocsens-cost-graalflagscutoff-r{1,2,3} "$o"/javac-allocsens-cost-lockscutoff-r{1,2,3} --runs 10
 }
 
+stage_inliner() {
+    local setting n flags builds=${INLINER_BUILDS:-3} runs=${INLINER_RUNS:-5} o="$HERE/out"
+    echo "== the images of every setting with source positions, for what is left of the loads and branches"
+    "$SCRIPTS/evaluation/shape-sweep.sh" "${INLINER_SETTINGS[@]}"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/shape_metrics.py" --sweep "${INLINER_SETTINGS[@]/#/$o/awfy-}"
+    for setting in "${INLINER_SETTINGS[@]}"; do
+        echo "== setting $setting: $(FLAGS=1 "$SCRIPTS/evaluation/shape-sweep.sh" "$setting")"
+        flags=$(FLAGS=1 "$SCRIPTS/evaluation/shape-sweep.sh" "$setting")
+        local dirs=() images=(--image "graal-1=$o/awfy-$setting-t1/graal/awfy-$setting-t1" --image "graal-1-again=$o/awfy-$setting-t1/graal/awfy-$setting-t1")
+        for n in $(seq 1 "$builds"); do
+            ONLY="graal fields" TAG="$setting-t$n" EXTRA="$flags" "$HERE/run.sh" Awfy
+            dirs+=("$o/awfy-$setting-t$n")
+            [[ $n -eq 1 ]] || images+=(--image "graal-$n=$o/awfy-$setting-t$n/graal/awfy-$setting-t$n")
+        done
+        for n in $(seq 1 "$builds"); do
+            images+=(--image "fields-$n=$o/awfy-$setting-t$n/fields/awfy-$setting-t$n")
+        done
+        echo "-- build time by stage ($builds builds of each configuration)"
+        uv run --project "$REPO" python "$SCRIPTS/evaluation/stage_times.py" "${dirs[@]}" --steps
+        echo "-- loads left"
+        counts "${dirs[@]/%//graal/counts.txt}" "${dirs[@]/%//fields/counts.txt}"
+        wait_quiet
+        echo "-- run time (the first graal image twice is the noise)"
+        taskset -c 4-7 uv run --project "$REPO" python "$REPO/programs/awfy/time.py" "${images[@]}" --runs "$runs"
+    done
+}
+
+stage_lie() {
+    local level opt tag
+    for level in default O3; do
+        opt=""; tag=claim-default
+        [[ $level == O3 ]] && { opt="-O3"; tag=claim-o3; }
+        echo "== LoadStoreElimination at $level, honest and with the false claim"
+        EXTRA="$opt -H:+TrackNodeSourcePosition" ONLY="graal fields" TAG=$tag "$HERE/run.sh" LoadStoreElimination
+        LIE="$LIE_CLAIM" EXTRA="$opt -H:+TrackNodeSourcePosition" ONLY="graal fields" TAG=$tag "$HERE/run.sh" LoadStoreElimination || true  # the lie must give a wrong result
+        for k in "" "-lie"; do
+            echo "-- $([[ -z $k ]] && echo honest || echo "the false claim")"
+            uv run --project "$REPO" python "$SCRIPTS/evaluation/shape_metrics.py" "$HERE/out/loadstoreelimination$k-$tag"/{graal,fields} --methods 0 --exclude NONE
+        done
+    done
+}
+
 stage_frameworks() {
     local app r
     if [[ -n $NO_CONCURRENCY ]]; then
@@ -212,6 +261,10 @@ main() {
     [[ ${stages[0]} != all ]] || stages=("${ALL_STAGES[@]}")
     for stage in "${stages[@]}"; do
         declare -F "stage_$stage" > /dev/null || { echo "unknown stage $stage (see --list)" >&2; return 2; }
+        if [[ -z $NO_CONCURRENCY && $stage =~ ^(inliner|lie)$ ]]; then
+            echo "stage $stage is measured without a model of concurrency: run it with THREAD_ESCAPE=off" >&2
+            return 2
+        fi
         if [[ -n $NO_CONCURRENCY && $stage =~ ^(shapes|matrix)$ ]]; then
             echo "stage $stage needs thread escape, and THREAD_ESCAPE=off leaves it out" >&2
             return 2

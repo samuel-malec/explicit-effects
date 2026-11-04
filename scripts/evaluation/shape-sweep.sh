@@ -6,6 +6,7 @@
 #   scripts/evaluation/shape-sweep.sh                    # every setting below
 #   scripts/evaluation/shape-sweep.sh base nounroll      # some of them
 #   LIST=1 scripts/evaluation/shape-sweep.sh             # only print the settings
+#   FLAGS=1 scripts/evaluation/shape-sweep.sh nounroll   # the options of one setting (for timing builds, which keep no positions)
 #   THREAD_ESCAPE=off ROUNDS=2 scripts/evaluation/shape-sweep.sh base   # builds awfy-base and awfy-base-2 (FIRST_ROUND=2 only the second)
 #
 # The settings are the levels of the optimization (-O), the inliner's switches and its limit for trivial methods, and the
@@ -21,14 +22,19 @@ declare -A SETTINGS=(
     [notrivial]="-O3 -H:-AOTTrivialInline"
     [trivial5]="-O3 -H:+AOTTrivialInline -H:MaxNodesInTrivialMethod=5"
     [noaot]="-O3 -H:-AOTInline"
+    [noiba]="-O3 -H:+AOTTrivialInline -H:-InlineBeforeAnalysis"
     [O1]="-O1 -H:+AOTTrivialInline"
     [Os]="-Os -H:+AOTTrivialInline"
     [notrivial-nounroll]="-O3 -H:-AOTTrivialInline $UNROLL"
     [noaot-nounroll]="-O3 -H:-AOTInline $UNROLL"
     [Os-nounroll]="-Os -H:+AOTTrivialInline $UNROLL"
 )
-ORDER=(base nounroll nopeel notrivial trivial5 noaot O1 Os notrivial-nounroll noaot-nounroll Os-nounroll)
+ORDER=(base nounroll nopeel notrivial trivial5 noaot noiba O1 Os notrivial-nounroll noaot-nounroll Os-nounroll)
 
+if [[ -n ${FLAGS:-} ]]; then  # FLAGS=1 shape-sweep.sh base: the native-image options of a setting, without the source positions
+    echo "${SETTINGS[${1:?usage: FLAGS=1 shape-sweep.sh <setting>}]}"
+    exit 0
+fi
 if [[ -n ${LIST:-} ]]; then
     for name in "${ORDER[@]}"; do printf '%-20s %s\n' "$name" "${SETTINGS[$name]}"; done
     exit 0
