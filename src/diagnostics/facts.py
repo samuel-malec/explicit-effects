@@ -17,6 +17,7 @@ import re
 import sys
 from pathlib import Path
 
+from effects.signatures import STATICS
 from graal.graal_import import load
 
 # Effects the facts can't name one by one, as the export lists them.
@@ -37,7 +38,7 @@ def short_object(name: str) -> str:
     """objects.X$Counter@objects.X.main([Ljava/lang/String;)V:0 → Counter@main:0, and so for
     each call site an inlined allocation went through."""
     kind, _, site = name.partition("@")
-    if kind.endswith(".<statics>"):  # a static field's pseudo-object: its class
+    if kind.endswith(STATICS):  # a static field's pseudo-object: its class
         return ".".join(kind.split(".")[-2:])
     kind = re.split(r"[.$]", kind)[-1]
     if not site:

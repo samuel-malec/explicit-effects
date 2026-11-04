@@ -1,6 +1,7 @@
 """Import a graal-export file which contains Graal IR annotated with points-to information."""
 
 import json
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -18,14 +19,15 @@ def load_facts(path: str | Path, assumptions: str | None = None) -> PointsToFact
     """Only the facts of an export, without reading its graphs. `assumptions` names one set of
     thread-escape assumptions, if the export was made with all of them (`none`, `thread-confined`,
     `thread-confined,vm-fields`, ...): the shared objects are then those under that set."""
-    data = json.loads(Path(path).read_text())
-    return PointsToFacts(data.get("methods", {}), data.get("fields", {}), _shared(data, assumptions))
+    return _facts(json.loads(Path(path).read_text()), assumptions)
 
 
-def _shared(data: dict, assumptions: str | None = None) -> frozenset[str] | None:
+def _facts(data: dict, assumptions: str | None = None) -> PointsToFacts:
     if assumptions is not None:
-        return frozenset(data["sharedObjectsByAssumptions"][assumptions])
-    return frozenset(data["sharedObjects"]) if "sharedObjects" in data else None
+        shared = frozenset(data["sharedObjectsByAssumptions"][assumptions])
+    else:
+        shared = frozenset(data["sharedObjects"]) if "sharedObjects" in data else None
+    return PointsToFacts(data.get("methods", {}), data.get("fields", {}), shared)
 
 
 def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
@@ -45,10 +47,6 @@ def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
         raise ValueError(f"{path} has no graphs - it was written with DUMP_JSON, not DUMP_IR")
 
     graphs = [parse_graph(g) for g in data["graphs"]]
-    counts: dict[str, int] = {}
-
-    for g in graphs:
-        counts[g.name] = counts.get(g.name, 0) + 1
-
+    counts = Counter(g.name for g in graphs)
     keyed = {(g.name if counts[g.name] == 1 else g.name + g.descriptor): g for g in graphs}
-    return PointsToFacts(data.get("methods", {}), data.get("fields", {}), _shared(data)), keyed
+    return _facts(data), keyed

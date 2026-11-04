@@ -79,7 +79,7 @@ def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str
     methods = facts.methods
     written: dict[str, set[str]] = {}
     for m, e in methods.items():
-        own = {field if part(field, receivers) == rest else part(field, receivers)
+        own = {field if (p := part(field, receivers)) == rest else p
                for kind, field, receivers in accesses(e) if kind == "write"}
         written[m] = own | set(e.get("vmWrites", ())) | ({INIT} if e.get("allocates") else set())
 

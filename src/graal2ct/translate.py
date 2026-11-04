@@ -53,7 +53,12 @@ class Unsupported(Exception):
 
 
 def structure_name(method: str) -> str:
-    return "".join(c if c.isalnum() else "_" for c in method)
+    return _identifier(method)
+
+
+def _identifier(text: str) -> str:
+    """The text with every character but a letter or a digit made `_`."""
+    return "".join(c if c.isalnum() else "_" for c in text)
 
 
 def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
@@ -68,7 +73,7 @@ def token_names(partitions: tuple[str, ...]) -> dict[str, str]:
             break
 
     for p, s in parts.items():
-        names[p] = "".join(c if c.isalnum() else "_" for c in ("h_" + "_".join(s[-depth:])).replace("[]", "_arr"))
+        names[p] = _identifier(("h_" + "_".join(s[-depth:])).replace("[]", "_arr"))
         names[p] += "_" if names[p][-1].isdigit() else ""
 
     return names
@@ -410,6 +415,13 @@ class MethodTranslation:
             raise Unsupported(f"{what} touches {partition}, which the signature of {self.graph.name} lacks")
         return self.token[partition]
 
+    def _partition(self, n: Node, location: str) -> str:
+        """The partition of the node's access to `location`, a field or an array kind, through its receivers."""
+        try:
+            return self.effects.partition(location, _receivers(n))
+        except ValueError as e:  # objects the facts don't list together
+            raise Unsupported(str(e)) from e
+
     def _node(self, n: Node) -> None:
         op, v, t = n.op, f"v{n.id}", _type(n)
         if op in ("Parameter", "ValuePhi", CAUGHT) or op in ALIASES or op in ENDS:
@@ -563,10 +575,7 @@ class MethodTranslation:
             self._synchronize("release", f"volatile write of {n.field} at bci {n.bci}", n.receivers)
         value = _type(n) if n.op == "LoadField" else self.type_of(n.inputs[-1])
         k = self.program.field_index(n.field, value)
-        try:
-            partition = self.effects.partition(n.field, None if n.receivers is None else frozenset(n.receivers))
-        except ValueError as e:  # objects the facts don't list together
-            raise Unsupported(str(e)) from e
+        partition = self._partition(n, n.field)
 
         before, after = self._advance(self._token_for(partition, n.field))
         static = "static" if (n.op == "LoadField" and not n.inputs) or (
@@ -579,10 +588,7 @@ class MethodTranslation:
             self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], field=n.field)
 
     def _array(self, n: Node) -> None:
-        try:
-            partition = self.effects.partition(n.kind, None if n.receivers is None else frozenset(n.receivers))
-        except ValueError as e:  # objects the facts don't list together
-            raise Unsupported(str(e)) from e
+        partition = self._partition(n, n.kind)
 
         before, after = self._advance(self._token_for(partition, n.kind))
         ins = [before, *(self.ref(i) for i in n.inputs)]
@@ -619,7 +625,7 @@ class MethodTranslation:
             size = o.length if o.op == "VirtualArray" else len(o.fields)
             name = self.ref(o.id)
             given = self.nodes.get(self.allocated.get(o.id))
-            receivers = frozenset(given.receivers) if given is not None and given.receivers is not None else None
+            receivers = _receivers(given) if given is not None else None
 
             for i, value in enumerate(n.entries[start:start + size]):
                 field = o.fields[i] if o.op != "VirtualArray" else o.kind
@@ -817,6 +823,11 @@ class MethodTranslation:
 
 def _type(n: Node) -> str:
     return "bool" if n.type == "cond" else n.type
+
+
+def _receivers(n: Node) -> frozenset[str] | None:
+    """The objects the node's access may touch, None when the facts can't say."""
+    return None if n.receivers is None else frozenset(n.receivers)
 
 
 def _element(kind: str) -> str:
