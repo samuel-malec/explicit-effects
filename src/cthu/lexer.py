@@ -50,7 +50,6 @@ def tokenize(text: str) -> list[Token]:
     i, line, line_start = 0, 1, 0
 
     while i < len(text):
-
         ch, column = text[i], i - line_start + 1
         if ch == "\n":
             tokens.append(Token(Category.EOL, ch, line, column))

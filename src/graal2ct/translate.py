@@ -32,12 +32,10 @@ VIRTUAL = {"VirtualInstance", "VirtualArray", "VirtualBoxing"}
 
 # Nodes that touch memory in a way the dialect has no operation for. Each becomes a call to
 # an external that takes every token of the method: the method's signature covers the node.
-OPAQUE = {"EnsureClassInitialized", "MarkStaticFinalFieldInitialized", "PureBox", "AllocatingBox", "CopyOf",
-          "CopyOfRange",
+OPAQUE = {"EnsureClassInitialized", "MarkStaticFinalFieldInitialized", "PureBox", "AllocatingBox",
+          "CopyOf", "CopyOfRange", "ArrayCopy", "ArrayCopyWithConversions",
           "ArrayEquals", "ArrayRegionEquals", "ArrayRegionEqualsWithMask", "ArrayCompareTo", "ArrayRegionCompareTo",
-          "ArrayIndexOf", "VectorizedHashCode", "CalcStringAttributes", "StringLatin1Inflate",
-          "ArrayCopyWithConversions",
-          "UnaryMathIntrinsic", "ArrayCopy"}
+          "ArrayIndexOf", "VectorizedHashCode", "CalcStringAttributes", "StringLatin1Inflate", "UnaryMathIntrinsic"}
 
 ALIASES = {"Pi", "ValueProxy", "PublishWrites", "StateSplitProxy"}
 
@@ -442,7 +440,7 @@ class MethodTranslation:
         elif op == "Unbox":
             self._emit("ref", f"unbox_{t}", [self.ref(n.inputs[0])], [v], [t])
 
-        elif op == "IntegerTest": 
+        elif op == "IntegerTest":
             x, y = n.inputs[:2]
             t_in = self.type_of(x)
             self._emit(t_in, "and", [self.ref(x), self.ref(y)], [f"{v}_and"], [t_in])
@@ -619,7 +617,7 @@ class MethodTranslation:
             name = self.ref(o.id)
             given = self.nodes.get(self.allocated.get(o.id))
             receivers = frozenset(given.receivers) if given is not None and given.receivers is not None else None
-            
+
             for i, value in enumerate(n.entries[start:start + size]):
                 field = o.fields[i] if o.op != "VirtualArray" else o.kind
                 partition = self._initialized(field, receivers)
@@ -629,7 +627,7 @@ class MethodTranslation:
                     continue
 
                 before, after = self._advance(self.token[partition])
-                
+
                 if o.op != "VirtualArray":
                     k = self.t.program.field_index(field, self.type_of(value))
                     self._emit("heap", f"init_{k}", [before, name, self.ref(value)], [after], ["heap"], field=field)
@@ -660,10 +658,10 @@ class MethodTranslation:
         thrown = self._thrown(n) if n.id == self.throwing else []  # one that Graal says may throw
         ftype = function_type([self.type_of(i) for i in values] + heaps,
                               ([result] if result else []) + [t for _, t in thrown] + heaps)
-        
+
         versions = [self._advance(t) for t in self.tokens]
         k = self._continuation(n.id)
-        
+
         self._emit(structure, "run", [], [k], [ftype])
         self._emit(ftype, "call", [k, *(self.ref(i) for i in values), *(before for before, _ in versions)],
                    ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions],
@@ -708,11 +706,11 @@ class MethodTranslation:
         result = "ref" if constructs else None if n.type == "void" else _type(n)
         thrown = self._thrown(n)
         arg_types = [self.type_of(a) for a in n.args]
-        
+
         out_types = ([result] if result else []) + [t for _, t in thrown] + heaps
         ftype = function_type(arg_types + heaps, out_types)
         versions = [self._advance(t) for t in tokens]
-        
+
         outs = ([f"v{n.id}"] if result else []) + [x for x, _ in thrown] + [after for _, after in versions]
         k = self._continuation(n.id)
         self._emit(structure, "run", [], [k], [ftype])

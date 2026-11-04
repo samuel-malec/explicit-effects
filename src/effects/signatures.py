@@ -27,6 +27,7 @@ from graal.graal_import import PointsToFacts
 # The objects an access's receiver may point to, as the export names them
 Receivers = frozenset[str] | None
 
+
 class Partitioner(Protocol):
     """A field, or an array kind, `int[]`, and the
     objects an access may touch, to the access's partition."""
@@ -230,7 +231,8 @@ class Signature:
     writes: frozenset[str]
     opaque: bool = False  # may touch anything
     why: str = ""  # what makes it opaque: the effect at the root of it
-    releases: bool = False # whether this method, or any other method it may call, releases
+    releases: bool = False  # whether this method, or any other method it may call, releases
+
 
 @dataclass
 class Effects:
@@ -347,7 +349,7 @@ def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, s
 
 def program_partition(facts: PointsToFacts, partition: Partitioner) -> Partitioner:
     """The partitioning for the program's own fields and for array kinds.
-       Any other field, the platform's, is in the rest of memory."""
+    Any other field, the platform's, is in the rest of memory."""
     program = facts.fields.keys()  # the fields of the classes under analysis
 
     def part(field: str, receivers: Receivers = None) -> str:

@@ -15,10 +15,9 @@ import argparse
 from collections import Counter
 from pathlib import Path
 
-from graal.graal_import import PointsToFacts, load_facts
-
 from effects.kills import ANY, kills, kind
 from effects.signatures import callees_of, synchronizes_on, synchronizing
+from graal.graal_import import PointsToFacts, load_facts
 
 # Packages that are not the program under analysis, as the export treats them by default.
 PLATFORM = ("java.", "javax.", "jdk.", "sun.", "com.sun.", "com.oracle.", "org.graalvm.", "org.ietf.",
