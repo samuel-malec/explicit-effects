@@ -72,7 +72,7 @@ if [[ ${THREAD_ESCAPE:-on} == off ]]; then
     DEFAULT_STAGES=(loads time ceiling cost)
     ALL_STAGES=(loads time ceiling cost control javac frameworks inliner lie)
 fi
-INLINER_SETTINGS=(${INLINER_ONLY:-base nounroll nopeel notrivial notrivial-nounroll trivial5 noiba O1 Os})  # see shape-sweep.sh; INLINER_ONLY="base O1" to test
+INLINER_SETTINGS=(${INLINER_ONLY:-base nounroll nopeel notrivial notrivial-nounroll trivial5 nopriority nopriority-nounroll iba5 O1 Os})  # see shape-sweep.sh; INLINER_ONLY="base O1" to test
 LIE_CLAIM='LoadStoreElimination.countInto(LLoadStoreElimination$Counter;LLoadStoreElimination$Link;)V'
 BARISTA_APPS=(vanilla-hello-world vertx-hello-world micronaut-hello-world micronaut-shopcart micronaut-similarity helidon-hello-world
               dropwizard-hello-world play-scala-hello-world ktor-hello-world spring-hello-world spring-petclinic)  # not the two Quarkus ones: they fail without the feature too

@@ -10,7 +10,11 @@
 #   THREAD_ESCAPE=off ROUNDS=2 scripts/evaluation/shape-sweep.sh base   # builds awfy-base and awfy-base-2 (FIRST_ROUND=2 only the second)
 #
 # The settings are the levels of the optimization (-O), the inliner's switches and its limit for trivial methods, and the
-# loop optimizations that duplicate code (full and partial unrolling, peeling). base is the configuration of the 2 November run.
+# loop optimizations that duplicate code (full and partial unrolling, peeling). base is the configuration of the 2 November run: it
+# turns trivial inlining on, which run.sh's default leaves off (notrivial is that default). -H:-AOTInline is deprecated and read by
+# nothing, and so is -H:-InlineBeforeAnalysis (deprecated: no effect); -H:InlineBeforeAnalysisAllowedDepth (default 20) is the depth of the
+# inlining before the analysis, which changes the graphs the analysis sees (depth 1 fails in Native Image itself, 5 and 10 build). -H:-AOTPriorityInline switches off Graal's main inliner (only
+# -O2 and -O3 turn it on).
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 
 POSITIONS="-H:+TrackNodeSourcePosition"
@@ -21,15 +25,15 @@ declare -A SETTINGS=(
     [nopeel]="-O3 -H:+AOTTrivialInline $UNROLL -H:-LoopPeeling"
     [notrivial]="-O3 -H:-AOTTrivialInline"
     [trivial5]="-O3 -H:+AOTTrivialInline -H:MaxNodesInTrivialMethod=5"
-    [noaot]="-O3 -H:-AOTInline"
-    [noiba]="-O3 -H:+AOTTrivialInline -H:-InlineBeforeAnalysis"
+    [nopriority]="-O3 -H:+AOTTrivialInline -H:-AOTPriorityInline"
+    [iba5]="-O3 -H:+AOTTrivialInline -H:InlineBeforeAnalysisAllowedDepth=5"
     [O1]="-O1 -H:+AOTTrivialInline"
     [Os]="-Os -H:+AOTTrivialInline"
     [notrivial-nounroll]="-O3 -H:-AOTTrivialInline $UNROLL"
-    [noaot-nounroll]="-O3 -H:-AOTInline $UNROLL"
+    [nopriority-nounroll]="-O3 -H:+AOTTrivialInline -H:-AOTPriorityInline $UNROLL"
     [Os-nounroll]="-Os -H:+AOTTrivialInline $UNROLL"
 )
-ORDER=(base nounroll nopeel notrivial trivial5 noaot noiba O1 Os notrivial-nounroll noaot-nounroll Os-nounroll)
+ORDER=(base nounroll nopeel notrivial trivial5 nopriority iba5 O1 Os notrivial-nounroll nopriority-nounroll Os-nounroll)
 
 if [[ -n ${FLAGS:-} ]]; then  # FLAGS=1 shape-sweep.sh base: the native-image options of a setting, without the source positions
     echo "${SETTINGS[${1:?usage: FLAGS=1 shape-sweep.sh <setting>}]}"
