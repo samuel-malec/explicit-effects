@@ -43,13 +43,23 @@ def looping(s: Structure) -> set[str]:
     return found
 
 
+def export(example: str, allocation_sites: bool = False) -> Path:
+    """The example's export, by default or with allocation sites; the check is skipped when it is missing."""
+    path = SUITE / (f"{example}.allocsens.json" if allocation_sites else f"{example}.json")
+    if not path.exists():
+        pytest.skip(f"{path} is missing: run graal-export/suite")
+    return path
+
+
+def concurrency_facts(example: str) -> PointsToFacts:
+    """The facts of a concurrency example, exported with allocation sites."""
+    return load_facts(export(f"concurrency.{example}", allocation_sites=True))
+
+
 def translate(example: str, partition: str) -> tuple[Program, Translation]:
     """The example's `demo` method, under the partitioning; the object
     partitionings read the export with allocation sites."""
-    path = SUITE / (f"{example}.allocsens.json" if partition.startswith("object") else f"{example}.json")
-    if not path.exists():
-        pytest.skip(f"{path} is missing: run graal-export/suite")
-    facts, graphs = load(path)
+    facts, graphs = load(export(example, allocation_sites=partition.startswith("object")))
     effects = no_analysis() if partition == "none" else analyse(facts, PARTITIONERS[partition](facts))
     translation = Translation(graphs, effects)
     program = translation.translate([k for k in sorted(graphs) if ".demo(" in k or k.endswith(".demo")])
@@ -143,7 +153,7 @@ def check_suite_limits() -> None:
     s = demo(translate("limits.VolatileField", "field")[0])
     sync = [i.op for i in s.lambdas[0].body if i.op in ("acquire", "release", "getstatic_0")]
     assert sync == ["acquire"] * len(heaps(s.lambdas[0].params)) + ["getstatic_0"], sync
-    facts, graphs = load(SUITE / "limits.OpaqueCall.json")
+    facts, graphs = load(export("limits.OpaqueCall"))
     effects = analyse(facts, PARTITIONERS["field"](facts))
     s = demo(translate("limits.OpaqueCall", "field")[0])
     assert len(heaps(s.lambdas[0].params)) == len(effects.partitions)
@@ -174,10 +184,7 @@ SYNCHRONIZING_CALLS = {
 
 
 def synchronizing_call(example: str, partition: str):
-    path = SUITE / (f"{example}.allocsens.json" if partition.startswith("object") else f"{example}.json")
-    if not path.exists():
-        pytest.skip(f"{path} is missing: run graal-export/suite")
-    facts, _ = load(path)
+    facts, _ = load(export(example, allocation_sites=partition.startswith("object")))
     suffix, expected = SYNCHRONIZING_CALLS[example]
     method = next(m for m in facts.methods if m.startswith(example) and suffix in m)
     return facts, method, expected
@@ -215,9 +222,9 @@ def check_suite_blockers() -> None:
     object only this thread reaches only when all synchronization counts, and with none counting
     nothing blocks in these programs."""
     program = ["concurrency."]
-    local, _ = load(SUITE / "concurrency.AcrossLocalMonitor.json")
+    local, _ = load(export("concurrency.AcrossLocalMonitor"))
     assert blockers(local, program, "shared") == {} and sum(blockers(local, program, "all").values()) == 3
-    shared, _ = load(SUITE / "concurrency.AcrossLockSharedBlocks.json")
+    shared, _ = load(export("concurrency.AcrossLockSharedBlocks"))
     assert sum(blockers(shared, program, "shared").values()) == 3 and blockers(shared, program, "none") == {}
     print("ok   suite: the blockers of a program's methods count synchronization as the kill sets do")
 
@@ -255,13 +262,10 @@ def check_suite_publication() -> None:
     and each time the examples that kind publishes become local."""
     wrong = {}
     for example, expected in PUBLICATION.items():
-        for variant, want in zip(("", ".allocsens"), expected):
-            path = SUITE / f"{PACKAGE}.{example}{variant}.json"
-            if not path.exists():
-                pytest.skip(f"{path} is missing: run graal-export/suite")
-            got = item_shared(load_facts(path), example)
+        for allocation_sites, want in zip((False, True), expected):
+            got = item_shared(load_facts(export(f"{PACKAGE}.{example}", allocation_sites)), example)
             if want is not None and got != want:
-                wrong[example, variant or ".default"] = got
+                wrong[example, ".allocsens" if allocation_sites else ".default"] = got
     assert not wrong, wrong
     print("ok   suite: what another thread can reach is shared, through a static field, a field, an array, a copy, an atomic, a queue, a map and a task")
 
@@ -270,25 +274,19 @@ def check_suite_elidable_locks() -> None:
     """A monitor goes when every object it may lock is reached by one thread only and nothing waits on it;
     a lock on a shared object stays, and so does a local one that is waited on. Each answer has a control
     that changes it."""
-    def facts(example: str) -> PointsToFacts:
-        path = SUITE / f"concurrency.{example}.allocsens.json"
-        if not path.exists():
-            pytest.skip(f"{path} is missing: run graal-export/suite")
-        return load_facts(path)
-
     def in_method(sites: dict[str, str], method: str) -> dict[str, str]:
         return {s: k for s, k in sites.items() if s.startswith(f"concurrency.{method}(")}
 
     # The tally of AcrossLocalMonitor is main's alone: its enter and its exit can go.
-    local = facts("AcrossLocalMonitor")
+    local = concurrency_facts("AcrossLocalMonitor")
     sites = in_method(elidable(local), "AcrossLocalMonitor$Tally.add")
     assert sorted(sites.values()).count("enter") == 1 and "exit" in sites.values(), sites
     # The control: if every object counted as shared, nothing could go.
     assert not elidable(replace(local, shared=None)), "a lock on a shared object stays"
     # A lock on a static object is every thread's.
-    assert not in_method(elidable(facts("AcrossLockLocal")), "AcrossLockLocal.logged")
+    assert not in_method(elidable(concurrency_facts("AcrossLockLocal")), "AcrossLockLocal.logged")
     # A local object that is waited on keeps its lock...
-    waited = facts("WaitedOnKeepsLock")
+    waited = concurrency_facts("WaitedOnKeepsLock")
     assert not in_method(elidable(waited), "WaitedOnKeepsLock.pass"), "a lock that wait needs stays"
     # ...and the control: without the waits in the facts the same lock is listed.
     unwaited = replace(waited, methods={m: {k: v for k, v in e.items() if k != "waits"} for m, e in waited.methods.items()})
@@ -302,20 +300,16 @@ def check_suite_elidable_locks() -> None:
 def check_suite_elidable_volatiles() -> None:
     """A volatile access of a field becomes an ordinary one when every object it may be on is reached by one
     thread only; on an object handed to a thread, or in a static field, it stays volatile."""
-    def facts(example: str) -> PointsToFacts:
-        path = SUITE / f"concurrency.{example}.allocsens.json"
-        if not path.exists():
-            pytest.skip(f"{path} is missing: run graal-export/suite")
-        return load_facts(path)
-
     def in_method(sites: dict[str, str], method: str) -> dict[str, str]:
         return {s: k.split("\t")[0] for s, k in sites.items() if s.startswith(f"concurrency.{method}(")}
 
-    local = facts("VolatileOnLocal")
+    local = concurrency_facts("VolatileOnLocal")
     kinds = sorted(in_method(elidable(local), "VolatileOnLocal.fill").values())
     assert kinds == ["plain-read", "plain-read", "plain-write"], kinds
     # The control: if every object counted as shared, nothing could change.
     assert not elidable(replace(local, shared=None)), "a volatile access on a shared object stays"
-    assert not in_method(elidable(facts("VolatileOnShared")), "VolatileOnShared.fill"), "the gauge a thread reaches stays volatile"
-    assert not in_method(elidable(facts("AcrossAcquireLocal")), "AcrossAcquireLocal.poll"), "a static field is every thread's"
+    assert not in_method(elidable(concurrency_facts("VolatileOnShared")), "VolatileOnShared.fill"), \
+        "the gauge a thread reaches stays volatile"
+    assert not in_method(elidable(concurrency_facts("AcrossAcquireLocal")), "AcrossAcquireLocal.poll"), \
+        "a static field is every thread's"
     print("ok   suite: the volatile accesses that become ordinary are those on objects one thread reaches")
