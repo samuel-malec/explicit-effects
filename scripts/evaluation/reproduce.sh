@@ -33,6 +33,11 @@ javac       (long) javac: cost of the field kill sets, the cutoff and lock remov
 inliner     (long, only with THREAD_ESCAPE=off) AWFY under different inliner and unroller settings, graal and fields: the loads and branches
             left by place (shape_metrics.py), the build time by stage, and the run time against the A/A; INLINER_BUILDS=3 timing builds
             of each configuration, INLINER_RUNS=5 runs
+knobs       (only with THREAD_ESCAPE=off) the options of Graal's main inliner that bound its budget, one by one: does each change what is
+            inlined? Only the graal image of AWFY with source positions for each level (KNOBS_ONLY="inl300 cgs50" to choose), and
+            what inlining_diff.py shows of them against base: the inlined call sites, and what is inlined into Queens
+budget      (long, only with THREAD_ESCAPE=off) the inliner stage for levels of that budget (BUDGET_ONLY="base inl600 inl300 nopriority"):
+            the loads and branches left by place, the build time by stage, and the run time against the A/A, for each level
 lie         (only with THREAD_ESCAPE=off) the control that a false claim must fail, at -O3 and at the default level: countInto claimed
             to write nothing, in LoadStoreElimination, with the loads left by place
 frameworks  (long) PetClinic and three Barista servers: builds, removable sites, PetClinic under load (§8.6, §8.7);
@@ -70,9 +75,13 @@ if [[ ${THREAD_ESCAPE:-on} == off ]]; then
     # the stages that remove locks or read what thread escape found have nothing to run without it
     NO_CONCURRENCY=1
     DEFAULT_STAGES=(loads time ceiling cost)
-    ALL_STAGES=(loads time ceiling cost control javac frameworks inliner lie)
+    ALL_STAGES=(loads time ceiling cost control javac frameworks inliner knobs budget lie)
 fi
 INLINER_SETTINGS=(${INLINER_ONLY:-base nounroll nopeel notrivial notrivial-nounroll trivial5 nopriority nopriority-nounroll iba5 O1 Os})  # see shape-sweep.sh; INLINER_ONLY="base O1" to test
+KNOB_SETTINGS=(${KNOBS_ONLY:-base inl3000 inl1000 inl600 inl400 inl300 inl200 inl100 cgs600 cgs300 cgs100 cgs50 cgs20 cgs10 cgs5
+                            cgn10000 cgn3000 cgn1000 cgn500 rootpen10 rootpen1000 rootpen1t200 rootpen10t200 rootpen1000t200
+                            nodepen1 nodepen100 cgs20+nodepen0 cgs20+nodepen1 nopriority})  # see shape-sweep.sh
+BUDGET_SETTINGS=(${BUDGET_ONLY:-base inl1000 inl600 inl400 inl300 inl200 nopriority})  # the levels of the sweep, chosen from the knobs
 LIE_CLAIM='LoadStoreElimination.countInto(LLoadStoreElimination$Counter;LLoadStoreElimination$Link;)V'
 BARISTA_APPS=(vanilla-hello-world vertx-hello-world micronaut-hello-world micronaut-shopcart micronaut-similarity helidon-hello-world
               dropwizard-hello-world play-scala-hello-world ktor-hello-world spring-hello-world spring-petclinic)  # not the two Quarkus ones: they fail without the feature too
@@ -203,6 +212,22 @@ stage_inliner() {
     done
 }
 
+stage_knobs() {
+    local o="$HERE/out"
+    echo "== the graal image of every setting with source positions"
+    CONFIGS=graal "$SCRIPTS/evaluation/shape-sweep.sh" "${KNOB_SETTINGS[@]}"
+    for setting in "${KNOB_SETTINGS[@]}"; do echo "-- $setting: $(FLAGS=1 "$SCRIPTS/evaluation/shape-sweep.sh" "$setting")"; done
+    echo "== what each inlined, against the first (the reference)"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/inlining_diff.py" "${KNOB_SETTINGS[@]/#/$o/awfy-}"
+}
+
+stage_budget() {
+    INLINER_SETTINGS=("${BUDGET_SETTINGS[@]}")
+    stage_inliner
+    echo "== what each level inlined, against the first (the reference)"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/inlining_diff.py" "${BUDGET_SETTINGS[@]/#/$HERE/out/awfy-}"
+}
+
 stage_lie() {
     local level opt tag
     for level in default O3; do
@@ -261,7 +286,7 @@ main() {
     [[ ${stages[0]} != all ]] || stages=("${ALL_STAGES[@]}")
     for stage in "${stages[@]}"; do
         declare -F "stage_$stage" > /dev/null || { echo "unknown stage $stage (see --list)" >&2; return 2; }
-        if [[ -z $NO_CONCURRENCY && $stage =~ ^(inliner|lie)$ ]]; then
+        if [[ -z $NO_CONCURRENCY && $stage =~ ^(inliner|knobs|budget|lie)$ ]]; then
             echo "stage $stage is measured without a model of concurrency: run it with THREAD_ESCAPE=off" >&2
             return 2
         fi

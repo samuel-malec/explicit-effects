@@ -15,6 +15,14 @@
 # nothing, and so is -H:-InlineBeforeAnalysis (deprecated: no effect); -H:InlineBeforeAnalysisAllowedDepth (default 20) is the depth of the
 # inlining before the analysis, which changes the graphs the analysis sees (depth 1 fails in Native Image itself, 5 and 10 build). -H:-AOTPriorityInline switches off Graal's main inliner (only
 # -O2 and -O3 turn it on).
+#
+# The budget of Graal's main inliner has no named settings; a name is built from pieces joined by +, each piece an option of the
+# inliner (PriorityInliningPhase.Options) added to base, so that any level can be asked for: inl<N> InlinedCompilerNodeLimit=N (the
+# root graph's size after which no more is inlined), cgs<N> CallGraphSizeLimit=N (calls explored), cgn<N> CallGraphCompilerNodeLimit=N
+# (their nodes), rootpen<X> RootSizePenaltyCoefficient=X, rootpen<X>t<T> with RootSizePenaltyTypicalGraphSize=T (above which roots
+# are penalized), nodepen<X> CompilerNodePenaltyCoefficient=X (the priority of big subtrees). inl300+cgs50 is both limits.
+#
+#   CONFIGS=graal scripts/evaluation/shape-sweep.sh inl300 cgs50   # only the graal image of each (default: graal and fields)
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../graal-native/env.sh"
 
 POSITIONS="-H:+TrackNodeSourcePosition"
@@ -35,24 +43,49 @@ declare -A SETTINGS=(
 )
 ORDER=(base nounroll nopeel notrivial trivial5 nopriority iba5 O1 Os notrivial-nounroll nopriority-nounroll Os-nounroll)
 
+budget_option() {  # one piece of a budget setting's name: its option, or nothing (and status 1) if it is not one
+    local x
+    case $1 in
+        inl[0-9]*) echo "-H:InlinedCompilerNodeLimit=${1#inl}" ;;
+        cgs[0-9]*) echo "-H:CallGraphSizeLimit=${1#cgs}" ;;
+        cgn[0-9]*) echo "-H:CallGraphCompilerNodeLimit=${1#cgn}" ;;
+        rootpen[0-9]*t[0-9]*) x=${1#rootpen}; echo "-H:RootSizePenaltyCoefficient=${x%%t*} -H:RootSizePenaltyTypicalGraphSize=${x##*t}" ;;
+        rootpen[0-9]*) echo "-H:RootSizePenaltyCoefficient=${1#rootpen}" ;;
+        nodepen[0-9]*) echo "-H:CompilerNodePenaltyCoefficient=${1#nodepen}" ;;
+        *) return 1 ;;
+    esac
+}
+
+setting_flags() {  # a setting's native-image options (without the source positions), or status 1 if there is no such setting
+    local piece option flags
+    if [[ -n ${SETTINGS[$1]:-} ]]; then echo "${SETTINGS[$1]}"; return 0; fi
+    flags=${SETTINGS[base]}
+    while IFS= read -r piece; do
+        option=$(budget_option "$piece") || return 1
+        flags="$flags $option"
+    done < <(tr '+' '\n' <<< "$1")
+    echo "$flags"
+}
+
 if [[ -n ${FLAGS:-} ]]; then  # FLAGS=1 shape-sweep.sh base: the native-image options of a setting, without the source positions
-    echo "${SETTINGS[${1:?usage: FLAGS=1 shape-sweep.sh <setting>}]}"
+    setting_flags "${1:?usage: FLAGS=1 shape-sweep.sh <setting>}" || { echo "error: no setting called $1" >&2; exit 2; }
     exit 0
 fi
 if [[ -n ${LIST:-} ]]; then
     for name in "${ORDER[@]}"; do printf '%-20s %s\n' "$name" "${SETTINGS[$name]}"; done
+    echo "(and budget settings built from inl<N> cgs<N> cgn<N> rootpen<X>[t<T>] nodepen<X> joined by +, see above: inl300+cgs50)"
     exit 0
 fi
 
 CHOSEN=("$@")
 [[ ${#CHOSEN[@]} -gt 0 ]] || CHOSEN=("${ORDER[@]}")
 for name in "${CHOSEN[@]}"; do
-    [[ -n ${SETTINGS[$name]:-} ]] || { echo "error: no setting called $name (LIST=1 lists them)" >&2; exit 2; }
+    setting_flags "$name" > /dev/null || { echo "error: no setting called $name (LIST=1 lists them)" >&2; exit 2; }
 done
 for name in "${CHOSEN[@]}"; do
     for round in $(seq "${FIRST_ROUND:-1}" "${ROUNDS:-1}"); do
         tag=$name
         [[ $round -eq 1 ]] || tag=$name-$round
-        EXTRA="${SETTINGS[$name]} $POSITIONS" ONLY="graal fields" TAG=$tag "$HERE/run.sh" Awfy
+        EXTRA="$(setting_flags "$name") $POSITIONS" ONLY="${CONFIGS:-graal fields}" TAG=$tag "$HERE/run.sh" Awfy
     done
 done
