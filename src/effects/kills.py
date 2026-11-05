@@ -37,7 +37,7 @@ IGNORABLE: dict[str, tuple[str, ...] | None] = {
 NAMED = {node for nodes in IGNORABLE.values() if nodes for node in nodes}
 
 
-def kind(text: str) -> str:
+def node_kind(text: str) -> str:
     """A fact's text without its position and the node's address: `EnsureClassInitializedNode`."""
     return re.split(r" at | \(|:", text, maxsplit=1)[0].strip()
 
@@ -48,7 +48,8 @@ def blocks(facts: PointsToFacts, method: dict, ignore: Collection[str] = ()) -> 
     that is unresolved, or a call of a method without facts. What `ignore` names does not count."""
     ignored = {node for name in ignore for node in (IGNORABLE[name] or ())}
     for text in method.get("unknown", ()):
-        if kind(text) not in ignored and not ("other-effects" in ignore and kind(text) not in NAMED):
+        node = node_kind(text)
+        if (node in NAMED and node not in ignored) or (node not in NAMED and "other-effects" not in ignore):
             return True
     if "synchronization" not in ignore and (synchronizing(facts, method, "acquires") or synchronizing(facts, method, "releases")):
         return True
@@ -79,7 +80,7 @@ def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str
     methods = facts.methods
     written: dict[str, set[str]] = {}
     for m, e in methods.items():
-        own = {field if part(field, receivers) == rest else part(field, receivers)
+        own = {field if (p := part(field, receivers)) == rest else p
                for kind, field, receivers in accesses(e) if kind == "write"}
         written[m] = own | set(e.get("vmWrites", ())) | ({INIT} if e.get("allocates") else set())
 

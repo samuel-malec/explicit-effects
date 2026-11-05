@@ -15,11 +15,10 @@ upper bound to compare a build with, not a build to keep.
 import argparse
 from pathlib import Path
 
+from effects.kills import ANY, IGNORABLE, kills
 from graal.graal_import import PointsToFacts, load_facts
 
 from .blockers import in_program
-from effects.kills import ANY, IGNORABLE, kills
-
 
 #: The layers the notes found in front of most opaque methods, then what lies behind them, in the order they were found.
 LAYERS = ("identity-hash", "class-initialization", "synchronization")

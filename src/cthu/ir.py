@@ -1,10 +1,15 @@
+"""The Cthulhu program the translation makes: a structure per method, its λs and their instructions, the names
+of its function types (`f_rh_ih`), and its text (`to_text`)."""
+
 from dataclasses import dataclass, field
 from functools import cache
 
-LINEAR = frozenset({"heap"})
+LINEAR = frozenset({"heap"})  # the types whose values are used exactly once: never copied, never dropped
 
 # How code leaves the method
 THROWS, TRAPS = "throws", "traps"
+
+ENTRY = "run"  # the λ a method starts in; taking it as a closure calls the method itself
 
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
 _TYPES = {code: t for t, code in _TYPE_CODES.items()}
@@ -47,10 +52,9 @@ class Instr:
     outs: list[str] = field(default_factory=list)
     out_types: list[str] = field(default_factory=list)
     note: str = ""  # a comment for the reader, which nothing reads back
-    at: str = ""  # where in the bytecode it came from, as graal-export names a position
     field: str = ""  # the field a field access reads or writes
     exit: str = ""  # how a guard leaves the method: THROWS or TRAPS
-    observes: tuple[int, ...] = () # tokens that are only read
+    observes: tuple[int, ...] = ()  # the tokens a call only reads: their places in ins, counted from the end
 
     def renamed(self, ins: list[str], outs: list[str]) -> "Instr":
         copy = object.__new__(Instr)
@@ -61,9 +65,11 @@ class Instr:
         line = " ".join([self.type, self.op, *self.ins])
         if self.outs:
             line += " →  " + " ".join(self.outs)
-        # A call's note is its callee, which the closure's structure already names.
-        comment = ("only reads " + " ".join(self.ins[at] for at in self.observes) if self.observes else "") \
-            if self.op == "call" else self.note or self.field or self.exit
+        if self.op == "call":
+            # A call's note is its callee, which the closure's structure already names.
+            comment = "only reads " + " ".join(self.ins[at] for at in self.observes) if self.observes else ""
+        else:
+            comment = self.note or self.field or self.exit
         return line + (f"   ; {comment}" if comment else "")
 
 

@@ -1,3 +1,5 @@
+"""Split Cthulhu text into tokens. A comment runs from `;` to the end of its line."""
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -15,7 +17,9 @@ class Category(Enum):
 
 
 KEYWORDS = {"type", "signature", "structure", "field", "class", "constant"}
-_PUNCT = {":", "∷", "×", "=", ","}
+# The characters that are a token on their own.
+_SINGLE = {**dict.fromkeys(":∷×=,", Category.PUNCT), **dict.fromkeys("[]", Category.BRACKET),
+           **dict.fromkeys("()", Category.PAREN), "λ": Category.LAMBDA}
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,8 @@ class ParseError(Exception):
 
 
 def is_ident_char(ch: str) -> bool:
+    """Whether the character can be part of a name: a letter or a digit, a sub- or superscript (h₁, xᵢ),
+    one of ° to ¿ (x²), or one of ? _ ' % ∅."""
     code = ord(ch)
     return (code <= 255 and ch.isalnum()) or 0x1D62 <= code < 0x1D66 or 0x2070 <= code < 0x20A0 \
         or 0x00B0 <= code < 0x00C0 or ch in "?_'%∅"
@@ -46,7 +52,6 @@ def tokenize(text: str) -> list[Token]:
     i, line, line_start = 0, 1, 0
 
     while i < len(text):
-
         ch, column = text[i], i - line_start + 1
         if ch == "\n":
             tokens.append(Token(Category.EOL, ch, line, column))
@@ -71,10 +76,8 @@ def tokenize(text: str) -> list[Token]:
             tokens.append(Token(Category.ARROW, arrow, line, column))
             i += len(arrow)
 
-        elif ch in _PUNCT or ch in "[]()λ":
-            category = (Category.PUNCT if ch in _PUNCT else Category.BRACKET if ch in "[]"
-            else Category.PAREN if ch in "()" else Category.LAMBDA)
-            tokens.append(Token(category, ch, line, column))
+        elif ch in _SINGLE:
+            tokens.append(Token(_SINGLE[ch], ch, line, column))
             i += 1
 
         elif is_ident_char(ch):

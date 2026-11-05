@@ -2,12 +2,12 @@ import copy
 import dataclasses
 import itertools
 import re
-from pathlib import Path
 
 from cthu import parser, prelude
 from cthu.ir import Instr, Lambda, Program, to_text
 from cthu.lexer import ParseError
 from cthu.ssu import LinearityError, check, linearize
+from effects.kills import ANY, kills, partitioned
 from effects.signatures import (
     PARTITIONERS,
     REST,
@@ -16,28 +16,12 @@ from effects.signatures import (
     by_field,
     by_object,
     by_object_field,
-    no_analysis,
     one_heap,
 )
 from graal.graal_import import load
 from graal.graal_ir import Node
 from graal2ct.translate import Translation
-
-DATA = Path(__file__).resolve().parent.parent / "data"
-LOAD_STORE_ELIMINATION = DATA / "loadstoreelimination.json"
-SIGNATURES = DATA / "signatures.json"
-ALIASING = DATA / "aliasing.json"  # exported with allocation sites
-
-
-def translate(partition: str = "none") -> tuple[Program, Translation]:
-    facts, graphs = load(LOAD_STORE_ELIMINATION)
-    effects = no_analysis() if partition == "none" else analyse(facts, PARTITIONERS[partition](facts))
-    translation = Translation(graphs, effects)
-    return translation.translate(sorted(graphs)), translation
-
-
-def structure(program: Program, name: str):
-    return next(s for s in program.structures if s.name == name)
+from translations import ALIASING, LOAD_STORE_ELIMINATION, SIGNATURES, looping, structure, translate
 
 
 def lam(program: Program, structure_name: str, name: str) -> Lambda:
@@ -56,12 +40,12 @@ def ops(lam: Lambda) -> list[str]:
     return [f"{i.type} {i.op}" for i in lam.body]
 
 
-def check_examples_translate() -> None:
+def check_load_store_elimination_translates() -> None:
     """Every method of LoadStoreElimination translates and passes the static-single-use
     check. main's allocations, which escape analysis made, become new_k, and
     their fields' first values init_k. forwardAcrossVirtualCall's interface call
     has two targets: it calls a dispatch that may do what either does."""
-    program, translation = translate()
+    program, translation = translate(LOAD_STORE_ELIMINATION)
     assert not translation.refused, translation.refused
     main = [i for lam in structure(program, "LoadStoreElimination_main").lambdas for i in lam.body]
     assert any(i.type == "heap" and i.op.startswith("new_") for i in main), "main allocates"
@@ -76,7 +60,7 @@ def check_examples_translate() -> None:
 def check_heap_is_threaded() -> None:
     """Each memory operation consumes the current heap and produces the next:
     the three stores of deadStoreOtherField are ordered by h → h1 → h2 → h3."""
-    program, _ = translate()
+    program, _ = translate(LOAD_STORE_ELIMINATION)
     body = lam(program, "LoadStoreElimination_deadStoreOtherField", "b2").body
     stores = [i for i in body if i.type == "heap" and i.op.startswith("set_")]
     assert [s.ins[0] for s in stores] == ["h", "h1", "h2"] and [s.outs[0] for s in stores] == ["h1", "h2", "h3"], stores
@@ -86,7 +70,7 @@ def check_heap_is_threaded() -> None:
 def check_branches_fork_the_heap() -> None:
     """An If picks one of two λs with opt/join; its frame hands the heap to
     both with `fork` -- exactly one runs -- while plain values are dup'ed."""
-    program, _ = translate()
+    program, _ = translate(LOAD_STORE_ELIMINATION)
     run = ops(lam(program, "LoadStoreElimination_deadStoreBothArms", "run"))
     assert "bool not" in run, run
     assert sum(op.endswith(" opt") for op in run) == 2 and sum(op.endswith(" join") for op in run) == 1, run
@@ -95,31 +79,13 @@ def check_branches_fork_the_heap() -> None:
     print("ok   a branch is opt/join over two λs; its frame forks the heap")
 
 
-def recursive_lambdas(program: Program, structure_name: str) -> set[str]:
-    """The λs that can reach themselves through the λs they reference."""
-    s = structure(program, structure_name)
-    calls = {l.name: {i.op for i in l.body if i.type == s.name} for l in s.lambdas}
-    recursive = set()
-    for start in calls:
-        seen, work = set(), list(calls[start])
-        while work:
-            name = work.pop()
-            if name == start:
-                recursive.add(start)
-                break
-            if name not in seen:
-                seen.add(name)
-                work.extend(calls.get(name, ()))
-    return recursive
-
-
 def check_loops_are_recursion() -> None:
     """hoistLoadOutOfLoop has a loop, so some λ reaches itself: the header,
     called again from the back edge. deadStoreBothArms has none, so no λ does."""
-    program, _ = translate()
-    loop = recursive_lambdas(program, "LoadStoreElimination_hoistLoadOutOfLoop")
+    program, _ = translate(LOAD_STORE_ELIMINATION)
+    loop = looping(structure(program, "LoadStoreElimination_hoistLoadOutOfLoop"))
     assert loop, "no λ in hoistLoadOutOfLoop calls itself"
-    assert not recursive_lambdas(program, "LoadStoreElimination_deadStoreBothArms")
+    assert not looping(structure(program, "LoadStoreElimination_deadStoreBothArms"))
     print(f"ok   a loop is recursion ({', '.join(sorted(loop))} in hoistLoadOutOfLoop); a loop-free method has none")
 
 
@@ -131,9 +97,9 @@ def check_exceptions_are_control_flow() -> None:
     takes it as its first parameter. The arm where the null check of counter
     fails makes an exception. Both go on to the λ that leaves the method with
     it as exc, and with every token; the λ that returns gives back null.
-    Every λ from which each path throws says so, for the rules. Nothing
+    Every λ from which each path throws says so, for --shape. Nothing
     deoptimizes in LoadStoreElimination, so nothing traps."""
-    program, _ = translate()
+    program, _ = translate(LOAD_STORE_ELIMINATION)
     s = structure(program, "LoadStoreElimination_forwardAcrossWritingCall")
     lambdas = {l.name: l for l in s.lambdas}
     assert [n for n, _ in lambdas["run"].outs][:2] == ["r", "exc"], lambdas["run"].outs
@@ -220,7 +186,7 @@ def check_overloads_resolve() -> None:
     forwardAcrossCallControl the one for a Counter. Every call to a translated
     method has the type of that method's run, and calls outside the export
     keep their overloads apart too."""
-    program, translation = translate()
+    program, translation = translate(LOAD_STORE_ELIMINATION)
     run = run_types(program)
     calls = method_calls(program)
     assert all(run[callee] == t for _, callee, t in calls if callee in run), calls
@@ -258,7 +224,7 @@ def check_programs_type_check() -> None:
     its own frame type, which a join of its closures takes."""
     graal = prelude.load()
     assert not graal.errors, graal.errors
-    program, _ = translate()
+    program, _ = translate(LOAD_STORE_ELIMINATION)
     errors = prelude.check(program, graal)
     assert not errors, errors[:5]
 
@@ -412,7 +378,6 @@ def check_kills_for_graal() -> None:
     writes Counter.value only of the counters passed to it, which is not the
     partition of forwardAcrossCallOnOtherObject's own counter; each access has
     its partition, two in forwardPastOtherObject and one in its control."""
-    from effects.kills import ANY, kills
     facts, _ = load(LOAD_STORE_ELIMINATION)
     written = kills(facts)
     e = "LoadStoreElimination"
@@ -432,7 +397,6 @@ def check_kills_for_graal() -> None:
         assert written[f"{s}.{method.format(s)}"] == ANY, method
 
     # With objects told apart, a kill is a field of a set of objects, and each access has its set.
-    from effects.kills import partitioned
     facts, _ = load(ALIASING)
     written, located = kills(facts, "object-field"), partitioned(facts, "object-field")
     a = "Aliasing"
@@ -456,16 +420,16 @@ def check_partitions_separate_effects() -> None:
     translates the same methods, and passes the single-use and type checks.
     Without an analysis the call takes the one heap token."""
     graal = prelude.load()
-    _, baseline = translate()
+    _, baseline = translate(LOAD_STORE_ELIMINATION)
     for partition in PARTITIONERS:
-        program, translation = translate(partition)
+        program, translation = translate(LOAD_STORE_ELIMINATION, partition)
         assert translation.refused.keys() == baseline.refused.keys(), (partition, translation.refused)
         errors = check(program) + prelude.check(program, graal)
         assert not errors, (partition, errors[:5])
 
     def writing_call(partition: str) -> tuple[list[str], str, list[str]]:
         """The tokens the call takes, the token the store gives, and what the jump to the load passes."""
-        program, _ = translate(partition)
+        program, _ = translate(LOAD_STORE_ELIMINATION, partition)
         b2 = lam(program, "LoadStoreElimination_forwardAcrossWritingCall", "b2")
         call = next(i for i in b2.body if i.op == "call" and "countInto" in i.note)
         store = next(i for i in b2.body if i.op.startswith("set_"))
@@ -561,7 +525,7 @@ def check_the_parser_reads_the_output_back() -> None:
     declarations, structures, λs and instructions. A broken line of the
     prelude is reported where it is."""
     for partition in ("none", "field"):
-        program, _ = translate(partition)
+        program, _ = translate(LOAD_STORE_ELIMINATION, partition)
         module = parser.parse(to_text(program))
         assert list(module.fields.items()) == list(program.fields.items()) and module.classes == program.classes
         assert module.constants == program.constants
@@ -590,7 +554,7 @@ def check_the_parser_reads_the_output_back() -> None:
 def check_the_checker_can_fail() -> None:
     """Break a translated λ three ways; the checker must notice each, and
     linearize must refuse to copy the heap."""
-    program, _ = translate()
+    program, _ = translate(LOAD_STORE_ELIMINATION)
 
     def broken(edit) -> list[str]:
         p = copy.deepcopy(program)
@@ -625,7 +589,7 @@ def check_the_checker_can_fail() -> None:
 
 
 if __name__ == "__main__":
-    check_examples_translate()
+    check_load_store_elimination_translates()
     check_heap_is_threaded()
     check_branches_fork_the_heap()
     check_loops_are_recursion()

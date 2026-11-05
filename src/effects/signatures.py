@@ -27,6 +27,7 @@ from graal.graal_import import PointsToFacts
 # The objects an access's receiver may point to, as the export names them
 Receivers = frozenset[str] | None
 
+
 class Partitioner(Protocol):
     """A field, or an array kind, `int[]`, and the
     objects an access may touch, to the access's partition."""
@@ -34,7 +35,7 @@ class Partitioner(Protocol):
     def __call__(self, field: str, receivers: Receivers = None, /) -> str: ...
 
 
-# Memory partition that no field of the program names, such as platform's fields or opaque methods or other
+# The rest of memory, which no field of the program names: the platform's fields, and what allocation writes.
 REST = "*"
 
 # The pseudo-objects of an access whose receiver the analysis can't say
@@ -181,8 +182,8 @@ def _names(classes: dict, per_field: bool) -> dict:
     `LoadStoreElimination$Counter@main:9`."""
 
     def label(members: list) -> str:
-        found = sorted(o for o in ([o for _, o in members] if per_field else [m for m in members if isinstance(m, str)])
-                       if o not in (UNKNOWN, NOTHING))
+        objects = [o for _, o in members] if per_field else [m for m in members if isinstance(m, str)]
+        found = sorted(o for o in objects if o not in (UNKNOWN, NOTHING))
 
         if not found:  # only the field's unknown or null receivers
             field, pseudo = members[0] if per_field else reversed(members[0])
@@ -214,10 +215,10 @@ def _names(classes: dict, per_field: bool) -> dict:
     return names
 
 
-def _site(obj: str) -> tuple[str, str]:
+def _site(name: str) -> tuple[str, str]:
     """The type and a short allocation site: `LoadStoreElimination$Counter@LoadStoreElimination.main([Ljava/lang/String;)V:9`
     is `LoadStoreElimination$Counter` at `main:9`; an object named by its type has no site."""
-    kind, _, site = obj.partition("@")
+    kind, _, site = name.partition("@")
     if site and site != "constant":
         method, _, bci = site.split(" in ")[0].rpartition(":")
         site = method.split("(")[0].rsplit(".", 1)[-1] + ":" + bci
@@ -230,7 +231,8 @@ class Signature:
     writes: frozenset[str]
     opaque: bool = False  # may touch anything
     why: str = ""  # what makes it opaque: the effect at the root of it
-    releases: bool = False # whether this method, or any other method it may call, releases
+    releases: bool = False  # whether this method, or any other method it may call, releases
+
 
 @dataclass
 class Effects:
@@ -263,7 +265,7 @@ class Effects:
 
 
 def no_analysis() -> Effects:
-    """Baseline analysis version that treats all of the heap as a single partion."""
+    """The baseline without an analysis: all of memory is one partition, and every method takes its token."""
     return Effects(one_heap, {}, ("heap",))
 
 
@@ -273,16 +275,20 @@ def callees_of(facts: PointsToFacts) -> dict[str, set[str]]:
 
 
 def close_over_callees(callees: dict[str, set[str]], *sets: dict[str, set[str]]) -> None:
+    """Add to each method's set, in each of `sets`, the sets of every method it may call, directly or not. Methods
+    that call each other end with one set; their callees outside the group are done before them."""
     for group in _components(callees):
         members = set(group)
         called = {c for m in group for c in callees[m] if c not in members}
-        for of in sets:
-            joined = set().union(*(of.get(m, ()) for m in group), *(of.get(c, ()) for c in called))
+        for per_method in sets:
+            joined = set().union(*(per_method.get(m, ()) for m in group), *(per_method.get(c, ()) for c in called))
             for m in group:
-                of[m] |= joined
+                per_method[m] |= joined
 
 
 def _components(callees: dict[str, set[str]]) -> list[list[str]]:
+    """The groups of methods that call each other, directly or not, each group after the groups it calls
+    (Tarjan's algorithm, without recursion)."""
     index: dict[str, int] = {}
     low: dict[str, int] = {}
     stack: list[str] = []
@@ -347,7 +353,7 @@ def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, s
 
 def program_partition(facts: PointsToFacts, partition: Partitioner) -> Partitioner:
     """The partitioning for the program's own fields and for array kinds.
-       Any other field, the platform's, is in the rest of memory."""
+    Any other field, the platform's, is in the rest of memory."""
     program = facts.fields.keys()  # the fields of the classes under analysis
 
     def part(field: str, receivers: Receivers = None) -> str:

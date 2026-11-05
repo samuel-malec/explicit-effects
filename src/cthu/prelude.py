@@ -1,17 +1,18 @@
-""" Representation of the Prelude for Graal dialect in Cthu,
-    extended with parsing logic. """
+"""The prelude of the Graal dialect, graal.ct: its types, signatures and structures, and the check that each
+instruction of a program applies an operation the prelude declares to values of the types it takes."""
 
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from . import parser
-from .ir import Instr, Lambda, Program, frame_type, parse_function_type
+from .ir import ENTRY, Instr, Lambda, Program, frame_type, parse_function_type
 from .parser import OpType, Signature
 
 GRAAL = Path(__file__).with_name("graal.ct")
 
-FUNCTION = ("function", "stck", "bool")  # operations a function supports
+FUNCTION = "function"  # the signature every function type, such as f_rh_ih, implements
+STACK, BOOL = "stck", "bool"  # the stack and boolean types that signature takes
 CONSTANTS = {"int", "long"}  # the structures with cons_<n>
 MEMORY = "heap"  # the structure with the field and allocation operations
 #: An array kind, as the operations on it name it, and the type of its elements.
@@ -63,8 +64,7 @@ def parse(text: str) -> Prelude:
         if cycle:
             prelude.errors.append(f"signature {name} extends itself: {' → '.join(cycle)}")
 
-    function_signature, _, _ = FUNCTION
-    if problem := _reference(module.signatures, function_signature, _function_arguments("F", ["I"], ["O"])):
+    if problem := _reference(module.signatures, FUNCTION, _function_arguments("F", ["I"], ["O"])):
         prelude.errors.append(f"function types: {problem}")
 
     for name, structure in module.structures.items():
@@ -174,14 +174,13 @@ class _Expected:
                 self.closures[t, op] = self._closure(op, self.lambdas[t, op])
             return self.closures[t, op]
 
-        if op == "run" and t in self.externals:
+        if op == ENTRY and t in self.externals:
             return [], list(instr.out_types)  # an external is typed by the calls to it
 
         function = parse_function_type(t)
         if function:
             if t not in self.functions:
-                function_signature, _, _ = FUNCTION
-                self.functions[t] = self.prelude.operations(function_signature, _function_arguments(t, *function))
+                self.functions[t] = self.prelude.operations(FUNCTION, _function_arguments(t, *function))
             return self.functions[t].get(op, f"a function has no {op}")
 
         return f"no structure {t}"
@@ -240,8 +239,7 @@ class _Expected:
 def _function_arguments(t: str, ins: list[str], outs: list[str]) -> list:
     """What the function type `t` ∷ ins → outs gives the function signature: F S B I O G,
     where G is the frame for arms of type `t`."""
-    _, stck, bool_ = FUNCTION
-    return [t, stck, bool_, ins, outs, frame_type(t)]
+    return [t, STACK, BOOL, ins, outs, frame_type(t)]
 
 
 def _memory(kind: str, k: int, fields: list[str], classes: int) -> OpType | str:

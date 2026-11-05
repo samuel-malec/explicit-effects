@@ -17,6 +17,7 @@ import re
 import sys
 from pathlib import Path
 
+from effects.signatures import STATICS
 from graal.graal_import import load
 
 # Effects the facts can't name one by one, as the export lists them.
@@ -37,7 +38,7 @@ def short_object(name: str) -> str:
     """objects.X$Counter@objects.X.main([Ljava/lang/String;)V:0 → Counter@main:0, and so for
     each call site an inlined allocation went through."""
     kind, _, site = name.partition("@")
-    if kind.endswith(".<statics>"):  # a static field's pseudo-object: its class
+    if kind.endswith(STATICS):  # a static field's pseudo-object: its class
         return ".".join(kind.split(".")[-2:])
     kind = re.split(r"[.$]", kind)[-1]
     if not site:
@@ -57,21 +58,21 @@ def receivers(objects: list[str] | None) -> str:
     return ", ".join(short_object(o) for o in objects)
 
 
-def show(key: str, facts: dict) -> str:
+def show(key: str, method: dict) -> str:
     lines = [key]
-    for label, kind in (("reads", "reads"), ("writes", "writes")):
-        if facts.get(kind):
-            lines.append(f"    {label:<8}{', '.join(short_field(f) for f in facts[kind])}")
-    if facts.get("callees"):
-        lines.append(f"    {'calls':<8}{', '.join(short_method(c) for c in facts['callees'])}")
-    if facts.get("allocates"):
+    for kind in ("reads", "writes"):
+        if method.get(kind):
+            lines.append(f"    {kind:<8}{', '.join(short_field(f) for f in method[kind])}")
+    if method.get("callees"):
+        lines.append(f"    {'calls':<8}{', '.join(short_method(c) for c in method['callees'])}")
+    if method.get("allocates"):
         lines.append("    allocates")
-    locks = facts.get("locks", {})
+    locks = method.get("locks", {})
     for kind in EFFECTS:
-        for what in facts.get(kind, ()):
+        for what in method.get(kind, ()):
             on = f"   on {receivers(locks[what])}" if what in locks else ""
             lines.append(f"    {kind:<7} {what}{on}")
-    for access in facts.get("accesses", ()):
+    for access in method.get("accesses", ()):
         at = (access.get("at") or "").rpartition(":")[2]
         lines.append(f"    {access['kind']:<6}{short_field(access['field']):<30} through {receivers(access['receivers'])}"
                      + (f"   at bci {at}" if at else ""))

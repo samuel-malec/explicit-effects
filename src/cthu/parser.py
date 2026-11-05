@@ -1,3 +1,6 @@
+"""Parse Cthulhu text: the prelude's types, signatures and structures, and a program's declarations, structures
+and λs."""
+
 from dataclasses import dataclass, field
 from typing import NoReturn
 

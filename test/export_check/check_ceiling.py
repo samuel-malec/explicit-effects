@@ -4,6 +4,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import effects.kills
 from diagnostics.ceiling import ceiling
 from effects.kills import ANY, IGNORABLE, kills
 from graal.graal_import import PointsToFacts
@@ -94,14 +95,12 @@ def check_the_command_line() -> None:
 def check_the_checks_can_fail() -> None:
     """If only the first of a method's effects were looked at, leaving the hash out would free `both`; the check
     of each effect on its own notices."""
-    import effects.kills as module
-
-    original = module.blocks
+    original = effects.kills.blocks
 
     def first_only(facts, method, ignore=()):
         return original(facts, {**method, "unknown": list(method.get("unknown", ()))[:1]}, ignore)
 
-    module.blocks = first_only
+    effects.kills.blocks = first_only
     try:
         check_each_effect_is_ignored_on_its_own()
     except AssertionError:
@@ -109,5 +108,5 @@ def check_the_checks_can_fail() -> None:
     else:
         raise AssertionError("the check did not notice that only the first effect of a method was read")
     finally:
-        module.blocks = original
+        effects.kills.blocks = original
     print("ok   the check of each effect fails when only a method's first effect is read")

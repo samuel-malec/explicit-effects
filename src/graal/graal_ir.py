@@ -20,7 +20,6 @@ class Node:
     flow: str | None = None
     phi: tuple[tuple[int, int], ...] = ()
     receivers: tuple[str, ...] | None = None  # what a field or array access may touch, None when unknown
-    at: str | None = None  # where a field or array access is: method, bci, and the calls it was inlined through
     ordered: bool = False  # a volatile field access: a load acquires, a store releases
     kind: str | None = None  # an array access's or allocation's element kind: int[], Object[]
     fields: tuple[str, ...] = ()  # an object escape analysis made virtual: its fields, in order
@@ -75,7 +74,6 @@ def _node(raw: dict) -> Node:
         flow=raw.get("flow"),
         phi=tuple((e["block"], e["value"]) for e in raw.get("from", ())),
         receivers=tuple(raw["receivers"]) if raw.get("receivers") is not None else None,
-        at=raw.get("at"),
         ordered=raw.get("ordered", False),
         kind=raw.get("kind"),
         fields=tuple(raw.get("fields", ())),
