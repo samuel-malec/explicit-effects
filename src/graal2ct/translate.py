@@ -1,5 +1,4 @@
-"""Graal IR → Cthulhu: each method a structure, each block a λ, with a token for each partition of memory the
-method touches."""
+"""Graal IR → Cthulhu translation"""
 
 import re
 from itertools import count
@@ -57,7 +56,6 @@ def structure_name(method: str) -> str:
 
 
 def _identifier(text: str) -> str:
-    """The text with every character but a letter or a digit made `_`."""
     return "".join(c if c.isalnum() else "_" for c in text)
 
 

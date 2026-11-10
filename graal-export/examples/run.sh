@@ -30,8 +30,8 @@ main=${package:+$package.}$name
 dir=$OUT/$main/$variant
 
 case $variant in
-    field)        flags=(-H:+TrackNodeSourcePosition -H:+SideEffectAnalysisRemoveDeadStores) ;;
-    object-field) flags=(-H:+TrackNodeSourcePosition -H:+SideEffectAnalysisRemoveDeadStores
+    field)        flags=(-H:+TrackNodeSourcePosition -H:+SideEffectAnalysisEliminateOverwrittenStores) ;;
+    object-field) flags=(-H:+TrackNodeSourcePosition -H:+SideEffectAnalysisEliminateOverwrittenStores
                          -H:AnalysisContextSensitivity=allocsens -H:SideEffectAnalysisPartition=object-field) ;;
     graal)        flags=(-H:-SideEffectAnalysisNarrowCalls) ;;
 esac

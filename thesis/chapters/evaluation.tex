@@ -1,7 +1,8 @@
 \chapter{Evaluation}\label{chap:evaluation}
 % Budget: 6 standard pages, mostly tables. Every number is from one run of reproduce.sh on 2 November 2026 with
 % THREAD_ESCAPE=off (.notes/technical/results-2026-11-02/, with the readings in .notes/author/evaluation-without-concurrency.md),
-% except where a table says otherwise.
+% except those of Section "Larger Programs", which are from the run of the stages javac and frameworks on 3 November 2026 with
+% THREAD_ESCAPE=off (.notes/technical/results-2026-11-03/javac-frameworks/, F88), and where a table says otherwise.
 
 \newcommand{\pct}[1]{\ensuremath{#1\,\%}}
 
@@ -23,9 +24,8 @@ that differs from it in exactly the facts under test.
 
 \begin{table}[t]
     \centering
-    \caption{The configurations. \texttt{graal} loads the feature but hands nothing to Graal, so apart from counting it is
-    Native Image as released. \texttt{ceiling} leaves out the kill of everything the facts cannot name: it is unsound, an upper
-    bound and not a result. \texttt{fields} is also built on allocation sites, against \texttt{graal} on allocation sites.}
+    \caption{The configurations. \texttt{graal} hands nothing to Graal, so apart from counting it is Native Image as
+    released. \texttt{ceiling} is unsound: an upper bound, not a result.}
     \label{tab:eval-configurations}
     \footnotesize
     \begin{tabular}{llll}
@@ -62,6 +62,9 @@ only on the same analysis, and report the price of the allocation-site analysis 
         \texttt{Aliasing}   & 13 methods: two references that may or may not meet, with 4 controls & loads \\
         \texttt{Allocation} & 4 methods: a call that allocates enough to collect, which tests the virtual machine state a call kills & loads \\
         AWFY                & 14 benchmarks over a small collection library of their own, 459 methods, pinned at commit \texttt{74306fe}; a \texttt{main} constructs each benchmark and prints whether it verified & loads, run time, cost \\
+        javac               & the JDK's compiler, compiling the 79 sources of AWFY & cost, loads, run time \\
+        PetClinic           & Graal's Native Image bundle of Spring PetClinic (Tomcat, H2, HikariCP), served under load & cost, loads, run time \\
+        Barista             & eleven server applications of the Barista suite, release 0.6.6: a plain hello world, hello worlds on seven frameworks, two more Micronaut applications, and Spring PetClinic & cost, loads \\
         Native Image's tests & its own JUnit suite: 23 images with 289 tests & robustness \\
         \bottomrule
     \end{tabular}
@@ -87,6 +90,7 @@ mechanism works, not what a typical program gains. AWFY is the realistic program
         Counts    & field loads, stores, and calls left in the program's methods at the end of Graal's low tier; static counts, which loop unrolling multiplies, not run time \\
         Run time  & 14 benchmarks, 20 iterations, five runs, the first iteration dropped, the median; four cores of one NUMA node, nothing else running; images take turns run by run \\
         Builds timed & \texttt{graal} and \texttt{fields} four times each, timed together; the first \texttt{graal} binary timed twice (A/A) shows the noise \\
+        Larger programs & 3 November 2026, the stages \texttt{javac} and \texttt{frameworks} with \texttt{THREAD\_ESCAPE=off}; tool \texttt{f185b31}, fork \texttt{308e7320996}; three builds of \texttt{graal} and of \texttt{fields} of each, one at a time \\
         Build time & wall-clock seconds of one build at a time on an empty machine, configurations taking turns, five rounds; median and range, stage times from the builder's log \\
         \bottomrule
     \end{tabular}
@@ -98,9 +102,7 @@ mechanism works, not what a typical program gains. AWFY is the realistic program
 
 \begin{table}[t]
     \centering
-    \caption{Loads left by Graal in the program's methods. The percentage is the change against \texttt{graal} on the same
-    analysis. AWFY is built at \texttt{-O2} or \texttt{-O3}; the two are different compilations, so only the columns of one
-    row compare. The \texttt{-O3} build on allocation sites was not run.}
+    \caption{Loads left in the program's methods; the percentage is the change against \texttt{graal} on the same analysis.}
     \label{tab:eval-loads}
     \footnotesize
     \begin{tabular}{lrrrrr}
@@ -159,10 +161,7 @@ programs. \Cref{tab:eval-time} gives AWFY at \texttt{-O3} on the default analysi
 
 \begin{table}[t]
     \centering
-    \caption{Run time of AWFY at \texttt{-O3}, default analysis, in percent against the first \texttt{graal} build (negative
-    is faster). A/A is that binary timed again, the noise. The last two columns are ranges over the three other builds of
-    \texttt{graal} and the four builds of \texttt{fields}. The six benchmarks not listed are Bounce, CD, Json, Towers,
-    Mandelbrot, and NBody; Mandelbrot and NBody do not change.}
+    \caption{Run time of AWFY at \texttt{-O3}, default analysis, in percent against the first \texttt{graal} build (negative is faster).}
     \label{tab:eval-time}
     \footnotesize
     \begin{tabular}{lrrrr}
@@ -184,6 +183,7 @@ programs. \Cref{tab:eval-time} gives AWFY at \texttt{-O3} on the default analysi
     \end{tabular}
 \end{table}
 
+The six benchmarks not listed are Bounce, CD, Json, Towers, Mandelbrot, and NBody; Mandelbrot and NBody do not change.
 \textbf{Queens} is the one clear win: \pct{-27.5} to \pct{-27.8} in every build, far outside the noise. Its recursive method
 \texttt{placeQueen} no longer has each call kill four array-reference fields, so their loads leave its loop
 (\Cref{sec:eval-control}). \textbf{The total} is \pct{-0.1} to \pct{-1.4} (mean \pct{-0.8}), against \pct{0.0} to \pct{+1.1} for
@@ -294,10 +294,11 @@ sense is rare: of the 33 loads that left a loop, 5 appear outside it and 28 are 
 
 \section{Cost}\label{sec:eval-cost}
 
+\subsection{AWFY}\label{sec:eval-cost-awfy}
+
 \begin{table}[t]
     \centering
-    \caption{Build time of AWFY at \texttt{-O3}, median of five rounds in seconds, with the range of the total, and the peak
-    memory. ``Added'' is the difference of the medians against the configuration above it on the same analysis.}
+    \caption{Build of AWFY at \texttt{-O3}, median of five rounds in seconds (range of the total).}
     \label{tab:eval-cost}
     \footnotesize
     \setlength{\tabcolsep}{4pt}
@@ -316,31 +317,161 @@ sense is rare: of the 33 loads that left a loop, 5 appear outside it and 28 are 
     \end{tabular}
 \end{table}
 
-\begin{table}[t]
-    \centering
-    \caption{Where the added time goes, in seconds (median of five rounds). The export and the tool run inside the analysis
-    stage; applying the kill sets is part of compilation and is summed over the compiler's threads.}
-    \label{tab:eval-steps}
-    \footnotesize
-    \begin{tabular}{lrr}
-        \toprule
-        Step & \texttt{fields} & \texttt{objects} \\
-        \midrule
-        Export of the facts, in the analysis stage            & 1.7 & 1.7 \\
-        Tool: kill sets from the facts, in the analysis stage & 0.3 & 0.3 \\
-        Applying the kill sets, in compilation                & 0.1 & 0.3 \\
-        \midrule
-        Added to the build, total                             & $+1.3$ & $+2.9$ \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
 Kill sets add 1.3 seconds (\pct{5}) to the build of AWFY, 1.9 of them in the analysis stage, where the facts are exported and
 the tool runs. The compile stage does not move (0.3 seconds against a spread of 6.9--8.1), and neither does the memory. The
 allocation-site analysis costs more than everything we add: \texttt{graal} on allocation sites takes 30.4 seconds against 24.1
 (\pct{+26}) and its analysis stage 2.7 times as long, and the partitions then add 2.9 seconds (\pct{+10}) and gave nothing on
 AWFY. The price of the finer analysis grows with the program: javac builds in 67 seconds on the default analysis and in 288 on
 allocation sites (24 October, three rounds, nothing of ours in either).
+
+\subsection{Larger Programs}\label{sec:eval-large}
+
+AWFY has 459 methods; the programs for which Native Image is built have many more. \Cref{tab:eval-large} gives the build of
+javac, of the PetClinic bundle, and of the eleven Barista applications on the default analysis, \texttt{graal} against
+\texttt{fields}, three builds of each, one at a time on an empty machine, the configurations taking turns.%
+\footnote{The Barista suite is at \url{https://github.com/barista-benchmarks/barista}. Its two Quarkus applications are left out:
+they do not build with Native Image from our fork even without our feature.} In every program the ranges of the two
+configurations do not overlap, so three builds tell the increment from the spread.
+
+\begin{table}[t]
+    \centering
+    \caption{Build of the larger programs, median of three builds in seconds (range of the totals), by the build of \texttt{graal}.}
+    \label{tab:eval-large}
+    \footnotesize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        Program & \texttt{graal} & \texttt{fields} & Added & Analysis & Loads \\
+        \midrule
+        Spring PetClinic & 128.0 (127.0--130.0) & 172.0 (170.0--173.0) & +44.0 (\pct{+34}) & +42.6 & \pct{-0.9} \\
+        PetClinic & 116.0 (112.0--119.0) & 146.0 (146.0--151.0) & +30.0 (\pct{+26}) & +33.8 & \pct{-0.9} \\
+        play-scala & 67.0 (67.0--68.0) & 82.0 (79.0--84.0) & +15.0 (\pct{+22}) & +14.9 & \pct{-0.8} \\
+        dropwizard & 63.0 (62.0--63.0) & 73.0 (72.0--80.0) & +10.0 (\pct{+16}) & +12.2 & \pct{-0.9} \\
+        javac & 62.0 (61.0--64.0) & 76.0 (69.0--78.0) & +14.0 (\pct{+23}) & +7.9 & \pct{-3.1} \\
+        spring-hello & 62.0 (60.0--64.0) & 73.0 (71.0--74.0) & +11.0 (\pct{+18}) & +11.4 & \pct{-0.8} \\
+        micronaut-shopcart & 61.0 (60.0--62.0) & 72.0 (71.0--75.0) & +11.0 (\pct{+18}) & +10.4 & \pct{-0.6} \\
+        micronaut-similarity & 56.5 (56.2--57.3) & 66.0 (64.0--67.0) & +9.5 (\pct{+17}) & +10.0 & \pct{-0.7} \\
+        ktor & 55.8 (55.2--57.6) & 65.0 (64.0--67.0) & +9.2 (\pct{+16}) & +10.1 & \pct{-0.4} \\
+        micronaut-hello & 55.5 (55.5--56.3) & 66.0 (65.0--67.0) & +10.5 (\pct{+19}) & +9.6 & \pct{-0.7} \\
+        helidon & 46.0 (44.9--46.5) & 52.8 (51.0--52.8) & +6.8 (\pct{+15}) & +5.9 & \pct{-0.8} \\
+        vertx & 37.3 (36.0--37.9) & 41.1 (40.6--43.5) & +3.8 (\pct{+10}) & +5.1 & \pct{-0.8} \\
+        plain hello world & 29.9 (29.1--30.2) & 32.1 (31.7--32.5) & +2.2 (\pct{+7}) & +2.6 & -- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The plain hello world has 3 loads in its own code. Kill sets add 7 to 34\,\% to the build: 2.2 seconds to the plain hello world, 6.8 to 15.0 seconds (\pct{+15} to \pct{+22}) to
+the eight framework applications of ordinary size, and 30 and 44 seconds (\pct{+26} and \pct{+34}) to the two PetClinics, the
+bundle of Graal and the one of Barista. In every program the percentage is larger than on AWFY (\pct{+5}), and it grows with the
+program. The increment
+is in the analysis stage, where the facts are exported and the tool runs; the compile stage moves by \mbox{$-1.9$} to
+$+0.4$ seconds. The analysis column can exceed the total: on PetClinic the stage grows by 33.8 seconds and the build by 30.0,
+because the other stages together are 3.8 seconds shorter in the \texttt{fields} builds. That is within their spread between
+builds of one configuration (the compile stage of the three \texttt{graal} builds took 20.9--23.1 seconds, of the three
+\texttt{fields} builds 20.4--21.7). The peak memory of the servers differs by at most 0.3 GiB; javac's rises from 6.2 to 7.6
+GiB, AWFY's by 0.1.
+
+\textbf{javac} is the exception in how the increment divides. Its analysis stage grows by 7.9 seconds (\pct{+13} of the
+build), but the total by 14.0: the rest is in the stage that lays out the methods, which took 10.4--10.7 seconds in every
+\texttt{graal} build and in one of the \texttt{fields} builds, and 16.0 and 16.4 seconds in the other two. Three builds do not
+tell whether \texttt{fields} slows that stage or some builds are slow; the build with the fast stage took 69 seconds against
+61--64 for \texttt{graal}, which is 7 seconds more. The analysis increment of 7.9 seconds is the one to cite.
+
+The loads that \texttt{fields} removes are few: 0.4 to 0.9\,\% of the loads in the servers' own methods, and 3.1\,\% in javac
+(7,846 to 7,531 of them in loops). The calls left do not change (javac 38,299 to 38,301, PetClinic 278,122 to 278,171). We did
+not establish why the servers gain so little.
+
+\textbf{Run time} can be told for two of the programs. javac compiles the 79 sources of AWFY in 0.240--0.241 seconds in the
+three \texttt{graal} builds and in 0.239--0.243 in the three \texttt{fields} builds (ten runs of five compilations each); the
+first \texttt{graal} image timed again differs by $-0.3$\,\%, so there is no difference. PetClinic served 4,085--4,344 requests
+per second in the three \texttt{graal} builds and 4,175--4,384 in the three \texttt{fields} builds (16 connections, five runs
+of 30 seconds each after a warm-up of 15); the first \texttt{graal} image measured twice differs by \pct{+0.4}, the runs of one
+image by about \pct{1}, but the builds of one configuration by \pct{6.3} (\texttt{graal}) and \pct{5.0} (\texttt{fields}). The
+medians differ by \pct{+2.2}, which is within the spread between builds, so it is not a gain. No Barista application was timed:
+with at most \pct{0.9} fewer loads there is nothing to see through the spread between builds.
+
+\subsection{Allocation Sites}\label{sec:eval-cost-sites}
+
+Partitions by object need Native Image's allocation-site analysis, which costs Native Image itself. \Cref{tab:eval-sites} gives
+that price from the builds we have: earlier runs, each row from one run, with the code and the model of concurrency of its day,
+so the numbers do not compare with the other tables. The allocation sites multiply the build by 1.3 on AWFY and by 4.3 on javac.
+On PetClinic a build with allocation sites and a cutoff of 100, with nothing of ours in it, took 1,830 seconds against 120, 15
+times as long. On the ten Barista applications that built, an image with allocation sites, the cutoff, and our export and lock
+elision took 3.0 to 10.7 times the \texttt{graal} build; where we timed our steps (three applications), they were 6 to 17
+seconds of it, so the factor is the price of the allocation sites. Spring PetClinic did not finish: our export ran out of
+memory. The factor grows with the program, and it is far above what the facts themselves cost (7 to 34\,\%).
+
+\begin{table}[t]
+    \centering
+    \caption{Build time of Native Image on the default analysis and with allocation sites, in seconds, and the ratio.}
+    \label{tab:eval-sites}
+    \footnotesize
+    \begin{tabular}{lrrr}
+        \toprule
+        Program (builds) & Default & Allocation sites & Times \\
+        \midrule
+        AWFY (five rounds)                  & 24.1 & 30.4 & 1.3 \\
+        javac (three rounds)               & 67   & 288  & 4.3 \\
+        PetClinic (one build)              & 120  & 1,830 & 15 \\
+        \midrule
+        Spring PetClinic (one build)       & 138 & out of memory & -- \\
+        play-scala                          & 72   & 771  & 10.7 \\
+        dropwizard                          & 69   & 537  & 7.8 \\
+        micronaut-shopcart                  & 66   & 647  & 9.8 \\
+        spring-hello                        & 65   & 567  & 8.7 \\
+        ktor                                & 63   & 364  & 5.8 \\
+        micronaut-hello                     & 62   & 550  & 8.9 \\
+        micronaut-similarity                & 59   & 460  & 7.8 \\
+        helidon                             & 50   & 377  & 7.5 \\
+        vertx                               & 42   & 265  & 6.3 \\
+        plain hello world                   & 33   & 99   & 3.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Where the Time Goes}\label{sec:eval-cost-steps}
+
+The added time is our work in the analysis stage. \Cref{tab:eval-steps} divides it into its steps: the facts are collected from
+Native Image's analysis (together with a text report of them, which these builds discard), the facts are written to the export
+file, and the tool computes the kill sets from it. The three add up to the increment of the analysis stage in every program, to within 0.8 seconds. Collecting the facts is the
+largest step in all programs but the two PetClinics, where writing the export is (14.9 of 33.6 seconds on PetClinic, 17.6 of
+42.5 on Spring PetClinic); the tool takes 15 to 30\,\%. Applying the kill sets happens in compilation, on several threads, and
+adds at most 2.3 seconds of thread time. The last row is AWFY built with partitions by object on allocation sites, against
+\texttt{graal} on allocation sites: its steps are as large as those of \texttt{fields}, and the check that every graph keeps
+its partitions consistent adds 0.4 seconds of thread time. No other program was built with partitions by object in this run,
+so no other program has such a row.
+
+\begin{table}[t]
+    \centering
+    \caption{Our steps in the \texttt{fields} builds, and in the \texttt{objects} build of AWFY, in seconds (median).}
+    \label{tab:eval-steps}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        & \multicolumn{3}{c}{Steps} & & & \\
+        \cmidrule(lr){2-4}
+        Program & Facts & Write & Tool & Sum & Stage added & Apply \\
+        \midrule
+        Spring PetClinic & 12.3 & 17.6 & 12.7 & 42.5 & +42.6 & 2.3 \\
+        PetClinic & 9.8 & 14.9 & 8.9 & 33.6 & +33.8 & 1.7 \\
+        play-scala & 6.0 & 5.1 & 3.4 & 14.5 & +14.9 & 1.1 \\
+        dropwizard & 6.0 & 3.2 & 2.3 & 11.5 & +12.2 & 0.6 \\
+        javac & 4.8 & 1.4 & 1.2 & 7.4 & +7.9 & 0.5 \\
+        spring-hello & 5.6 & 3.4 & 2.5 & 11.5 & +11.4 & 0.7 \\
+        micronaut-shopcart & 4.7 & 3.7 & 2.6 & 11.0 & +10.4 & 0.9 \\
+        micronaut-similarity & 4.2 & 2.9 & 2.1 & 9.3 & +10.0 & 0.7 \\
+        ktor & 5.0 & 2.5 & 1.9 & 9.4 & +10.1 & 0.6 \\
+        micronaut-hello & 4.2 & 2.9 & 2.1 & 9.2 & +9.6 & 0.7 \\
+        helidon & 3.1 & 1.8 & 1.2 & 6.0 & +5.9 & 0.3 \\
+        vertx & 3.3 & 1.0 & 0.9 & 5.2 & +5.1 & 0.3 \\
+        plain hello world & 1.9 & 0.5 & 0.5 & 2.9 & +2.6 & 0.1 \\
+        \midrule
+        AWFY & 1.5 & 0.2 & 0.3 & 1.9 & +1.9 & 0.1 \\
+        AWFY on allocation sites, \texttt{objects} & 1.5 & 0.2 & 0.3 & 2.0 & +1.9 & 0.3 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \section{What Blocks the Analysis}\label{sec:eval-blockers}
 
@@ -402,17 +533,21 @@ with \pct{-27.7}. Elsewhere the gain is a handful of loads (2--4\,\% of AWFY's) 
 small size is not a weakness of the implementation: the ceiling removes three times the loads and is no faster, and the
 opacity of AWFY has several layers, each of which would have to go.
 
-\paragraph{Cost.} The facts are cheap on AWFY: kill sets add \pct{5} to the build. The expensive part is the allocation-site
-analysis that partitions by object need: it adds \pct{26} to the build of AWFY and multiplies that of javac by 4.3, and the
-partitions gained nothing on AWFY. Kill sets on the default analysis are therefore the affordable combination.
+\paragraph{Cost.} The facts are cheap on AWFY: kill sets add \pct{5} to the build. On larger programs they add 7 to 34\,\%
+(\Cref{tab:eval-large}), almost all of it in the analysis stage, and they remove 0.4 to 3.1\,\% of the loads. The allocation-site analysis that partitions by object need is dearer still
+(\Cref{tab:eval-sites}): it adds \pct{26} to the build of AWFY, multiplies that of javac by 4.3 and that of PetClinic by 15,
+and takes the Barista applications 3.0 to 10.7 times as long; the partitions gained nothing on AWFY. Kill sets on the default
+analysis are therefore the affordable combination.
 
-\paragraph{Not shown.} We did not measure programs larger than AWFY without the concurrency model, so the cost of the facts on
-them is not reported here, and we did not count loads at run time.
+\paragraph{Not shown.} We did not time the Barista applications, and PetClinic's throughput differs less between the
+configurations than between builds of one, so the larger programs show a cost and no run-time gain. We did not count loads at
+run time.
 
 \section{Threats to Validity}\label{sec:eval-threats}
 
 \paragraph{One machine and few programs.} Every timing is from one server with an AMD Zen~1 processor and without hardware
-counters. The realistic program is AWFY; the gains on the other four are by design.
+counters. The realistic program for run time is AWFY, with javac and PetClinic as larger checks; the gains on the four small
+programs are by design.
 
 \paragraph{Code placement.} Native Image places every method at a multiple of 32 bytes, so a change in the size of one method
 moves all that follow it. Placement alone moves twelve of the fourteen AWFY benchmarks by 4--13\,\% with identical instructions,
@@ -428,5 +563,5 @@ allocation sites at \texttt{-O3}) printed an incorrect result on every run of th
 second run, 25 images, were correct. That configuration hands nothing to Graal, so our facts are not the cause; we have not
 explained it. The tables use the second run.
 
-\paragraph{Single builds and older numbers.} The ceiling is one build of each configuration, javac's cost is of 24 October, and
-the export behind \Cref{tab:eval-blockers} is of 22 October. The \texttt{-O3} build on allocation sites was not run.
+\paragraph{Single builds and older numbers.} The ceiling is one build of each configuration, three builds of each configuration
+are all that the larger programs have, the allocation-site builds of \Cref{tab:eval-sites} are of 24 to 29 October (one build each for PetClinic and Barista), and the export behind \Cref{sec:eval-blockers} is of 22 October. The \texttt{-O3} build on allocation sites was not run.

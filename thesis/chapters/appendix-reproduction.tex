@@ -22,16 +22,18 @@ export PATH=$JAVA_HOME/bin:$HOME/mx:$HOME/.local/bin:$PATH
 cd ~/graal/substratevm && mx build # the builder must be newer than the sources
 THREAD_ESCAPE=off ~/explicit-effects/scripts/evaluation/reproduce.sh          # loads, time, ceiling, cost
 THREAD_ESCAPE=off ~/explicit-effects/scripts/evaluation/reproduce.sh control  # control flow and loops
+THREAD_ESCAPE=off ~/explicit-effects/scripts/evaluation/reproduce.sh javac frameworks  # the larger programs
 \end{lstlisting}
 
 In \texttt{graal-native}, the results are written to a directory of \texttt{out/reproduction/}, named by the UTC time, the
 commit, and \texttt{no-thread-escape}: \texttt{provenance.txt} (which code), one file per stage, and \texttt{SUMMARY.txt}.
-\Cref{tab:app-stages} lists the stages. The first four took 55 minutes on 2 November.
+\Cref{tab:app-stages} lists the stages. The first four took 55 minutes on 2 November; \texttt{javac} and \texttt{frameworks} took 12 minutes and 2 hours 4 minutes on
+3 November.
 
 \begin{table}[t]
     \centering
-    \caption{The stages of \texttt{reproduce.sh} without a model of concurrency. The first four run by default; \texttt{control}
-    runs with \texttt{reproduce.sh control}.}
+    \caption{The stages of \texttt{reproduce.sh} without a model of concurrency. The first four run by default; the last
+    three are named on the command line.}
     \label{tab:app-stages}
     \small
     \begin{tabular}{llp{6.4cm}}
@@ -43,6 +45,8 @@ commit, and \texttt{no-thread-escape}: \texttt{provenance.txt} (which code), one
         \texttt{ceiling}    & \ref{sec:eval-ceiling} & \texttt{graal}, \texttt{fields}, and \texttt{ceiling} on AWFY at \texttt{-O3}: loads left and run times \\
         \texttt{cost}       & \ref{sec:eval-cost}    & every configuration of AWFY, five rounds, with the stage times and the peak memory \\
         \texttt{control}    & \ref{sec:eval-control} & control flow, loops, and the place of every load, on the small programs and on AWFY at \texttt{-O3} \\
+        \texttt{javac}      & \ref{sec:eval-large}   & \texttt{graal} and \texttt{fields} on javac, three builds each, the loads left, and the time javac takes to compile AWFY's sources with each image \\
+        \texttt{frameworks} & \ref{sec:eval-large}   & \texttt{graal} and \texttt{fields} on PetClinic and eleven Barista applications, three builds each, the loads left, and PetClinic under load with every image \\
         \bottomrule
     \end{tabular}
 \end{table}
