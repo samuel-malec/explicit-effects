@@ -7,6 +7,10 @@
 # exit status, the build time, the size, and (for the locks configurations) what was removed. The analysis' own files
 # (export, kill sets, timings, counts) are in <output directory>/<mode>/.
 #
+#   build_plain <bundle.nib> <output directory> [native-image options the bundle needs]
+#
+# the same bundle applied by the same builder without the feature: the control that tells whether a failing build or image is ours.
+#
 #   graal        the feature on, nothing narrowed: the baseline
 #   fields       every call narrowed to what its callees write
 #   ceiling      fields, with the kill of everything the facts cannot name left out (unsound: an upper bound)
@@ -55,6 +59,22 @@ build_bundle() {  # configuration, bundle, directory, options for native-image
         --bundle-apply=app.nib > "$dir/build.log" 2>&1 )
     local status=$?
     echo "$config: exit $status, built in $((SECONDS - start)) s, $(grep -o 'executable, [0-9.]*MiB' "$dir/build.log" | head -1), $(grep -h 'locks removed' "$dir/$mode/timings.txt" 2> /dev/null | head -1)"
+    local executable
+    executable=$(find "$dir/app.output/default" -maxdepth 1 -type f -executable ! -name '*.so' ! -name '*.debug' 2> /dev/null | head -1)
+    [[ -z $executable ]] || ln -sfn "$executable" "$dir/image"
+    return $status
+}
+
+build_plain() {  # bundle, directory, options for native-image
+    local nib=$1 dir=$2
+    shift 2
+    rm -rf "$dir" && mkdir -p "$dir"
+    provenance "$dir"
+    cp "$nib" "$dir/app.nib"
+    local start=$SECONDS
+    ( cd "$dir" && "$GRAALVM/bin/native-image" -J--upgrade-module-path="$COMPILER" -EHOME -EPATH "$@" --bundle-apply=app.nib > "$dir/build.log" 2>&1 )
+    local status=$?
+    echo "plain: exit $status, built in $((SECONDS - start)) s, $(grep -o 'executable, [0-9.]*MiB' "$dir/build.log" | head -1)"
     local executable
     executable=$(find "$dir/app.output/default" -maxdepth 1 -type f -executable ! -name '*.so' ! -name '*.debug' 2> /dev/null | head -1)
     [[ -z $executable ]] || ln -sfn "$executable" "$dir/image"
