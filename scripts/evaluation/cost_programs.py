@@ -6,7 +6,8 @@ Usage:
     uv run python scripts/evaluation/cost_programs.py graal-native/out
 
 The builds are the ones of reproduce.sh's javac and frameworks stages: out/javac-cost-<config>-r<k>/ (cost-javac.sh),
-out/petclinic-r<k>/<config>/ and out/barista/<app>-r<k>/<config>/ (petclinic.sh and barista.sh with TAG=r<k>). A build whose log lacks
+out/petclinic-r<k>/<config>/, out/barista/<app>-r<k>/<config>/ (petclinic.sh and barista.sh with TAG=r<k>) and
+out/renaissance/<benchmark>-r<k>/<config>/ (renaissance.sh). A build whose log lacks
 "Finished generating" failed and is listed as such.
 """
 
@@ -46,10 +47,11 @@ def rounds_of(out: Path) -> dict[str, dict[str, list[Path]]]:
     for directory in sorted(out.glob("petclinic-r*/*")):
         if directory.name in CONFIGS and directory.is_dir():
             add("petclinic", directory.name, directory)
-    for directory in sorted((out / "barista").glob("*-r*/*")):
-        app = directory.parent.name.rsplit("-r", 1)[0]
-        if directory.name in CONFIGS and directory.is_dir():
-            add(app, directory.name, directory)
+    for suite in ("barista", "renaissance"):
+        for directory in sorted((out / suite).glob("*-r*/*")):
+            app = directory.parent.name.rsplit("-r", 1)[0]
+            if directory.name in CONFIGS and directory.is_dir():
+                add(app, directory.name, directory)
     return programs
 
 
