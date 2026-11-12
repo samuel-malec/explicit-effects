@@ -19,16 +19,23 @@ Run them from anywhere, for example `scripts/sharing/thread-escape.sh`. The numb
 | `cost-javac.sh` | The same on javac. |
 | `time_locks.sh` | What removing locks and volatile accesses is worth on the designed shapes. |
 | `time_javac.py` | How long each javac image takes to compile AWFY. |
+| `image_sizes.py` | The size of the images of `graal` and `fields` from the build logs: the file, the code area, the image heap. |
+| `scaling.py` | What `fields` adds to a build against the size of the image, over the programs the logs hold; the fit and a figure. |
+| `footprint.py` | What adopting the feature costs: the fork's change to Graal against upstream, the options, the tool's size. |
+| `barista_compare.py` | Whether the Barista images that `barista_run.py` started answered alike. |
 
 ## `frameworks/`: real servers
 
 | Script | What it does |
 | --- | --- |
-| `bundle.sh` | Applies a Native Image bundle in one configuration; sourced by the two below. |
+| `bundle.sh` | Applies a Native Image bundle in one configuration, or without the feature (`build_plain`, the control); sourced by the scripts below. |
 | `petclinic.sh`, `petclinic_load.py` | Spring PetClinic's builds, and the images under load. |
 | `petclinic/` | The four reflection registrations the 2023 bundle lacks, and how they were found. |
 | `barista.sh` | An application of the Barista suite, one image per configuration. |
 | `barista-gate.sh` | The gate before a load run: four configurations of an application, and why no site is removable. |
+| `barista_run.py` | Starts every Barista image the builds left, sends it its workload's requests and keeps the answers (compare them with `evaluation/barista_compare.py`). |
+| `barista-control.sh` | The same bundle with and without the feature, to tell whether an image that does not start is ours. |
+| `tika-hang.sh` | The quarkus-tika bundle applied again and again with and without the feature: whether a hang of the build is the feature's. |
 
 ## `sharing/`: why thread escape answers what it answers
 
