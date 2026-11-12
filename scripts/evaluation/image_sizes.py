@@ -5,7 +5,8 @@ Usage:
     uv run python scripts/evaluation/image_sizes.py graal-native/out --only 'javac|petclinic' --builds sizes-builds.tsv
 
 The builds are the ones of reproduce.sh: out/awfy-cost-<config>-r<k>/ (cost.sh), out/javac-cost-<config>-r<k>/ (cost-javac.sh),
-out/petclinic-r<k>/<config>/ and out/barista/<app>-r<k>/<config>/ (petclinic.sh and barista.sh with TAG=r<k>), and
+out/petclinic-r<k>/<config>/, out/barista/<app>-r<k>/<config>/ (petclinic.sh and barista.sh with TAG=r<k>),
+out/renaissance/<benchmark>-r<k>/<config>/ (renaissance.sh), and
 out/awfy-<setting>-t<k>/ (the inliner stage, one directory holding both images; the builds with source positions, awfy-<setting>
 without a round, are left out: their images carry the positions). Builds from before `kills` was renamed `fields` are read as
 fields where a program has no build under the new name.
@@ -132,6 +133,8 @@ def discover(out: Path, listed: dict[Path, int]) -> list[Build]:
         add("javac, PetClinic and the Barista applications", "petclinic", d.name, d / "build.log", d, d / "provenance.txt")
     for d in sorted((out / "barista").glob("*-r*/*")):
         add("javac, PetClinic and the Barista applications", d.parent.name.rsplit("-r", 1)[0], d.name, d / "build.log", d, d / "provenance.txt")
+    for d in sorted((out / "renaissance").glob("*-r*/*")):
+        add("Renaissance", d.parent.name.rsplit("-r", 1)[0], d.name, d / "build.log", d, d / "provenance.txt")
     for d in sorted(out.glob("awfy-*-t[0-9]*")):
         setting = re.sub(r"-t\d+$", "", d.name.removeprefix("awfy-"))
         for config in CONFIGS:
