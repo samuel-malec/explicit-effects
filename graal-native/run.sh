@@ -24,6 +24,9 @@
 #   ONLY="graal fields" TAG=sym EXTRA="-H:-DeleteLocalSymbols" ./run.sh Awfy
 #                              # only some of the images, into out/awfy-sym/, with more
 #                              # native-image options: here, the symbols perf needs
+#   KILL_SETS=tool ./run.sh Awfy
+#                              # the fields image with the kill sets worked out by the explicit-effects tool, as before; the default
+#                              # is build (the image builder does it), and both does both and stops the build if they differ
 #
 # A fourth image, graal-dse, only with ONLY, has Graal remove dead stores itself after inlining,
 # with the partitions of the objects image. A fifth, ceiling, only with ONLY, is the fields image with the kill of
@@ -96,6 +99,11 @@ for mode in "${MODES[@]}"; do
     fi
     if [[ $mode == ceiling ]]; then
         OBJECTS+=(-H:SideEffectAnalysisIgnoreEffects=all)
+    fi
+    # The fields image's kill sets come from the image builder: it partitions by field and leaves no effect out, which is all the
+    # builder does. ceiling, objects and graal-dse keep the tool's; graal narrows nothing.
+    if [[ $mode == fields ]]; then
+        OBJECTS+=(-H:SideEffectAnalysisKillSets="${KILL_SETS:-build}")
     fi
     if [[ $mode == objects ]]; then
         OBJECTS=(-H:AnalysisContextSensitivity=allocsens -H:+TrackNodeSourcePosition -H:SideEffectAnalysisPartition=object-field
