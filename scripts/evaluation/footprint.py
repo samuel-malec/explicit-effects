@@ -86,7 +86,8 @@ def main() -> int:
     print("  controls: " + ", ".join(o[1] for o in controls))
     print("  to use it: " + ", ".join(f"{o[1]} ({o[3]})" for o in found if o[0] == "option"))
     print("  the command line of the `fields` build (scripts/frameworks/bundle.sh): -H:+UnlockExperimentalVMOptions -H:+SideEffectAnalysis "
-          "-H:SideEffectAnalysisOutput=<dir> -H:SideEffectAnalysisTool=<checkout of the tool> -H:SideEffectAnalysisUv=<uv>\n")
+          "-H:SideEffectAnalysisKillSets=build -H:SideEffectAnalysisOutput=<dir> -H:SideEffectAnalysisTool=<checkout of the tool> "
+          "-H:SideEffectAnalysisUv=<uv>\n")
 
     files, lines = python_lines(REPO / "src")
     tests = python_lines(REPO / "test")

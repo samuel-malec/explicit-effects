@@ -19,6 +19,11 @@
 #                kept; lockscutoff also removes the locks and makes the volatile accesses ordinary that thread escape proves local
 #
 # THREAD_ESCAPE=off adds -H:-SideEffectAnalysisThreadEscape to every configuration and refuses locks and lockscutoff.
+#
+# KILL_SETS says where fields works out the kill sets: build (the default; the image builder does it from the same facts), tool (the
+# explicit-effects tool on the export, as before) or both (the builder does it and the tool too, and the build stops if any method's
+# kill set differs). The other configurations keep the fork's default, tool: ceiling leaves effects out and the builder does not,
+# and the rest narrow no calls.
 
 # Sets `mode` (the analysis' output directory) and `flags` for a configuration; the caller declares both local.
 configure() {
@@ -27,7 +32,7 @@ configure() {
     mode=fields
     case $1 in
         graal)             mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls) ;;
-        fields)            flags=() ;;
+        fields)            flags=(-H:SideEffectAnalysisKillSets="${KILL_SETS:-build}") ;;
         ceiling)           flags=(-H:SideEffectAnalysisIgnoreEffects=all) ;;
         graalflagscutoff)  mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}") ;;
         locks)             mode=locks; flags=("${locks[@]}") ;;

@@ -13,8 +13,8 @@
 #   THREAD_ESCAPE=off scripts/evaluation/reproduce.sh       # the same stages with no model of concurrency anywhere: no thread escape,
 #                                                           # every lock and volatile access counts as ordering this thread with
 #                                                           # another, nothing is elided. The stages loads, time, ceiling, cost (default),
-#                                                           # control, javac and frameworks (these three: graal and fields only); results
-#                                                           # in out/reproduction/<UTC time>-<tool commit>-no-thread-escape/
+#                                                           # control, javac, frameworks and renaissance (these four: graal and fields
+#                                                           # only); results in out/reproduction/<UTC time>-<tool commit>-no-thread-escape/
 #
 # The results are in out/reproduction/<UTC time>-<tool commit>/: provenance.txt (which code), one <stage>.txt for each stage
 # (the commands' tables, as printed), and SUMMARY.txt (the stages, their status and time). The builds themselves stay in out/.
@@ -44,6 +44,9 @@ frameworks  (long) PetClinic and three Barista servers: builds, removable sites,
             needs ~/eval/petclinic and ~/eval/barista (bundles copied from the laptop);
             with THREAD_ESCAPE=off: graal and fields, 3 rounds, on PetClinic and eleven Barista applications (cost, loads left),
             and PetClinic under load with the images of all rounds
+renaissance (long, only with THREAD_ESCAPE=off) the 15 Renaissance benchmarks: graal and fields, 3 builds of each (build time, size, loads
+            left), and the run time of every image, 5, 3 or 2 processes of each by how long the benchmark takes; about 10 hours
+            (builds 2, runs 8); needs ~/eval/renaissance (the bundles, made on pontos04 by renaissance-bundles.sh)
 EOF
 }
 
@@ -75,7 +78,7 @@ if [[ ${THREAD_ESCAPE:-on} == off ]]; then
     # the stages that remove locks or read what thread escape found have nothing to run without it
     NO_CONCURRENCY=1
     DEFAULT_STAGES=(loads time ceiling cost)
-    ALL_STAGES=(loads time ceiling cost control javac frameworks inliner knobs budget lie)
+    ALL_STAGES=(loads time ceiling cost control javac frameworks renaissance inliner knobs budget lie)
 fi
 INLINER_SETTINGS=(${INLINER_ONLY:-base nounroll nopeel notrivial notrivial-nounroll trivial5 nopriority nopriority-nounroll iba5 O1 Os})  # see shape-sweep.sh; INLINER_ONLY="base O1" to test
 KNOB_SETTINGS=(${KNOBS_ONLY:-base inl3000 inl1000 inl600 inl400 inl300 inl200 inl100 cgs600 cgs300 cgs100 cgs50 cgs20 cgs10 cgs5
@@ -85,6 +88,10 @@ BUDGET_SETTINGS=(${BUDGET_ONLY:-base inl1000 inl600 inl400 inl300 inl200 noprior
 LIE_CLAIM='LoadStoreElimination.countInto(LLoadStoreElimination$Counter;LLoadStoreElimination$Link;)V'
 BARISTA_APPS=(vanilla-hello-world vertx-hello-world micronaut-hello-world micronaut-shopcart micronaut-similarity helidon-hello-world
               dropwizard-hello-world play-scala-hello-world ktor-hello-world spring-hello-world spring-petclinic)  # not the two Quarkus ones: they fail without the feature too
+# the Renaissance benchmarks by how many processes of each image the run time gets (the longer the benchmark, the fewer); RENAISSANCE_ONLY="scrabble" to test
+RENAISSANCE_SHORT=(rx-scrabble scala-kmeans scrabble scala-doku)  # 5
+RENAISSANCE_MEDIUM=(dotty finagle-http future-genetic mnemonics par-mnemonics philosophers reactors scala-stm-bench7)  # 3
+RENAISSANCE_SLOW=(akka-uct finagle-chirper fj-kmeans)  # 2
 
 wait_quiet() {  # the timings are of a machine with nothing else running
     while [[ $(cut -d. -f1 /proc/loadavg) -ge ${QUIET_LOAD:-2} ]]; do sleep 15; done  # QUIET_LOAD=100 to test the stages on a machine that is not quiet
@@ -276,6 +283,39 @@ stage_frameworks() {
         --image flags="$p/graalflagscutoff/image" --image locks="$p/lockscutoff/image" --runs 5 --seconds 30 --warmup 15 --clients 16
 }
 
+stage_renaissance() {
+    local o="$HERE/out" runs="$HERE/out/renaissance-run-repro" rounds=${RENAISSANCE_ROUNDS:-1,2,3}  # RENAISSANCE_ROUNDS=1 to test the stage
+    local bundles=${RENAISSANCE:-$HOME/eval/renaissance}
+    local java_home=${JAVA_HOME:-$HOME/.mx/jdks/labsjdk-ce-latest-jvmci-25.4-b23_amd64}  # the JDK renaissance-bundles.sh builds with: dotty reads its modules at run time
+    local short=() medium=() slow=() all=() missing=() b
+    keep() { [[ -z ${RENAISSANCE_ONLY:-} || " $RENAISSANCE_ONLY " == *" $1 "* ]]; }
+    for b in "${RENAISSANCE_SHORT[@]}"; do if keep "$b"; then short+=("$b"); fi; done
+    for b in "${RENAISSANCE_MEDIUM[@]}"; do if keep "$b"; then medium+=("$b"); fi; done
+    for b in "${RENAISSANCE_SLOW[@]}"; do if keep "$b"; then slow+=("$b"); fi; done
+    all=("${short[@]}" "${medium[@]}" "${slow[@]}")
+    [[ ${#all[@]} -gt 0 ]] || { echo "RENAISSANCE_ONLY names no benchmark of the suite" >&2; return 1; }
+    for b in "${all[@]}"; do [[ -f $bundles/$b/$b.nib ]] || missing+=("$b"); done
+    [[ ${#missing[@]} -eq 0 ]] || { echo "no bundle in $bundles for: ${missing[*]} (scripts/frameworks/renaissance-bundles.sh makes them on pontos04)" >&2; return 1; }
+    [[ -d $java_home ]] || { echo "no JDK at $java_home: set JAVA_HOME to the one renaissance-bundles.sh builds with" >&2; return 1; }
+    export JAVA_HOME=$java_home
+
+    "$SCRIPTS/frameworks/renaissance.sh" --rounds "$rounds" "${all[@]}"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/cost_programs.py" "$o"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/image_sizes.py" "$o" --only "^($(IFS='|'; echo "${all[*]}"))\$"
+
+    # the processes wait for an idle machine themselves (renaissance_run.py); each call leaves a directory of results in $runs
+    run_group() {  # repeats benchmark…
+        local repeats=$1; shift
+        [[ $# -eq 0 ]] || python3 "$SCRIPTS/frameworks/renaissance_run.py" --out "$runs" --rounds "$rounds" --repeats "$repeats" --benchmarks "$(IFS=,; echo "$*")"
+    }
+    rm -rf "$runs"
+    run_group 5 "${short[@]}"
+    run_group 3 "${medium[@]}"
+    run_group 2 "${slow[@]}"
+    echo "== run time of graal and fields (the rounds are the builds; fields differs outside the noise when the ranges of the rounds do not overlap)"
+    uv run --project "$REPO" python "$SCRIPTS/evaluation/renaissance_report.py" "$runs"/*
+}
+
 main() {
     if [[ ${1:-} == --run ]]; then  # one stage, run by the script itself so that set -e holds in it
         "stage_${2:?}"
@@ -286,7 +326,7 @@ main() {
     [[ ${stages[0]} != all ]] || stages=("${ALL_STAGES[@]}")
     for stage in "${stages[@]}"; do
         declare -F "stage_$stage" > /dev/null || { echo "unknown stage $stage (see --list)" >&2; return 2; }
-        if [[ -z $NO_CONCURRENCY && $stage =~ ^(inliner|knobs|budget|lie)$ ]]; then
+        if [[ -z $NO_CONCURRENCY && $stage =~ ^(inliner|knobs|budget|lie|renaissance)$ ]]; then
             echo "stage $stage is measured without a model of concurrency: run it with THREAD_ESCAPE=off" >&2
             return 2
         fi

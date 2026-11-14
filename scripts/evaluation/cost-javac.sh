@@ -10,6 +10,9 @@
 #   CONFIGS="graal graalinputs fields fieldsescape graal-allocsens graalflags-allocsens objects locks" ./cost-javac.sh   # the full table
 #   THREAD_ESCAPE=off ./cost-javac.sh                 # no model of concurrency: graal, fields, graal-allocsens and objects only
 #   CONFIGS="graalcutoff-allocsens graalflagscutoff-allocsens lockscutoff" ./cost-javac.sh      # lock removal with the saturation cutoff raised
+#   KILL_SETS=tool ./cost-javac.sh                    # fields with the kill sets worked out by the tool, as before (the default is build:
+#                                                     # the image builder; both does both and stops if they differ). Only fields: fieldsescape
+#                                                     # and objects keep the tool's, which the builder's version was not checked against
 #
 # graalinputs and graalflags-allocsens are graal with the flags thread escape needs (inputs of flows kept, source
 # positions kept): the baselines of fieldsescape and locks, so that what the flags cost Native Image itself is not
@@ -43,7 +46,7 @@ build() {  # configuration, round
     case $config in
         graal)          flags=(-H:-SideEffectAnalysisNarrowCalls) ;;
         graalinputs)    mode=graal; flags=(-H:-SideEffectAnalysisNarrowCalls "${inputs[@]}") ;;
-        fields)         flags=() ;;
+        fields)         flags=(-H:SideEffectAnalysisKillSets="${KILL_SETS:-build}") ;;
         fieldsescape)   mode=fields; flags=("${inputs[@]}" "${escape[@]}") ;;
         graal-allocsens) tag=graal; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}") ;;
         graalflags-allocsens) tag=graalflags; mode=graal; analysis=-allocsens; flags=(-H:-SideEffectAnalysisNarrowCalls "${allocsens[@]}" "${inputs[@]}" "${positions[@]}") ;;
