@@ -1,5 +1,3 @@
-"""Split Cthulhu text into tokens. A comment runs from `;` to the end of its line."""
-
 from dataclasses import dataclass
 from enum import Enum
 
@@ -17,7 +15,6 @@ class Category(Enum):
 
 
 KEYWORDS = {"type", "signature", "structure", "field", "class", "constant"}
-# The characters that are a token on their own.
 _SINGLE = {**dict.fromkeys(":∷×=,", Category.PUNCT), **dict.fromkeys("[]", Category.BRACKET),
            **dict.fromkeys("()", Category.PAREN), "λ": Category.LAMBDA}
 
@@ -40,8 +37,6 @@ class ParseError(Exception):
 
 
 def is_ident_char(ch: str) -> bool:
-    """Whether the character can be part of a name: a letter or a digit, a sub- or superscript (h₁, xᵢ),
-    one of ° to ¿ (x²), or one of ? _ ' % ∅."""
     code = ord(ch)
     return (code <= 255 and ch.isalnum()) or 0x1D62 <= code < 0x1D66 or 0x2070 <= code < 0x20A0 \
         or 0x00B0 <= code < 0x00C0 or ch in "?_'%∅"

@@ -1,15 +1,12 @@
-"""The Cthulhu program the translation makes: a structure per method, its λs and their instructions, the names
-of its function types (`f_rh_ih`), and its text (`to_text`)."""
-
 from dataclasses import dataclass, field
 from functools import cache
 
-LINEAR = frozenset({"heap"})  # the types whose values are used exactly once: never copied, never dropped
+LINEAR = frozenset({"heap"})  # list of linear types
 
 # How code leaves the method
 THROWS, TRAPS = "throws", "traps"
 
-ENTRY = "run"  # the λ a method starts in; taking it as a closure calls the method itself
+ENTRY = "run"  # the entry point of a Cthulhu program 
 
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
 _TYPES = {code: t for t, code in _TYPE_CODES.items()}
@@ -20,8 +17,6 @@ def function_type(params: list[str], outs: list[str]) -> str:
 
 
 def frame_type(function: str) -> str:
-    """The type of a frame for arms of a function type: what a join of two
-    closures of that type takes."""
     return f"frame[{function}]"
 
 
@@ -51,7 +46,7 @@ class Instr:
     ins: list[str] = field(default_factory=list)
     outs: list[str] = field(default_factory=list)
     out_types: list[str] = field(default_factory=list)
-    note: str = ""  # a comment for the reader, which nothing reads back
+    note: str = ""  # a comment for the reader
     field: str = ""  # the field a field access reads or writes
     exit: str = ""  # how a guard leaves the method: THROWS or TRAPS
     observes: tuple[int, ...] = ()  # the tokens a call only reads: their places in ins, counted from the end
