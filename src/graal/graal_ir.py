@@ -43,7 +43,7 @@ class Block:
     id: int
     succs: tuple[Edge, ...]
     exit: str | None  # "return", "unwind", "deopt", ...
-    end: dict  # how the block ends, {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
+    end: dict  # how the block ends
     nodes: tuple[Node, ...] = ()
 
 

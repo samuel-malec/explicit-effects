@@ -16,8 +16,8 @@ class PointsToFacts:
 
 
 def load_facts(path: str | Path, assumptions: str | None = None) -> PointsToFacts:
-    """Only the facts of an export, without reading its graphs. `assumptions` names one set of
-    thread-escape assumptions, if the export was made with all of them (`none`, `thread-confined`,
+    """`assumptions` names one set of thread-escape assumptions,
+    if the export was made with all of them (`none`, `thread-confined`,
     `thread-confined,vm-fields`, ...): the shared objects are then those under that set."""
     return _facts(json.loads(Path(path).read_text()), assumptions)
 
@@ -31,8 +31,6 @@ def _facts(data: dict, assumptions: str | None = None) -> PointsToFacts:
 
 
 def load(path: str | Path) -> tuple[PointsToFacts, dict[str, Graph]]:
-    """The facts and the graphs of an export, each graph under its method's name, with the
-    descriptor only when the export has more than one method of that name."""
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(
