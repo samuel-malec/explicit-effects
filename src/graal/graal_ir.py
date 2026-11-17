@@ -1,25 +1,43 @@
-"""Representation of Graal IR structures alongside the points-to information needed for analysis."""
+"""One method's Graal IR as graal-export writes it, read into frozen dataclasses.
+
+A graph is the method after the points-to analysis, scheduled: its blocks in the export's order, each block's
+nodes in the order the schedule runs them, a merge's phis and a loop exit's proxies first. `parse_graph` keeps
+what the export says, under another name where the JSON key is a Python keyword or means two things:
+
+    in                          inputs
+    class                       cls
+    from: [{block, value}]      phi: ((block, value), ...)
+    values (CommitAllocation)   entries   (a graph's own `values` is something else)
+    object, an int              virtual   (AllocatedObject: the virtual object it is)
+    object, a string            constant  (Constant: which object it is)
+
+Lists become tuples, and a key a node lacks gets the field's default. `receivers: null` stays None, "the
+analysis can't say", which is not `()`, "no object". Nothing reads the blocks' `preds` and `ops`, the nodes'
+`at` and `exception_edge` or the graph's `values`, so they are left out. The facts are in graal_import.
+"""
 
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class Node:
-    id: int
-    op: str
-    type: str
-    inputs: tuple[int, ...] = ()
-    bci: int = -1
-    index: int | None = None
-    value: str | None = None
-    field: str | None = None
-    cls: str | None = None
-    args: tuple[int, ...] = ()
-    target: str | None = None
-    callees: tuple[str, ...] = ()
-    flow: str | None = None
-    phi: tuple[tuple[int, int], ...] = ()
-    receivers: tuple[str, ...] | None = None  # what a field or array access may touch, None when unknown
+    id: int  # Graal's id of the node, unique in the graph
+    op: str  # Graal's node class without "Node": StoreField, InvokeWithException, ValuePhi
+    type: str  # int, long, float, double, ref, cond (a condition) or void (no value)
+    inputs: tuple[int, ...] = ()  # the values and conditions it uses
+    bci: int = -1  # where it is in the method's bytecode; negative when nowhere, -1 when the export gives none (phis)
+    index: int | None = None  # a Parameter's position, 0 the receiver of an instance method
+    value: str | None = None  # a Constant's value as text: 5, null, Ljava/lang/Object;
+    field: str | None = None  # a field access's field: forwarding.AcrossCall$Counter.value
+    cls: str | None = None  # the class a NewInstance makes, an InstanceOf tests or a VirtualInstance is
+    args: tuple[int, ...] = ()  # an invoke's arguments, the receiver first if there is one
+    target: str | None = None  # the method an invoke names, with its descriptor
+    callees: tuple[str, ...] = ()  # the methods the analysis linked to the invoke
+    flow: str | None = None  # the invoke's flow in the analysis: ok, no-callees, disabled or missing
+    phi: tuple[tuple[int, int], ...] = ()  # a ValuePhi's value from each predecessor: (block, value)
+    # The objects a field or array access may touch, a monitor may lock, or an AllocatedObject may be;
+    # None when the analysis can't say, which is not () (none).
+    receivers: tuple[str, ...] | None = None
     ordered: bool = False  # a volatile field access: a load acquires, a store releases
     kind: str | None = None  # an array access's or allocation's element kind: int[], Object[]
     fields: tuple[str, ...] = ()  # an object escape analysis made virtual: its fields, in order
@@ -34,30 +52,34 @@ class Node:
 
 @dataclass(frozen=True)
 class Edge:
-    to: int
-    label: str | None  # true/false, normal/exception edge
+    to: int  # the block it goes to
+    label: str | None  # true or false after an If, normal or exception after a call that may throw, else None
 
 
 @dataclass(frozen=True)
 class Block:
     id: int
     succs: tuple[Edge, ...]
-    exit: str | None  # "return", "unwind", "deopt", ...
-    end: dict  # how the block ends
+    # How the method leaves at the block's end: return, unwind (it throws), deopt, or the last node's class
+    # for another way; None when the block goes on to another.
+    exit: str | None
+    end: dict  # the block's last node: {"node": "IfNode", "bci": 2, "cond": "IsNullNode"}
     nodes: tuple[Node, ...] = ()
 
 
 @dataclass(frozen=True)
 class Graph:
-    name: str
-    descriptor: str
-    unsupported: tuple[str, ...]
-    entry: int
-    blocks: dict[int, Block]
-    static: bool = False
+    name: str  # class and method: forwarding.AcrossCall.demo
+    descriptor: str  # parameter and return types: (Lforwarding/AcrossCall$Counter;Lforwarding/AcrossCall$Link;)I
+    unsupported: tuple[str, ...]  # why the exporter refused the method, () if it didn't
+    entry: int  # the block the method starts in
+    blocks: dict[int, Block]  # by id, in the export's order
+    static: bool = False  # no receiver among the parameters
 
 
 def _node(raw: dict) -> Node:
+    receivers = raw.get("receivers")
+    obj = raw.get("object")
     return Node(
         id=raw["id"],
         op=raw["op"],
@@ -73,7 +95,7 @@ def _node(raw: dict) -> Node:
         callees=tuple(raw.get("callees", ())),
         flow=raw.get("flow"),
         phi=tuple((e["block"], e["value"]) for e in raw.get("from", ())),
-        receivers=tuple(raw["receivers"]) if raw.get("receivers") is not None else None,
+        receivers=None if receivers is None else tuple(receivers),
         ordered=raw.get("ordered", False),
         kind=raw.get("kind"),
         fields=tuple(raw.get("fields", ())),
@@ -81,28 +103,30 @@ def _node(raw: dict) -> Node:
         objects=tuple(raw.get("objects", ())),
         entries=tuple(raw.get("values", ())),
         locked=raw.get("locked", False),
-        virtual=raw.get("object") if isinstance(raw.get("object"), int) else None,
-        constant=raw.get("object") if isinstance(raw.get("object"), str) else None,
+        virtual=obj if isinstance(obj, int) else None,
+        constant=obj if isinstance(obj, str) else None,
         negated=tuple(raw.get("negated", ())),
     )
 
 
+def _block(raw: dict) -> Block:
+    return Block(
+        id=raw["id"],
+        succs=tuple(Edge(e["to"], e["label"]) for e in raw["succs"]),
+        exit=raw["exit"],
+        end=raw.get("end", {}),
+        nodes=tuple(_node(n) for n in raw.get("nodes", ())),
+    )
+
+
 def parse_graph(raw: dict) -> Graph:
-    """A method's graph, as graal-export writes it."""
-    blocks = {}
-    for b in raw.get("blocks", ()):
-        blocks[b["id"]] = Block(
-            id=b["id"],
-            succs=tuple(Edge(e["to"], e["label"]) for e in b["succs"]),
-            exit=b["exit"],
-            end=b.get("end", {}),
-            nodes=tuple(_node(n) for n in b.get("nodes", ())),
-        )
+    """A method's graph, as graal-export writes it. A method the exporter has no graph of (`unsupported` says
+    `no graph`, or `no graph after the analysis (…)`) has no blocks, and its entry is 0."""
     return Graph(
         name=raw["name"],
         descriptor=raw["descriptor"],
         unsupported=tuple(raw["unsupported"]),
         entry=raw.get("entry", 0),
-        blocks=blocks,
+        blocks={b["id"]: _block(b) for b in raw.get("blocks", ())},
         static=raw.get("static", False),
     )
