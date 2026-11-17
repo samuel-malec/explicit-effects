@@ -17,6 +17,7 @@ Run them from anywhere, for example `scripts/sharing/thread-escape.sh`. The numb
 | `load_split.py` | The loads of a designed program split into its controls, the methods that do not change, and the methods that lose loads. |
 | `cost.sh`, `cost.py` | What the analysis adds to a build, per configuration, and the table. |
 | `cost-javac.sh` | The same on javac. |
+| `final-t2.sh`, `summarize_builds.py` | The final run: AWFY, PetClinic, javac, the Renaissance benchmarks and the Barista applications built with `stock` (the feature off), `graal` and `fields` for several rounds, run time on three of them, and the table of build time, peak memory and size per program and arm. |
 | `time_locks.sh` | What removing locks and volatile accesses is worth on the designed shapes. |
 | `time_javac.py` | How long each javac image takes to compile AWFY. |
 | `image_sizes.py` | The size of the images of `graal` and `fields` from the build logs: the file, the code area, the image heap. |
