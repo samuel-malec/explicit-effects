@@ -15,17 +15,17 @@ from pathlib import Path
 
 from graal.graal_import import PointsToFacts, load_facts
 
-from .signatures import PARTITIONERS, REST, accesses, callees_of, close_over_callees, program_partition, reaching, synchronizing
+from .signatures import (PARTITIONERS, REST, accesses, callees_of, close_over_callees, program_partition, reaching,
+                         synchronizing)
 
-ANY = "any"
-INIT = "init"
+ANY = "any"  # the kill set of a call that may write anything
+INIT = "init"  # in a kill set: the call may allocate
 
-#: The effects whose kill can be left out for a measurement, and what each is in the facts: the kinds of node that
-#: are an unknown effect (None: not a node, see `blocks`). With them left out the kill sets are an upper bound
-#: of what Graal could be told, to see what making them precise could give. Never sound, so never for a build
-#: whose output is to be kept. The first three are the effects the notes found in front of most opaque methods;
-#: behind them are the others, each reached by all the methods that remain, so only the last (everything the
-#: facts cannot name) tells the most the kill sets could do.
+#: Effects whose kill can be left out, to measure what more precise kill sets could give Graal. Never sound, so
+#: never for an image whose output matters. Each maps to the kinds of node that are that effect among a method's
+#: unknown effects, or to None when it isn't one kind of node (`blocks` handles those). The first three are what
+#: most opaque methods reach first; every method still opaque without them reaches each of the others, so only
+#: leaving all of them out shows the most the kill sets could do.
 IGNORABLE: dict[str, tuple[str, ...] | None] = {
     "identity-hash": ("SubstrateIdentityHashCodeNode",),
     "class-initialization": ("EnsureClassInitializedNode",),
@@ -34,24 +34,26 @@ IGNORABLE: dict[str, tuple[str, ...] | None] = {
     "calls-without-facts": None,  # a call of a method the export has no facts for
     "other-effects": None,  # every other unknown effect: native transitions, raw writes, snippets, ...
 }
-NAMED = {node for nodes in IGNORABLE.values() if nodes for node in nodes}
+NAMED_NODES = {node for nodes in IGNORABLE.values() if nodes for node in nodes}
 
 
 def node_kind(text: str) -> str:
-    """A fact's text without its position and the node's address: `EnsureClassInitializedNode`."""
+    """The node kind of an unknown effect's text, without its position or address: `EnsureClassInitializedNode`."""
     return re.split(r" at | \(|:", text, maxsplit=1)[0].strip()
 
 
 def blocks(facts: PointsToFacts, method: dict, ignore: Collection[str] = ()) -> bool:
-    """Whether the method itself has what makes its kill set everything: an effect the facts can't name
-    (every one of them, not only the first), synchronization that may order this thread with another, a call
-    that is unresolved, or a call of a method without facts. What `ignore` names does not count."""
+    """Whether the method by itself makes its kill set everything: an unknown effect (any of them, not just the
+    first), synchronization that may order this thread with another, an unresolved call, or a call to a method
+    without facts. The effects named in `ignore` don't count."""
     ignored = {node for name in ignore for node in (IGNORABLE[name] or ())}
     for text in method.get("unknown", ()):
         node = node_kind(text)
-        if (node in NAMED and node not in ignored) or (node not in NAMED and "other-effects" not in ignore):
+        counts = node not in ignored if node in NAMED_NODES else "other-effects" not in ignore
+        if counts:
             return True
-    if "synchronization" not in ignore and (synchronizing(facts, method, "acquires") or synchronizing(facts, method, "releases")):
+    synchronizes = synchronizing(facts, method, "acquires") or synchronizing(facts, method, "releases")
+    if "synchronization" not in ignore and synchronizes:
         return True
     if "unresolved-calls" not in ignore and method.get("unresolved"):
         return True
@@ -59,42 +61,42 @@ def blocks(facts: PointsToFacts, method: dict, ignore: Collection[str] = ()) -> 
 
 
 def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str] = ()) -> dict[str, str | tuple[str, ...]]:
-    """Method → the partitions it may write, a field's own name where the
-    partition is all of the field, `init` if it allocates, and the VM's state it
-    writes; `any` if it reaches something the facts can't say anything about, or
-    synchronization that may order this thread with another. A lock or a volatile
-    field only this thread reaches (`synchronizing`) orders it with no one, and kills
-    nothing.
+    """Each method's kill set: the partitions it, or anything it may call, may write. A partition that is all of
+    a field goes by the field's name; the set also has `init` if the method allocates, and the VM's own
+    locations it writes. It is `any` if the method reaches something the facts can't describe, or
+    synchronization that may order this thread with another. A lock or volatile field that only this thread
+    reaches orders nothing, and kills nothing.
 
-    A release kills everything too, although it writes only its own writes: Graal
-    would let a load before a call that kills nothing of its location float below
-    the call, where it may read what another thread wrote after the release saw
-    it. A kill set can't stop loads below the call without stopping those above.
+    A release kills everything too, though it writes nothing itself: if the call killed nothing of a location,
+    Graal could move a load of it from before the call to after it, where it may read what another thread
+    wrote after seeing the release. A kill set can't stop loads moving below a call without stopping them
+    moving above it as well.
 
-    `ignore` (names of `IGNORABLE`) leaves the kill of those effects out: a measurement of what precise
-    kill sets could give, never sound."""
-    if unknown := set(ignore) - IGNORABLE.keys():
-        raise ValueError(f"cannot ignore {sorted(unknown)}: only {sorted(IGNORABLE)}")
+    `ignore` (names from IGNORABLE) leaves those effects' kills out: a measurement, never sound."""
+    if invalid := set(ignore) - IGNORABLE.keys():
+        raise ValueError(f"cannot ignore {sorted(invalid)}: only {sorted(IGNORABLE)}")
     part = program_partition(facts, PARTITIONERS[partition](facts))
     rest = part(REST)
     methods = facts.methods
     written: dict[str, set[str]] = {}
     for m, e in methods.items():
+        # A write outside the program's partitions (a platform field's) goes by the field's own name.
         own = {field if (p := part(field, receivers)) == rest else p
                for kind, field, receivers in accesses(e) if kind == "write"}
         written[m] = own | set(e.get("vmWrites", ())) | ({INIT} if e.get("allocates") else set())
 
     callees = callees_of(facts)
-    unknown = reaching(callees, {m: m for m, e in methods.items() if blocks(facts, e, ignore)})
-    # A method that reaches something unknown kills everything, whatever it writes. Every other one
-    # calls only methods like itself, so only they need what their callees write: on javac's export,
-    # a third of the methods, and a tenth of the time.
-    close_over_callees({m: cs for m, cs in callees.items() if m not in unknown}, written)
-    return {m: ANY if m in unknown else tuple(sorted(written[m])) for m in sorted(methods)}
+    kill_everything = reaching(callees, {m: m for m, e in methods.items() if blocks(facts, e, ignore)})
+    # A method that reaches something unknown kills everything, whatever it writes. Every other method only
+    # calls methods like itself, so only those need their callees' writes: on javac's export a third of the
+    # methods, and a tenth of the time.
+    close_over_callees({m: cs for m, cs in callees.items() if m not in kill_everything}, written)
+    return {m: ANY if m in kill_everything else tuple(sorted(written[m])) for m in sorted(methods)}
 
 
 def partitioned(facts: PointsToFacts, partition: str) -> dict[tuple[str, str], str]:
-    """(position, field) → partition, for each access the facts list where it is."""
+    """(position, field) → partition, for each access the export gives a position. It pairs the export's
+    accesses with `accesses(e)`, which lists them first and in the same order."""
     part = program_partition(facts, PARTITIONERS[partition](facts))
     return {(a["at"], a["field"]): part(field, receivers)
             for e in facts.methods.values()
@@ -115,8 +117,8 @@ def main() -> int:
     ignore = [name for name in args.ignore.split(",") if name]
     if ignore == ["all"]:
         ignore = list(IGNORABLE)
-    if unknown := set(ignore) - IGNORABLE.keys():
-        parser.error(f"cannot ignore {sorted(unknown)}: only {sorted(IGNORABLE)}")
+    if invalid := set(ignore) - IGNORABLE.keys():
+        parser.error(f"cannot ignore {sorted(invalid)}: only {sorted(IGNORABLE)}")
     if ignore:
         print(f"warning: the kill of {', '.join(ignore)} is left out: these kill sets are an upper bound, not sound", file=sys.stderr)
 
