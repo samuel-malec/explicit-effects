@@ -91,7 +91,6 @@ def parse(text: str) -> Prelude:
 
 
 def _reference(signatures: dict[str, Signature], name: str, args: list[str]) -> str | None:
-    """What is wrong with naming signature `name` with these arguments, if anything."""
     if name not in signatures:
         return f"no signature {name}"
 

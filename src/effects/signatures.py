@@ -1,8 +1,9 @@
 """Which partitions of memory each method may read and write.
 
     A partition is a set of memory locations, and a program's partitions are
-    disjoint: every location is in exactly one, so operations on two
-    partitions never touch the same memory.
+    disjoint
+
+    Currently, this project supports the following flavors of memory partitioning:
 
     - `heap`: all of memory as one partition.
     - `field`: one partition per field and per array element kind. Two fields
@@ -10,12 +11,9 @@
       makes them disjoint.
     - `object`: disjoint sets of objects from the points-to facts, with all
       their fields. Two objects share a partition when one access may touch
-      both: union-find over the objects each access's receiver may point to.
+      both. Done by union-find over the objects each access's receiver may point to.
     - `object-field`: the same for each field on its own, so a partition is one
       field of a set of objects: disjoint as both `field` and `object` are.
-
-    How finely the facts tell objects apart is the analysis's choice: by type
-    by default, by allocation site with -H:AnalysisContextSensitivity=allocsens.
 """
 
 from collections.abc import Callable
@@ -29,13 +27,10 @@ Receivers = frozenset[str] | None
 
 
 class Partitioner(Protocol):
-    """A field, or an array kind, `int[]`, and the
-    objects an access may touch, to the access's partition."""
-
     def __call__(self, field: str, receivers: Receivers = None, /) -> str: ...
 
 
-# The rest of memory, which no field of the program names: the platform's fields, and what allocation writes.
+# The rest of memory, which no field of the program names
 REST = "*"
 
 # The pseudo-objects of an access whose receiver the analysis can't say
@@ -94,14 +89,18 @@ PARTITIONERS: dict[str, Callable[[PointsToFacts], Partitioner]] = {
 
 
 def accesses(method: dict) -> list[tuple[str, str, Receivers]]:
-    """A method's field and array accesses: read or write, the field, and the
-    objects it may touch. A field the method reads or writes with no access
-    listed, as in a method outside the program, may touch any object."""
-    listed = [(a["kind"], a["field"], None if a["receivers"] is None else frozenset(a["receivers"]))
-              for a in method.get("accesses", ())]
-    covered = {(kind, field) for kind, field, _ in listed}
-    return listed + [(kind, field, None) for kind in ("read", "write") for field in method.get(kind + "s", ())
-                     if (kind, field) not in covered]
+    """Collect every field or array a method may read or write, as (kind, field, receivers)."""
+    result = []
+    for site in method.get("accesses", ()):
+        receivers = None if site["receivers"] is None else frozenset(site["receivers"])
+        result.append((site["kind"], site["field"], receivers))
+
+    with_site = {(kind, field) for kind, field, _ in result}
+    for kind, key in (("read", "reads"), ("write", "writes")):
+        for field in method.get(key, ()):
+            if (kind, field) not in with_site:
+                result.append((kind, field, None))
+    return result
 
 
 def _by_objects(facts: PointsToFacts, per_field: bool) -> Partitioner:
@@ -275,8 +274,7 @@ def callees_of(facts: PointsToFacts) -> dict[str, set[str]]:
 
 
 def close_over_callees(callees: dict[str, set[str]], *sets: dict[str, set[str]]) -> None:
-    """Add to each method's set, in each of `sets`, the sets of every method it may call, directly or not. Methods
-    that call each other end with one set; their callees outside the group are done before them."""
+    """Computing the least fixpoint solution of heap tokens for methods that lie on a call graph cycle.""" 
     for group in _components(callees):
         members = set(group)
         called = {c for m in group for c in callees[m] if c not in members}
@@ -287,8 +285,7 @@ def close_over_callees(callees: dict[str, set[str]], *sets: dict[str, set[str]])
 
 
 def _components(callees: dict[str, set[str]]) -> list[list[str]]:
-    """The groups of methods that call each other, directly or not, each group after the groups it calls
-    (Tarjan's algorithm, without recursion)."""
+    """Decompose the call graph into strongly connected components using Tarjan's algorithm."""
     index: dict[str, int] = {}
     low: dict[str, int] = {}
     stack: list[str] = []
