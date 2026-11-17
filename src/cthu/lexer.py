@@ -1,3 +1,6 @@
+"""The tokens of graal.ct text: names, keywords, strings, punctuation, arrows and line ends. `;` starts a
+comment that runs to the end of the line."""
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -15,12 +18,16 @@ class Category(Enum):
 
 
 KEYWORDS = {"type", "signature", "structure", "field", "class", "constant"}
-_SINGLE = {**dict.fromkeys(":∷×=,", Category.PUNCT), **dict.fromkeys("[]", Category.BRACKET),
-           **dict.fromkeys("()", Category.PAREN), "λ": Category.LAMBDA}
+_SINGLE = {  # the one-character tokens
+    **dict.fromkeys(":∷×=,", Category.PUNCT), **dict.fromkeys("[]", Category.BRACKET),
+    **dict.fromkeys("()", Category.PAREN), "λ": Category.LAMBDA,
+}
 
 
 @dataclass(frozen=True)
 class Token:
+    """A token, with where it starts: line and column, from 1."""
+
     category: Category
     text: str
     line: int
@@ -31,18 +38,23 @@ class Token:
 
 
 class ParseError(Exception):
+    """What is wrong at a line and column of the text."""
+
     def __init__(self, line: int, column: int, message: str):
         super().__init__(f"{line}:{column}: {message}")
         self.line, self.column = line, column
 
 
 def is_ident_char(ch: str) -> bool:
+    """Whether `ch` may be part of a name: a Latin-1 letter or digit, the subscripts ᵢ to ᵥ, the block of super-
+    and subscripts from ⁰, the signs from ° to ¿ (², ³ and ¹ among them), or one of ? _ ' % ∅."""
     code = ord(ch)
     return (code <= 255 and ch.isalnum()) or 0x1D62 <= code < 0x1D66 or 0x2070 <= code < 0x20A0 \
         or 0x00B0 <= code < 0x00C0 or ch in "?_'%∅"
 
 
 def tokenize(text: str) -> list[Token]:
+    """The text's tokens; a ParseError at the first character that starts none."""
     tokens = []
     i, line, line_start = 0, 1, 0
 

@@ -1,22 +1,27 @@
+"""The token form in memory, and its text in the graal.ct dialect. A program is structures, one per translated
+method; a structure is λs; a λ's body is instructions `type op ins → outs`."""
+
 from dataclasses import dataclass, field
 from functools import cache
 
-LINEAR = frozenset({"heap"})  # list of linear types
+LINEAR = frozenset({"heap"})  # the linear types: a value of one is used exactly once, never copied or dropped
 
-# How code leaves the method
+# How a guard, or every path from a λ, leaves the method: by throwing, or by stopping (deoptimizing)
 THROWS, TRAPS = "throws", "traps"
 
-ENTRY = "run"  # the entry point of a Cthulhu program 
+ENTRY = "run"  # the λ a structure starts at, which a call runs
 
 _TYPE_CODES = {"ref": "r", "int": "i", "long": "l", "float": "f", "double": "d", "bool": "b", "heap": "h"}
 _TYPES = {code: t for t, code in _TYPE_CODES.items()}
 
 
 def function_type(params: list[str], outs: list[str]) -> str:
+    """The name of the function type with these parameter and result types: ref, heap → int, heap is `f_rh_ih`."""
     return "f_" + "".join(_TYPE_CODES[t] for t in params) + "_" + "".join(_TYPE_CODES[t] for t in outs)
 
 
 def frame_type(function: str) -> str:
+    """The type of a frame whose two arms are functions of this type."""
     return f"frame[{function}]"
 
 
@@ -41,6 +46,9 @@ def _parse_function_type(name: str) -> tuple[tuple[str, ...], tuple[str, ...]] |
 
 @dataclass
 class Instr:
+    """One instruction, `type op ins → outs`: the operation `op` of `type` (a type, a structure or a function
+    type) applied to the values `ins`, defining the values `outs`."""
+
     type: str
     op: str
     ins: list[str] = field(default_factory=list)
@@ -52,11 +60,14 @@ class Instr:
     observes: tuple[int, ...] = ()  # the tokens a call only reads: their places in ins, counted from the end
 
     def renamed(self, ins: list[str], outs: list[str]) -> "Instr":
+        """A copy with other inputs and outputs; the rest is shared, but `out_types` is copied."""
         copy = object.__new__(Instr)
         copy.__dict__.update(self.__dict__, ins=ins, outs=outs, out_types=list(self.out_types))
         return copy
 
     def text(self) -> str:
+        """The instruction as a line of graal.ct, its note, field or exit as a comment; a call's comment says
+        which tokens it only reads."""
         line = " ".join([self.type, self.op, *self.ins])
         if self.outs:
             line += " →  " + " ".join(self.outs)
@@ -70,6 +81,8 @@ class Instr:
 
 @dataclass
 class Lambda:
+    """A λ: named, typed parameters and results, and the body that makes the results from the parameters."""
+
     name: str
     params: list[tuple[str, str]]  # (name, type)
     outs: list[tuple[str, str]]  # (name, type)
@@ -83,6 +96,8 @@ class Lambda:
 
 @dataclass
 class Structure:
+    """One translated method: its λs, ENTRY among them."""
+
     name: str
     lambdas: list[Lambda] = field(default_factory=list)
     note: str = ""
@@ -90,6 +105,8 @@ class Structure:
 
 @dataclass
 class Program:
+    """A translated program: its structures, and the fields, classes and constants they use by number."""
+
     structures: list[Structure] = field(default_factory=list)
     fields: dict[str, str] = field(default_factory=dict)  # `field T "name"` declarations, in order: get_i / set_i
     classes: list[str] = field(default_factory=list)  # `class` declarations: new_i, instanceof_i
@@ -103,18 +120,21 @@ class Program:
         self._indices.update({("constant", *c): i for i, c in enumerate(self.constants)})
 
     def field_index(self, name: str, type_: str) -> int:
+        """The field's number in `get_i` and `set_i`, declaring it with its type the first time."""
         if self.fields.setdefault(name, type_) != type_:
             raise ValueError(f"field {name} is both {self.fields[name]} and {type_}")
         return self._indices.setdefault(("field", name), len(self.fields) - 1)
 
     def class_index(self, name: str) -> int:
+        """The class's number in `new_i` and `instanceof_i`, declaring it the first time."""
         if ("class", name) not in self._indices:
             self._indices["class", name] = len(self.classes)
             self.classes.append(name)
         return self._indices["class", name]
 
     def constant_index(self, type_: str, what: str) -> int:
-        """A constant other than an int, a long or null: an object, a string, a float."""
+        """The number in `const_i` of a constant other than an int, a long or null (an object, a string, a float),
+        declaring it the first time. Quotes and line breaks in its text are replaced, so it can be quoted."""
         what = what.replace('"', "'").replace("\n", " ")
         if ("constant", type_, what) not in self._indices:
             self._indices["constant", type_, what] = len(self.constants)

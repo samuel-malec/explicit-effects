@@ -22,12 +22,18 @@ ARRAYS = {"byte": "int", "char": "int", "short": "int", "int": "int", "long": "l
 
 @dataclass
 class Prelude:
+    """The dialect's declarations: its types, its signatures, each structure's operations with their types, and
+    what is wrong in them."""
+
     types: set[str]
     signatures: dict[str, Signature]
     structures: dict[str, dict[str, OpType]]
     errors: list[str]
 
     def operations(self, signature: str, args: list, within: frozenset[str] = frozenset()) -> dict[str, OpType]:
+        """The operations of `signature[args]` and of the signatures it extends, with the arguments put in for
+        the parameters. A parameter given a list of types stands for all of them. `within` are the signatures
+        being expanded, so that one that extends itself stops."""
         s = self.signatures.get(signature)
         if s is None or signature in within:  # missing, or extending itself: reported by parse
             return {}
@@ -49,10 +55,14 @@ class Prelude:
 
 
 def load(path: Path = GRAAL) -> Prelude:
+    """The prelude in graal.ct, or in `path`."""
     return parse(path.read_text())
 
 
 def parse(text: str) -> Prelude:
+    """The prelude the text declares, with what is wrong in it: a reference to a missing signature or with the
+    wrong number of arguments, a signature that extends itself, a structure that binds an operation none of its
+    signatures has or misses one, and undeclared types."""
     module = parser.parse(text)
     prelude = Prelude(set(module.types), module.signatures, {}, [])
 
@@ -91,6 +101,7 @@ def parse(text: str) -> Prelude:
 
 
 def _reference(signatures: dict[str, Signature], name: str, args: list[str]) -> str | None:
+    """Why `name[ args ]` is no reference to a signature, None if it is one."""
     if name not in signatures:
         return f"no signature {name}"
 
@@ -118,6 +129,9 @@ def _cycle(signatures: dict[str, Signature], start: str) -> list[str] | None:
 
 
 def check(program: Program, prelude: Prelude) -> list[str]:
+    """The program's type errors: each instruction must apply an operation that the prelude or the program
+    declares to values of the types it takes, and each λ's results must have their types. The prelude's own
+    errors come first."""
     errors = [f"prelude: {e}" for e in prelude.errors]
     expected = _Expected(program, prelude)
 

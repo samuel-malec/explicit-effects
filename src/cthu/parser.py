@@ -1,3 +1,6 @@
+"""Parse graal.ct text: its types, signatures and structures, and a program's field, class and constant
+declarations."""
+
 from dataclasses import dataclass, field
 from typing import NoReturn
 
@@ -9,6 +12,8 @@ Reference = tuple[str, list[str]]  # a signature, with its arguments
 
 @dataclass
 class Signature:
+    """`signature name[ params ] : parents ( op ∷ ins → outs … )`"""
+
     name: str
     params: list[str]
     parents: list[Reference]  # the signatures it extends
@@ -17,6 +22,8 @@ class Signature:
 
 @dataclass
 class Instruction:
+    """`structure op ins → outs`, in a λ's body."""
+
     structure: str
     op: str
     ins: list[str]
@@ -25,6 +32,8 @@ class Instruction:
 
 @dataclass
 class LambdaDef:
+    """`λ params → outs ( instructions )`"""
+
     params: list[str]
     outs: list[str]
     body: list[Instruction]
@@ -32,6 +41,8 @@ class LambdaDef:
 
 @dataclass
 class StructureDef:
+    """`structure name : implements ( op = builtin … op = λ … )`"""
+
     name: str
     implements: list[Reference]
     builtins: dict[str, str] = field(default_factory=dict)  # operation = builtin
@@ -40,6 +51,8 @@ class StructureDef:
 
 @dataclass
 class Module:
+    """Everything a text declares."""
+
     types: list[str] = field(default_factory=list)
     signatures: dict[str, Signature] = field(default_factory=dict)
     structures: dict[str, StructureDef] = field(default_factory=dict)
@@ -49,10 +62,13 @@ class Module:
 
 
 def parse(text: str) -> Module:
+    """What the text declares; a ParseError where it isn't graal.ct."""
     return _Parser(tokenize(text)).module()
 
 
 class _Parser:
+    """A recursive-descent parser: each method reads one construct and moves past it."""
+
     def __init__(self, tokens: list[Token]):
         self.tokens = tokens
         self.i = 0
@@ -61,9 +77,11 @@ class _Parser:
     # --- tokens -------------------------------------------------------------
 
     def peek(self) -> Token | None:
+        """The next token, None at the end."""
         return self.tokens[self.i] if self.i < len(self.tokens) else None
 
     def accept(self, category: Category, text: str | None = None) -> Token | None:
+        """The next token if it has this category (and text), moving past it; otherwise None."""
         token = self.peek()
         if token is None or token.category is not category or (text is not None and token.text != text):
             return None
@@ -71,20 +89,24 @@ class _Parser:
         return token
 
     def expect(self, category: Category, text: str | None = None) -> Token:
+        """The next token, which must have this category (and text)."""
         token = self.accept(category, text)
         if token is None:
             self.fail(f"expected {repr(text) if text else category.value}, found {self.peek() or 'the end'}")
         return token
 
     def fail(self, message: str, token: Token | None = None) -> NoReturn:
+        """Raise a ParseError at the token, or else at the next one."""
         token = token or self.peek() or (self.tokens[-1] if self.tokens else Token(Category.EOL, "", 1, 1))
         raise ParseError(token.line, token.column, message)
 
     def lines(self) -> None:
+        """Skip empty lines."""
         while self.accept(Category.EOL):
             pass
 
     def end_of_line(self) -> None:
+        """The end of a line, or of the text."""
         if self.peek() is not None:
             self.expect(Category.EOL)
 
@@ -98,6 +120,7 @@ class _Parser:
         return names
 
     def open(self) -> None:
+        """A block's `(`, on this line or a later one."""
         self.lines()
         self.expect(Category.PAREN, "(")
 
@@ -111,6 +134,7 @@ class _Parser:
     # --- declarations -------------------------------------------------------
 
     def module(self) -> Module:
+        """The whole text: one declaration per line."""
         self.lines()
 
         while self.peek() is not None:
