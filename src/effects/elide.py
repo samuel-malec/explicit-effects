@@ -74,6 +74,7 @@ def elidable(facts: PointsToFacts) -> dict[str, str]:
 
 
 def main() -> int:
+    """Write the sites to change, one per line, and say how many of each kind there are."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path)
     parser.add_argument("-o", "--output", type=Path, required=True)
