@@ -1,4 +1,6 @@
-"""Graal IR → Cthulhu translation"""
+"""Graal IR into the token form, graal.ct: a structure per method, a λ per block it reaches, and a token per
+partition of memory its signature names. The graph decides the code; the signatures (effects.signatures) decide
+which tokens each method and each call takes."""
 
 import re
 from itertools import count
@@ -8,6 +10,7 @@ from cthu.ssu import linearize
 from effects.signatures import REST, Effects, no_analysis
 from graal.graal_ir import Block, Graph, Node
 
+# Graal's binary operations, and the dialect's names for them
 ARITHMETIC = {
     "Add": "add", "Sub": "sub", "Mul": "mul", "SignedDiv": "div", "SignedRem": "rem",
     "SignedFloatingIntegerDiv": "div", "SignedFloatingIntegerRem": "rem", "FloatDiv": "div", "FloatRem": "rem",
@@ -16,13 +19,16 @@ ARITHMETIC = {
     "Min": "min", "Max": "max",
 }
 
+# Graal's unary operations
 UNARY = {"Negate": "neg", "Not": "not", "Abs": "abs", "Sqrt": "sqrt"}
 
+# Graal's comparisons, each of which gives a bool
 COMPARISON = {
     "IntegerEquals": "eq?", "IntegerLessThan": "lt?", "IntegerBelow": "ult?",
     "ObjectEquals": "eq?", "PointerEquals": "eq?", "FloatEquals": "eq?", "FloatLessThan": "lt?",
 }
 
+# Conversions between number types, each a `to_<type>` of the source type
 CONVERSIONS = {"Narrow", "SignExtend", "ZeroExtend", "FloatConvert", "Reinterpret"}
 NUMBERS = {"int", "long", "float", "double"}
 
@@ -30,20 +36,24 @@ NUMBERS = {"int", "long", "float", "double"}
 VIRTUAL = {"VirtualInstance", "VirtualArray", "VirtualBoxing"}
 
 # Nodes that touch memory in a way the dialect has no operation for. Each becomes a call to
-# an external that takes every token of the method: the method's signature covers the node.
+# an external that takes every token of the method. The method's signature covers the node.
 OPAQUE = {"EnsureClassInitialized", "MarkStaticFinalFieldInitialized", "PureBox", "AllocatingBox",
           "CopyOf", "CopyOfRange", "ArrayCopy", "ArrayCopyWithConversions",
           "ArrayEquals", "ArrayRegionEquals", "ArrayRegionEqualsWithMask", "ArrayCompareTo", "ArrayRegionCompareTo",
           "ArrayIndexOf", "VectorizedHashCode", "CalcStringAttributes", "StringLatin1Inflate", "UnaryMathIntrinsic"}
 
+# Nodes that only pass their input on: their value goes by the input's name
 ALIASES = {"Pi", "ValueProxy", "PublishWrites", "StateSplitProxy"}
 
+# Nodes that end a block, which `_end` translates
 ENDS = {"If", "Return", "Unwind"}
 
 CALLS = {"Invoke", "InvokeWithException"}
 
+# The node that takes the exception where a handler starts
 CAUGHT = "ExceptionObject"
 
+# A descriptor's primitive types, and the dialect's type for each
 _DESCRIPTOR = {"Z": "int", "B": "int", "C": "int", "S": "int", "I": "int", "J": "long", "F": "float", "D": "double"}
 
 
@@ -52,10 +62,12 @@ class Unsupported(Exception):
 
 
 def structure_name(method: str) -> str:
+    """The name of a method's structure: its key, every character but letters and digits made `_`."""
     return _identifier(method)
 
 
 def _identifier(text: str) -> str:
+    """The text with every character that isn't a letter or a digit replaced by `_`."""
     return "".join(c if c.isalnum() else "_" for c in text)
 
 
@@ -116,7 +128,7 @@ class Translation:
         self.token_names = token_names(self.effects.partitions)
         self.keys = {graph.name + graph.descriptor: key for key, graph in graphs.items()}
         self.program = Program()
-        self.refused: dict[str, str] = {}  # each method refused, and why
+        self.refused: dict[str, str] = {}
 
     def translate(self, keys: list[str]) -> Program:
         """Add these methods to the program, a structure each; a method that can't be translated is
@@ -228,6 +240,7 @@ class MethodTranslation:
         return f"p{node.index}" if node.op == "Parameter" else f"v{node.id}"
 
     def type_of(self, node_id: int) -> str:
+        """The dialect's type of the value."""
         return _type(self.nodes[self.value(node_id)])
 
     def _every_path(self, seed: set[int]) -> set[int]:
@@ -341,6 +354,8 @@ class MethodTranslation:
         return param_ids
 
     def _defs_and_uses(self, block: Block) -> tuple[set[int], set[int]]:
+        """The values the block defines, and the values it needs from elsewhere: for its own nodes, and as the
+        phi inputs it passes on to its successors."""
         defs, uses = set(), set()
         if block.id in self.caught:
             defs.add(self.caught[block.id])
@@ -378,6 +393,7 @@ class MethodTranslation:
         return {n.id for n in self.graph.blocks[block_id].nodes if n.op in ("ValuePhi", CAUGHT)}
 
     def _branches(self, block: Block) -> tuple[int, int]:
+        """Where a block that ends in an If goes: its true and its false successor."""
         labels = {e.label: e.to for e in block.succs}
         return labels["true"], labels["false"]
 
@@ -407,16 +423,20 @@ class MethodTranslation:
         return structure
 
     def _lambda_name(self, block_id: int) -> str:
+        """The name of a block's λ: ENTRY for the entry block, b and the id for the others."""
         return ENTRY if block_id == self.graph.entry else f"b{block_id}"
 
     def _lambda_params(self, block_id: int) -> list[tuple[str, str]]:
+        """A block's λ's parameters: the method's for the entry block, the values it receives for the others; the
+        tokens after them."""
         tokens = [(t, "heap") for t in self.tokens]
         if block_id == self.graph.entry:
             return [(f"p{i}", t) for i, t in enumerate(self.params)] + tokens
         return [(self.ref(i), self.type_of(i)) for i in self.param_ids[block_id]] + tokens
 
     def _trap(self, block_id: int) -> Lambda:
-        # Every path from here deoptimizes, which stops the program: ahead-of-time code never comes back.
+        """The λ of a block from which every path deoptimizes, which stops the program (ahead-of-time code never
+        comes back): it traps on every token and gives nothing back."""
         lam = Lambda(self._lambda_name(block_id), self._lambda_params(block_id), list(self.outs), exit=TRAPS)
 
         for t in self.tokens:
@@ -427,6 +447,7 @@ class MethodTranslation:
         return lam
 
     def _block(self, block_id: int) -> Lambda:
+        """A block's λ: its nodes in order, then how the block ends."""
         block = self.graph.blocks[block_id]
         self.block_id = block_id
         self.renamed = {}
@@ -445,6 +466,7 @@ class MethodTranslation:
 
     def _emit(self, type_: str, op: str, ins: list[str], outs: list[str], out_types: list[str], note: str = "",
               field: str = "") -> None:
+        """Add an instruction to the λ being made."""
         self.body.append(Instr(type_, op, ins, outs, out_types, note, field))
 
     def _advance(self, token: str) -> tuple[str, str]:
@@ -454,6 +476,7 @@ class MethodTranslation:
         return before, after
 
     def _token_for(self, partition: str, what: str) -> str:
+        """The partition's token; Unsupported if the method's signature lacks it."""
         if partition not in self.token:
             raise Unsupported(f"{what} touches {partition}, which the signature of {self.graph.name} lacks")
         return self.token[partition]
@@ -466,6 +489,7 @@ class MethodTranslation:
             raise Unsupported(str(e)) from e
 
     def _node(self, n: Node) -> None:
+        """Translate one node into the λ being made."""
         op, v, t = n.op, f"v{n.id}", _type(n)
         if op in ("Parameter", "ValuePhi", CAUGHT) or op in ALIASES or op in ENDS:
             return
@@ -608,6 +632,7 @@ class MethodTranslation:
                 self._emit("heap", kind, [before], [after], ["heap"], note=what)
 
     def _field(self, n: Node) -> None:
+        """A field's load or store; a volatile one acquires or releases first."""
         if n.ordered and n.op == "LoadField":
             # A volatile read acquires before it reads: what it reads may be another thread's
             # write, and so may anything read after it.
@@ -621,6 +646,7 @@ class MethodTranslation:
         partition = self._partition(n, n.field)
 
         before, after = self._advance(self._token_for(partition, n.field))
+        # A static field's access has no receiver among its inputs.
         static = "static" if (n.op == "LoadField" and not n.inputs) or (
                 n.op == "StoreField" and len(n.inputs) == 1) else ""
         ins = [before, *(self.ref(i) for i in n.inputs)]
@@ -631,6 +657,7 @@ class MethodTranslation:
             self._emit("heap", f"set{static}_{k}", ins, [after], ["heap"], field=n.field)
 
     def _array(self, n: Node) -> None:
+        """An array element's load or store."""
         partition = self._partition(n, n.kind)
 
         before, after = self._advance(self._token_for(partition, n.kind))
@@ -717,6 +744,8 @@ class MethodTranslation:
         return [(self.ref(self.caught[self.block_id]), "ref")]
 
     def _call(self, n: Node) -> None:
+        """A call of the one target the analysis found, or a dispatch to one of several, with the tokens their
+        signatures need."""
         if len(n.callees) > 1:
             # A dispatch to one of several targets
             callee = n.target
@@ -769,6 +798,8 @@ class MethodTranslation:
         return f"k{node_id}" if node_id not in self.graph.blocks else f"kc{node_id}"
 
     def _end(self, block: Block) -> None:
+        """How the block's λ ends: a branch, the check for an exception after a node that may throw, a return,
+        a throw, or a jump to the next block."""
         if block.end.get("node") == "IfNode":
             if_node = next(n for n in block.nodes if n.op == "If")
             true, false = self._branches(block)
@@ -810,6 +841,7 @@ class MethodTranslation:
             self._emit("heap", "move", [self.current[t]], [f"{t}out"], ["heap"])
 
     def _jump(self, src: int, dst: int) -> None:
+        """A tail call of block `dst`'s λ, with the values it receives from `src` and the tokens."""
         phis = {n.id: dict(n.phi) for n in self.graph.blocks[dst].nodes if n.op == "ValuePhi"}
         args = [self.ref(phis[i][src]) if i in phis else self.ref(i) for i in self.param_ids[dst]]
         ftype = function_type([t for _, t in self._lambda_params(dst)], self.out_types)
@@ -818,6 +850,8 @@ class MethodTranslation:
                    [n for n, _ in self.outs], self.out_types)
 
     def _branch(self, c: str, true: int, false: int) -> None:
+        """A branch on `c`: the two blocks' λs as closures, one chosen by `opt` and `join` with a frame that forks
+        the tokens, called with what both arms receive."""
         params = self._lambda_params(true)
         ftype = function_type([t for _, t in params], self.out_types)
         frame = self._frame(ftype, params)
@@ -833,6 +867,8 @@ class MethodTranslation:
                    self.out_types)
 
     def _frame(self, ftype: str, params: list[tuple[str, str]]) -> Lambda:
+        """The frame for arms of this function type, made once per type: it forks every token, calls both arms,
+        and joins what they give back."""
         if ftype in self.frames:
             return self.frames[ftype]
 
@@ -856,6 +892,7 @@ class MethodTranslation:
 
 
 def _type(n: Node) -> str:
+    """A node's type in the dialect: a condition is a bool."""
     return "bool" if n.type == "cond" else n.type
 
 
