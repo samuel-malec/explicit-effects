@@ -1,5 +1,4 @@
-"""Print the Graal IR of an export as text: blocks in order, each with its nodes
-as the schedule has them and where it goes next.
+"""Print the Graal IR of an export as text
 
 Usage:
     uv run python -m diagnostics.show graal-export/out/suite/forwarding.AcrossCall.json --method demo
@@ -18,6 +17,7 @@ from graal.graal_ir import Block, Graph, Node
 
 
 def show(graph: Graph) -> str:
+    """A graph as text: its method, then each block with where it goes and its nodes."""
     lines = [f"{graph.name}{graph.descriptor}" + (f"   refused by the exporter: {'; '.join(graph.unsupported)}"
                                                   if graph.unsupported else "")]
     for block in graph.blocks.values():
@@ -28,12 +28,14 @@ def show(graph: Graph) -> str:
 
 
 def _successors(block: Block) -> str:
+    """Where a block goes: how the method leaves there, or its successors with their edges' labels."""
     if block.exit:
         return block.exit
     return ", ".join(f"{e.to}" + (f" ({e.label})" if e.label else "") for e in block.succs)
 
 
 def _node(n: Node) -> str:
+    """A node as one line: id, operation, type, inputs, then whatever else the export says about it."""
     inputs = " ".join(str(i) for i in (*n.inputs, *n.args))
     details = []
     if n.op == "Parameter":
@@ -58,6 +60,7 @@ def _node(n: Node) -> str:
 
 
 def main() -> int:
+    """Print the graphs of the export's methods, those whose name contains --method."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path)
     parser.add_argument("--method", default="", help="only methods whose name contains this")

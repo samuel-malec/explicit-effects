@@ -51,6 +51,7 @@ def short_object(name: str) -> str:
 
 
 def receivers(objects: list[str] | None) -> str:
+    """The objects an access may touch, as text."""
     if objects is None:
         return "objects unknown"
     if not objects:
@@ -59,6 +60,7 @@ def receivers(objects: list[str] | None) -> str:
 
 
 def show(key: str, method: dict) -> str:
+    """A method's facts as text: reads, writes, calls, allocation and effects, then each access with its objects."""
     lines = [key]
     for kind in ("reads", "writes"):
         if method.get(kind):
@@ -80,6 +82,7 @@ def show(key: str, method: dict) -> str:
 
 
 def main() -> int:
+    """Print the facts of the program's methods (with --all, of every method), those whose name contains --method."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path)
     parser.add_argument("--method", default="", help="only methods whose name contains this")
