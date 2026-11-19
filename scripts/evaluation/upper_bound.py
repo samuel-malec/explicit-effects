@@ -30,18 +30,35 @@ def row(name: str, graal: Counts, fields: Counts, none: Counts) -> str:
             f"{graal.loop_loads:>7,} {fields.loop_loads:>7,} {none.loop_loads:>7,}   {graal.calls:>8,} {fields.calls:>8,} {none.calls:>8,}")
 
 
+def common(graal: dict[str, Counts], fields: dict[str, Counts], none: dict[str, Counts]) -> tuple[Counts, Counts, Counts, int]:
+    """The three images' totals over the methods all three compile: an image that inlines differently compiles other methods, and a total over
+    all of them would then compare different sets."""
+    names = set(graal) & set(fields) & set(none)
+    return (total({m: graal[m] for m in names}), total({m: fields[m] for m in names}), total({m: none[m] for m in names}), len(names))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("programs", nargs="+", metavar="NAME=GRAAL,FIELDS,NONE", help="a name and the counts.txt of the three images")
     args = parser.parse_args()
+    print("every method an image compiles")
     print(f"{'program':22} {'graal':>9} {'fields, loads':>18} {'none, loads':>18} {'share':>7}   {'in loops: graal':>7} {'fields':>7} {'none':>7}   {'calls: graal':>8} {'fields':>8} {'none':>8}")
+    rows = []
     for spec in args.programs:
         name, _, paths = spec.partition("=")
         files = paths.split(",")
         if len(files) != 3:
             parser.error(f"{spec}: three counts.txt expected, graal, fields and none")
-        graal, fields, none = (total(read(Path(f))) for f in files)
-        print(row(name, graal, fields, none))
+        graal, fields, none = (read(Path(f)) for f in files)
+        rows.append((name, graal, fields, none))
+        print(row(name, total(graal), total(fields), total(none)))
+    print("\nthe methods all three images compile")
+    print(f"{'program':22} {'methods':>8}   {'graal':>9} {'fields, loads':>18} {'none, loads':>18} {'share':>7}   {'in loops: graal':>7} {'fields':>7} {'none':>7}")
+    for name, graal, fields, none in rows:
+        g, f, n, count = common(graal, fields, none)
+        removed_by_bound = g.loads - n.loads
+        share = f"{100 * (g.loads - f.loads) / removed_by_bound:.0f}%" if removed_by_bound > 0 else "-"
+        print(f"{name:22} {count:>8}   {g.loads:>9,} {change(g.loads, f.loads):>18} {change(g.loads, n.loads):>18} {share:>7}   {g.loop_loads:>7,} {f.loop_loads:>7,} {n.loop_loads:>7,}")
     return 0
 
 
