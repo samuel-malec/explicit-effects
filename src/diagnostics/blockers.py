@@ -4,6 +4,7 @@ bound, and how many methods the program has behind each.
 Usage:
     uv run python -m diagnostics.blockers graal-native/out/awfy-eval-o3/fields/export.json
     uv run python -m diagnostics.blockers export.json --program deltablue,havlak --synchronization none
+    uv run python -m diagnostics.blockers export.json --roots 25
 
 A method kills everything (`effects.kills`) when it, or a method it calls, has an effect or a call
 the facts can't name, or synchronization that may order this thread with another. The answer says
@@ -15,7 +16,7 @@ import argparse
 from collections import Counter
 from pathlib import Path
 
-from effects.kills import ANY, kills, node_kind
+from effects.kills import node_kind, opaque
 from effects.signatures import callees_of, synchronizes_on, synchronizing
 from graal.graal_import import PointsToFacts, load_facts
 
@@ -77,6 +78,63 @@ def blockers(facts: PointsToFacts, program: list[str], sync: str = "shared") -> 
     return result
 
 
+def nearest_through(facts: PointsToFacts, program: list[str], sync: str = "shared", top: int = 25) -> tuple[int, list[tuple[str, int, int, str]], list[tuple[str, int, int, str]]]:
+    """The methods the program's opaque methods become opaque through, as (method, program methods that call it directly,
+    program methods that come first to it, its own cause), most first, in two rankings; and how many program methods are
+    opaque.
+
+    Each opaque method has a distance to the nearest method that has a cause itself (an unresolved call, a native
+    transition, a lock, a class initialization): its roots are those at that distance on the paths of that length, and its gateways
+    the first method outside the program on those paths. A program method counts once under each of its roots and gateways, so
+    where paths tie the counts add up to more than the methods; a program method with a cause of its own is its own root and
+    has no gateway. The share of a method that is only reached after others is not counted: it would be 'every opaque method'
+    for the few roots that all calls end in."""
+    killing = opaque(facts)
+    callees = callees_of(facts)
+    callers: dict[str, list[str]] = {}
+    for m, cs in callees.items():
+        for c in cs:
+            callers.setdefault(c, []).append(m)
+    causes = {m: direct_cause(facts, m, sync) for m in killing}
+    dist = {m: 0 for m, why in causes.items() if why}
+    layer = list(dist)
+    while layer:
+        reached = []
+        for x in layer:
+            for caller in callers.get(x, ()):
+                if caller in killing and caller not in dist:
+                    dist[caller] = dist[x] + 1
+                    reached.append(caller)
+        layer = reached
+    nearest_roots: dict[str, frozenset[str]] = {}
+    gateways: dict[str, frozenset[str]] = {}
+    for m in sorted(dist, key=dist.__getitem__):
+        outside = not in_program(m, program)
+        if dist[m] == 0:
+            nearest_roots[m], gateways[m] = frozenset({m}), frozenset({m}) if outside else frozenset()
+            continue
+        roots_of: set[str] = set()
+        gateways_of: set[str] = set()
+        for c in callees[m]:
+            if dist.get(c) == dist[m] - 1:
+                roots_of |= nearest_roots[c]
+                gateways_of |= gateways[c]
+        nearest_roots[m] = frozenset(roots_of)
+        gateways[m] = frozenset({m}) if outside else frozenset(gateways_of)
+    mine = [m for m in dist if in_program(m, program)]
+    first_roots = Counter(r for m in mine for r in nearest_roots[m])
+    first_gateways = Counter(g for m in mine for g in gateways[m])
+
+    def direct(m: str) -> int:
+        return sum(1 for c in callers.get(m, ()) if c in killing and in_program(c, program))
+
+    def rows(counter: Counter[str]) -> list[tuple[str, int, int, str]]:
+        ranked = sorted(counter, key=lambda m: (-counter[m], m))[:top]
+        return [(m, direct(m), counter[m], causes[m] or "through callees") for m in ranked]
+
+    return len(mine), rows(first_gateways), rows(first_roots)
+
+
 def lock_sites(facts: PointsToFacts, program: list[str]) -> Counter[str]:
     """The program's monitor and volatile sites by what thread escape says of their receivers: lock elision and
     ordinary volatile accesses need every receiver of a site thread-local."""
@@ -104,13 +162,16 @@ def main() -> int:
                         help="which synchronization blocks: that on objects another thread may reach (what the kill sets do), "
                              "all of it (before they knew thread escape), or none (what a kill set that named exactly the "
                              "partitions another thread may touch could free at most)")
+    parser.add_argument("--roots", type=int, default=0, metavar="N",
+                        help="also list the N methods the program's opaque methods become opaque through: the gateways into the platform and "
+                             "the methods that have a cause themselves, by how many program methods come first to them")
     args = parser.parse_args()
     facts = load_facts(args.export, args.assumptions)
     program = [p for p in args.program.split(",") if p]
-    answers = kills(facts)
+    answers = opaque(facts)
     methods = [m for m in facts.methods if in_program(m, program)]
     counts = blockers(facts, program, args.synchronization)
-    killing = [m for m in methods if answers[m] == ANY]
+    killing = [m for m in methods if m in answers]
     print(f"{len(methods)} program methods; synchronization that blocks: {args.synchronization}; "
           f"{sum(counts.values())} have a cause" + (f" ({len(killing)} kill everything)" if args.synchronization == "shared" else ""))
     for cause, n in counts.most_common():
@@ -118,6 +179,14 @@ def main() -> int:
     sites = lock_sites(facts, program)
     print(f"{sum(sites.values())} monitor and volatile sites in the program's methods: "
           + ", ".join(f"{n} {what}" for what, n in sites.most_common()))
+    if args.roots:
+        opaque_program, gateways, causes = nearest_through(facts, program, args.synchronization, args.roots)
+        print(f"{opaque_program} program methods kill everything; first = program methods that come first to a method (each counted under every one it ties with)")
+        for title, rows in (("gateways: the first method outside the program on the way to a cause", gateways),
+                            ("roots: the methods with a cause of their own that program methods come nearest to", causes)):
+            print(f"{title}\n  {'first':>6} {'direct':>6}  method (cause)")
+            for method, direct, first, why in rows:
+                print(f"  {first:>6} {direct:>6}  {method} ({why})")
     return 0
 
 

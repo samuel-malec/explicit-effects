@@ -58,6 +58,17 @@ def blocks(facts: PointsToFacts, method: dict, ignore: Collection[str] = ()) -> 
     return "calls-without-facts" not in ignore and any(c not in facts.methods for c in method.get("callees", ()))
 
 
+def opaque(facts: PointsToFacts, ignore: Collection[str] = (), callees: dict[str, set[str]] | None = None) -> dict[str, str]:
+    """The methods whose kill set is everything (`any`), each with a method that has the cause: the method itself, or a
+    method it calls, directly or not. Only which methods these are, no kill set is worked out, so it costs a walk over
+    the call graph: with effects left out (`ignore`) the sets are long lists and this is the way to count what that
+    frees on a large program. `kills` has the same methods."""
+    if unknown := set(ignore) - IGNORABLE.keys():
+        raise ValueError(f"cannot ignore {sorted(unknown)}: only {sorted(IGNORABLE)}")
+    callees = callees_of(facts) if callees is None else callees
+    return reaching(callees, {m: m for m, e in facts.methods.items() if blocks(facts, e, ignore)})
+
+
 def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str] = ()) -> dict[str, str | tuple[str, ...]]:
     """Method → the partitions it may write, a field's own name where the
     partition is all of the field, `init` if it allocates, and the VM's state it
@@ -85,7 +96,7 @@ def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str
         written[m] = own | set(e.get("vmWrites", ())) | ({INIT} if e.get("allocates") else set())
 
     callees = callees_of(facts)
-    unknown = reaching(callees, {m: m for m, e in methods.items() if blocks(facts, e, ignore)})
+    unknown = opaque(facts, ignore, callees)
     # A method that reaches something unknown kills everything, whatever it writes. Every other one
     # calls only methods like itself, so only they need what their callees write: on javac's export,
     # a third of the methods, and a tenth of the time.
