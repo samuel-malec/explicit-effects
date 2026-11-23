@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from cthu.ir import ENTRY, LINEAR, Instr, Lambda, Program, Structure
 from cthu.ssu import linearize
 
-VALUES = {"int", "long", "float", "double", "bool", "ref"}
+VALUES = {"int", "long", "float", "double", "bool", "ref"}  # the types of values, the heap token not among them
 
 
 # Operations that can't throw and don't touch memory: safe to remove once nothing uses them (drop_unused).
@@ -23,10 +23,12 @@ PURE = re.compile(r"cons_m?\d+|const_\d+|null|move|not|neg|add|sub|mul|and|or|xo
 
 
 def is_pure(i: Instr) -> bool:
+    """Whether the instruction may go when nothing uses what it gives: a pure operation on values."""
     return i.type in VALUES and bool(PURE.fullmatch(i.op))
 
 
 def types_in(lam: Lambda) -> dict[str, str]:
+    """Each name the λ defines, its parameters included, with its type."""
     types = dict(lam.params)
     for i in lam.body:
         types.update(zip(i.outs, i.out_types))
@@ -35,6 +37,7 @@ def types_in(lam: Lambda) -> dict[str, str]:
 
 
 def fresh(taken: set[str], base: str) -> str:
+    """A name not yet in `taken`, `base` or `base` and a number, which is then added to it."""
     name, n = base, 0
     while name in taken:
         n += 1
@@ -45,6 +48,7 @@ def fresh(taken: set[str], base: str) -> str:
 
 
 def names_in(lam: Lambda) -> set[str]:
+    """Every name the λ defines or gives back."""
     return {n for n, _ in lam.params} | {n for n, _ in lam.outs} | {o for i in lam.body for o in i.outs}
 
 
@@ -60,6 +64,7 @@ class Closures:
                     self.places.setdefault(i.op, []).append((lam, i))
 
     def of(self, name: str) -> list[tuple[Lambda, Instr]]:
+        """The places that take λ `name` as a closure: the λ, and the instruction."""
         return self.places.get(name, [])
 
 
@@ -231,6 +236,8 @@ def _inline(lam: Lambda, ref: Instr, jump: Instr, target: Lambda) -> list[Instr]
     outs = {n for n, _ in target.outs}
 
     def rename(n: str) -> str:
+        """A name of `target` as `lam` knows it: a parameter is the argument passed, an output stays itself, and
+        any other name gets the target's appended, so it can't clash with one of `lam`'s."""
         return names.get(n, n if n in outs else f"{n}_{target.name}")
 
     copies = [i.renamed([rename(n) for n in i.ins], [rename(n) for n in i.outs]) for i in target.body]

@@ -25,6 +25,8 @@ PLATFORM = ("java.", "javax.", "jdk.", "sun.", "com.sun.", "com.oracle.", "org.g
 
 
 def in_program(method: str, prefixes: list[str]) -> bool:
+    """Whether the method is the program's: under one of the prefixes (`*` for any), or without prefixes, outside
+    the platform's packages."""
     if prefixes:
         return "*" in prefixes or any(method.startswith(p) for p in prefixes)
     return not method.startswith(PLATFORM)
@@ -95,6 +97,7 @@ def lock_sites(facts: PointsToFacts, program: list[str]) -> Counter[str]:
 
 
 def main() -> int:
+    """Print how many of the program's methods each cause keeps opaque, then its monitor and volatile sites."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path)
     parser.add_argument("--assumptions", help="the set of thread-escape assumptions to read from an export made with all of them: none, "

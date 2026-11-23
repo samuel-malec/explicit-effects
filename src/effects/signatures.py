@@ -1,66 +1,56 @@
 """Which partitions of memory each method may read and write.
 
-    A partition is a set of memory locations, and a program's partitions are
-    disjoint: every location is in exactly one, so operations on two
-    partitions never touch the same memory.
+A partition is a set of memory locations; a program's partitions never overlap. Memory can be cut four ways:
 
-    - `heap`: all of memory as one partition.
-    - `field`: one partition per field and per array element kind. Two fields
-      are different memory whatever the objects, so Java's type system alone
-      makes them disjoint.
-    - `object`: disjoint sets of objects from the points-to facts, with all
-      their fields. Two objects share a partition when one access may touch
-      both: union-find over the objects each access's receiver may point to.
-    - `object-field`: the same for each field on its own, so a partition is one
-      field of a set of objects: disjoint as both `field` and `object` are.
-
-    How finely the facts tell objects apart is the analysis's choice: by type
-    by default, by allocation site with -H:AnalysisContextSensitivity=allocsens.
+- `heap`: all of memory is one partition.
+- `field`: a partition per field and per array element kind. Java's types alone keep two fields apart.
+- `object`: a partition per set of objects, with all their fields. Two objects share a partition when one
+  access may touch both (union-find over the objects each access may touch).
+- `object-field`: the same for each field separately, so a partition is one field of a set of objects.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from typing import Protocol
 
 from graal.graal_import import PointsToFacts
 
-# The objects an access's receiver may point to, as the export names them
+# The objects an access may touch, as the export names them; None when the analysis can't say.
 Receivers = frozenset[str] | None
 
 
 class Partitioner(Protocol):
-    """A field, or an array kind, `int[]`, and the
-    objects an access may touch, to the access's partition."""
+    """The partition of an access to `field` on `receivers`."""
 
     def __call__(self, field: str, receivers: Receivers = None, /) -> str: ...
 
 
-# The rest of memory, which no field of the program names: the platform's fields, and what allocation writes.
+# The rest of memory: what no field of the program covers.
 REST = "*"
 
-# The pseudo-objects of an access whose receiver the analysis can't say
-# anything about, and of one whose receiver is always null, which touches nothing.
+# Stand-in objects for an access whose objects the analysis can't name, and for one whose reference is
+# always null, which touches nothing.
 UNKNOWN, NOTHING = "?", "null"
 
-# The pseudo-object of a class's static fields, which every thread reaches.
+# The stand-in object for a class's static fields, which every thread can reach.
 STATICS = ".<statics>"
 
 
 def shared_object(facts: PointsToFacts, o: str) -> bool:
-    """Whether another thread may reach the object: one the analysis can't name, a class's
-    static fields, or one the export lists as shared. Without that list, any object."""
+    """Whether another thread may reach the object: one the analysis can't name, static fields, an object
+    the export lists as shared, or any object when the export has no such list."""
     return facts.shared is None or o == UNKNOWN or o.endswith(STATICS) or o in facts.shared
 
 
 def synchronizes_on(facts: PointsToFacts, objects: Receivers) -> bool:
-    """Whether synchronizing on these objects, a lock's or a volatile field's, may order this
-    thread with another: not when no other thread can reach any of them."""
+    """Whether locking these objects, or a volatile access to them, may order this thread with another. It
+    can't if no other thread reaches any of them."""
     return objects is None or any(o != NOTHING and shared_object(facts, o) for o in objects)
 
 
 def synchronizing(facts: PointsToFacts, method: dict, kind: str) -> list[str]:
-    """The method's own acquires or releases (`kind`: "acquires" or "releases") that may order this
-    thread with another: not those on locks or volatile fields only this thread reaches."""
+    """The method's own sites of `kind` ("acquires" or "releases") that may order this thread with another,
+    leaving out locks and volatile fields that only this thread reaches."""
     locks = method.get("locks", {})
     return [s for s in method.get(kind, ()) if s not in locks or synchronizes_on(facts, locks[s])]
 
@@ -81,7 +71,7 @@ def by_object(facts: PointsToFacts) -> Partitioner:
 
 
 def by_object_field(facts: PointsToFacts) -> Partitioner:
-    """Disjoint sets of objects, for each field on its own."""
+    """Disjoint sets of objects, for each field separately."""
     return _by_objects(facts, per_field=True)
 
 
@@ -94,81 +84,109 @@ PARTITIONERS: dict[str, Callable[[PointsToFacts], Partitioner]] = {
 
 
 def accesses(method: dict) -> list[tuple[str, str, Receivers]]:
-    """A method's field and array accesses: read or write, the field, and the
-    objects it may touch. A field the method reads or writes with no access
-    listed, as in a method outside the program, may touch any object."""
-    listed = [(a["kind"], a["field"], None if a["receivers"] is None else frozenset(a["receivers"]))
-              for a in method.get("accesses", ())]
-    covered = {(kind, field) for kind, field, _ in listed}
-    return listed + [(kind, field, None) for kind in ("read", "write") for field in method.get(kind + "s", ())
-                     if (kind, field) not in covered]
+    """Every field or array a method may read or write, as (kind, field, receivers): first the accesses the
+    export lists, in its order, then each read or write the list misses, with receivers None."""
+    result = []
+    for site in method.get("accesses", ()):
+        receivers = None if site["receivers"] is None else frozenset(site["receivers"])
+        result.append((site["kind"], site["field"], receivers))
+
+    with_site = {(kind, field) for kind, field, _ in result}
+    for kind, key in (("read", "reads"), ("write", "writes")):
+        for field in method.get(key, ()):
+            if (kind, field) not in with_site:
+                result.append((kind, field, None))
+    return result
 
 
-def _by_objects(facts: PointsToFacts, per_field: bool) -> Partitioner:
-    program = facts.fields.keys()
-    parent: dict = {}
+def _in_program(field: str, program: Collection[str]) -> bool:
+    """Whether the partitions cover the field: one of the program's own fields, or an array element kind."""
+    return field in program or field.endswith("[]")
 
-    def find(x):
+
+class _DisjointSets:
+    """Union-find over any hashable elements."""
+
+    def __init__(self) -> None:
+        self.parent: dict = {}
+
+    def __contains__(self, x) -> bool:
+        return x in self.parent
+
+    def find(self, x):
+        parent = self.parent
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
         return x
 
+    def join(self, a, b) -> None:
+        self.parent.setdefault(a, a)
+        self.parent.setdefault(b, b)
+        self.parent[self.find(a)] = self.find(b)
+
+    def classes(self) -> dict:
+        """Each class by its root, with its members in the order they first joined."""
+        classes: dict = {}
+        for x in self.parent:
+            classes.setdefault(self.find(x), []).append(x)
+        return classes
+
+
+def _by_objects(facts: PointsToFacts, per_field: bool) -> Partitioner:
+    """Sets of objects that one access may touch together, or with `per_field` such sets for each field."""
+    program = facts.fields.keys()
+    sets = _DisjointSets()
+
     def elements(field: str, receivers: Receivers) -> list:
-        """What an access joins: (field, object) per field, otherwise the object."""
+        """What an access joins: (field, object) per field, otherwise the object. Without a named object, a
+        stand-in for the field's unknown objects or for null."""
         if not receivers:
             pseudo = UNKNOWN if receivers is None else NOTHING
             return [(field, pseudo) if per_field else (pseudo, field)]
         return [(field, o) if per_field else o for o in sorted(receivers)]
 
-    def join(a, b) -> None:
-        parent.setdefault(a, a)
-        parent.setdefault(b, b)
-        parent[find(a)] = find(b)
+    known: dict[str, set[str]] = {}  # for each field, the objects its listed accesses name
+    unknown: set[str] = set()  # the fields some access touches on objects the analysis can't name
 
-    known: dict[str, set[str]] = {}  # the objects the listed accesses of a field may touch
-    unknown: set[str] = set()  # fields some access may touch on objects the analysis can't name
+    # 1. Each access joins everything it may touch.
     for method in facts.methods.values():
         for _, field, receivers in accesses(method):
-            if field in program or field.endswith("[]"):
+            if _in_program(field, program):
                 touched = elements(field, receivers)
                 for element in touched:
-                    join(touched[0], element)
+                    sets.join(touched[0], element)
                 if receivers is None:
                     unknown.add(field)
                 else:
                     known.setdefault(field, set()).update(receivers)
 
-    # An access the analysis can't say anything about may touch any object with the field.
+    # 2. An access on objects the analysis can't name may touch any object with the field.
     for field in unknown:
         for o in known.get(field, ()):
-            join(elements(field, None)[0], elements(field, frozenset({o}))[0])
+            sets.join(elements(field, None)[0], elements(field, frozenset({o}))[0])
 
-    # Where the analysis doesn't tell allocation sites apart, it names an object by its type
-    # alone, T: a summary that may be any object of exactly that type, so the same object as
-    # one other accesses name by its allocation site, T@site, or as a constant, T@constant.
-    for element in list(parent):
+    # 3. An object named by its type alone, T, may be any object of exactly that type, so it is the same as
+    #    one named by an allocation site, T@site, or as a constant, T@constant.
+    for element in list(sets.parent):
         o = element[1] if per_field else element
         if isinstance(o, str) and "@" in o:
             summary = (element[0], o.split("@", 1)[0]) if per_field else o.split("@", 1)[0]
-            if summary in parent:
-                join(summary, element)
+            if summary in sets:
+                sets.join(summary, element)
 
-    classes: dict = {}
-    for element in parent:
-        classes.setdefault(find(element), []).append(element)
-    names = _names(classes, per_field)
+    names = _names(sets.classes(), per_field)
 
     def partition(field: str, receivers: Receivers = None, /) -> str:
         if field == REST:
             return REST
         if receivers and field in unknown and not receivers <= known.get(field, set()):
-            # An object no listed access of the field names, as a new object's can be: only the
-            # accesses the analysis can't say anything about touch that field of it.
+            # An object no listed access of the field names, such as a new one: only the accesses on
+            # objects the analysis can't name touch that field of it.
             receivers = None
         touched = elements(field, receivers)
-        roots = {find(e) for e in touched if e in parent}
-        if len(roots) != 1 or any(e not in parent for e in touched):
+        roots = {sets.find(e) for e in touched if e in sets}
+        if len(roots) != 1 or any(e not in sets for e in touched):
             raise ValueError(f"{field} through {sorted(receivers or ())} is in no one partition of the facts")
         return names[roots.pop()]
 
@@ -176,34 +194,38 @@ def _by_objects(facts: PointsToFacts, per_field: bool) -> Partitioner:
 
 
 def _names(classes: dict, per_field: bool) -> dict:
-    """A name per class. Per field: the field itself when it has one class,
-    otherwise the field and where the class's first object was allocated,
-    `LoadStoreElimination$Counter.value@main:9`. Per object: the first object,
-    `LoadStoreElimination$Counter@main:9`."""
+    """A name for each class, by its root. Per field: the field alone if it has one class, otherwise the field
+    and where the class's first object was allocated, `LoadStoreElimination$Counter.value@main:9`. Per object:
+    the first object, `LoadStoreElimination$Counter@main:9`. A name already taken gets #2, #3, ..."""
 
     def label(members: list) -> str:
-        objects = [o for _, o in members] if per_field else [m for m in members if isinstance(m, str)]
-        found = sorted(o for o in objects if o not in (UNKNOWN, NOTHING))
+        if per_field:
+            objects = [o for _, o in members]
+        else:
+            objects = [m for m in members if isinstance(m, str)]
+        named = sorted(o for o in objects if o not in (UNKNOWN, NOTHING))
 
-        if not found:  # only the field's unknown or null receivers
+        if not named:  # only stand-ins: the field's unknown objects or null
             field, pseudo = members[0] if per_field else reversed(members[0])
             return pseudo if per_field else f"{field}@{pseudo}"
 
-        kind, site = _site(found[0])
-        return (site or kind) if per_field else f"{kind}@{site}" if site else kind
+        kind, site = _site(named[0])
+        if per_field:
+            return site or kind
+        return f"{kind}@{site}" if site else kind
 
-    count: dict[str, int] = {}
+    classes_of_field: dict[str, int] = {}
     for members in classes.values():
         if per_field:
             field, _ = members[0]
-            count[field] = count.get(field, 0) + 1
+            classes_of_field[field] = classes_of_field.get(field, 0) + 1
 
     names, used = {}, set()
     for root, members in sorted(classes.items(), key=lambda item: sorted(map(str, item[1]))):
         name = label(members)
         if per_field:
             field, _ = members[0]
-            name = field if count[field] == 1 else f"{field}@{name}"
+            name = field if classes_of_field[field] == 1 else f"{field}@{name}"
 
         unique, k = name, 2
         while unique in used:
@@ -216,8 +238,8 @@ def _names(classes: dict, per_field: bool) -> dict:
 
 
 def _site(name: str) -> tuple[str, str]:
-    """The type and a short allocation site: `LoadStoreElimination$Counter@LoadStoreElimination.main([Ljava/lang/String;)V:9`
-    is `LoadStoreElimination$Counter` at `main:9`; an object named by its type has no site."""
+    """An object's type and short allocation site: `LoadStoreElimination$Counter@LoadStoreElimination.main([Ljava/lang/String;)V:9`
+    gives `LoadStoreElimination$Counter` and `main:9`. An object named by its type alone has no site."""
     kind, _, site = name.partition("@")
     if site and site != "constant":
         method, _, bci = site.split(" in ")[0].rpartition(":")
@@ -227,27 +249,31 @@ def _site(name: str) -> tuple[str, str]:
 
 @dataclass(frozen=True)
 class Signature:
+    """What a method, with everything it may call, may read and write."""
+
     reads: frozenset[str]
     writes: frozenset[str]
     opaque: bool = False  # may touch anything
-    why: str = ""  # what makes it opaque: the effect at the root of it
-    releases: bool = False  # whether this method, or any other method it may call, releases
+    why: str = ""  # the effect that makes it opaque
+    releases: bool = False  # whether it, or a method it may call, releases
 
 
 @dataclass
 class Effects:
+    """Each method's signature, and the partitions they are in terms of."""
+
     partition: Partitioner
-    signatures: dict[str, Signature]  # by method: name and descriptor
-    partitions: tuple[str, ...]  # every partition of the program, the rest of memory included
-    shared: frozenset[str] | None = None  # the partitions another thread may touch: all of them unless given
-    facts: PointsToFacts | None = None  # which objects another thread may reach: any, without facts
+    signatures: dict[str, Signature]  # by method key: name and descriptor
+    partitions: tuple[str, ...]  # every partition of the program, REST included
+    shared: frozenset[str] | None = None  # the partitions another thread may touch; all of them if not given
+    facts: PointsToFacts | None = None  # which objects another thread may reach; without facts, any
 
     def __post_init__(self) -> None:
         if self.shared is None:
             self.shared = frozenset(self.partitions)
 
     def tokens(self, method: str) -> tuple[str, ...]:
-        """The partitions a method needs a token for."""
+        """The partitions a method needs a token for: all of them if it is opaque or has no signature."""
         signature = self.signatures.get(method)
         if signature is None or signature.opaque:
             return self.partitions
@@ -258,8 +284,8 @@ class Effects:
         return self.facts is None or synchronizes_on(self.facts, objects)
 
     def keeps(self, method: str, partition: str) -> bool:
-        """Whether a call to the method gives the partition's token back unchanged: the
-        method may read the partition, but writes none of it."""
+        """Whether a call to the method gives the partition's token back unchanged: the method may read the
+        partition but writes none of it."""
         signature = self.signatures.get(method)
         return signature is not None and not signature.opaque and partition not in signature.writes
 
@@ -275,23 +301,23 @@ def callees_of(facts: PointsToFacts) -> dict[str, set[str]]:
 
 
 def close_over_callees(callees: dict[str, set[str]], *sets: dict[str, set[str]]) -> None:
-    """Add to each method's set, in each of `sets`, the sets of every method it may call, directly or not. Methods
-    that call each other end with one set; their callees outside the group are done before them."""
-    for group in _components(callees):
-        members = set(group)
-        called = {c for m in group for c in callees[m] if c not in members}
+    """Add to each method's set, in each of `sets`, the sets of every method it may call, directly or not.
+    Methods that call each other end with the same set. Changes `sets` in place."""
+    for component in _components(callees):  # a component's callees are complete before it
+        members = set(component)
+        called = {c for m in component for c in callees[m] if c not in members}
         for per_method in sets:
-            joined = set().union(*(per_method.get(m, ()) for m in group), *(per_method.get(c, ()) for c in called))
-            for m in group:
+            joined = set().union(*(per_method.get(m, ()) for m in component), *(per_method.get(c, ()) for c in called))
+            for m in component:
                 per_method[m] |= joined
 
 
 def _components(callees: dict[str, set[str]]) -> list[list[str]]:
-    """The groups of methods that call each other, directly or not, each group after the groups it calls
-    (Tarjan's algorithm, without recursion)."""
-    index: dict[str, int] = {}
-    low: dict[str, int] = {}
-    stack: list[str] = []
+    """The call graph's strongly connected components (Tarjan's algorithm), each after every component it
+    calls. Written without recursion, so that long call chains don't reach Python's recursion limit."""
+    index: dict[str, int] = {}  # the order in which each method was first visited
+    low: dict[str, int] = {}  # the lowest index the method reaches inside its component
+    stack: list[str] = []  # visited methods whose component isn't finished
     on_stack: set[str] = set()
     components: list[list[str]] = []
 
@@ -304,38 +330,38 @@ def _components(callees: dict[str, set[str]]) -> list[list[str]]:
         if root in index:
             continue
         visit(root)
-        work = [(root, iter(callees[root]))]
+        work = [(root, iter(callees[root]))]  # the current path, each method with the callees it has left
         while work:
             m, children = work[-1]
             for c in children:
-                if c not in callees:
+                if c not in callees:  # outside the graph
                     continue
-                if c not in index:
+                if c not in index:  # visit it first, then come back to m
                     visit(c)
                     work.append((c, iter(callees[c])))
                     break
                 if c in on_stack:
                     low[m] = min(low[m], index[c])
-            else:
+            else:  # every callee of m is done
                 work.pop()
                 if work:
                     caller, _ = work[-1]
                     low[caller] = min(low[caller], low[m])
-                if low[m] == index[m]:
-                    group = []
+                if low[m] == index[m]:  # m is its component's first method: the component is complete
+                    component = []
                     while True:
                         member = stack.pop()
                         on_stack.discard(member)
-                        group.append(member)
+                        component.append(member)
                         if member == m:
                             break
-                    components.append(group)
+                    components.append(component)
     return components
 
 
 def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, str]:
-    """The roots, and each method that calls one, directly or not, with what
-    the root it reaches says."""
+    """The roots, and every method that may call one, directly or not, each with the value of a root it
+    reaches (the first one found)."""
     callers: dict[str, set[str]] = {}
     for m, cs in callees.items():
         for callee in cs:
@@ -352,17 +378,18 @@ def reaching(callees: dict[str, set[str]], roots: dict[str, str]) -> dict[str, s
 
 
 def program_partition(facts: PointsToFacts, partition: Partitioner) -> Partitioner:
-    """The partitioning for the program's own fields and for array kinds.
-    Any other field, the platform's, is in the rest of memory."""
-    program = facts.fields.keys()  # the fields of the classes under analysis
+    """`partition` for the program's own fields and for array kinds; any other field, the platform's, is in
+    REST."""
+    program = facts.fields.keys()
 
     def part(field: str, receivers: Receivers = None) -> str:
-        return partition(field, receivers) if field in program or field.endswith("[]") else partition(REST)
+        return partition(field, receivers) if _in_program(field, program) else partition(REST)
 
     return part
 
 
 def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
+    """Each method's signature: the partitions it, and everything it may call, may read and write."""
     part = program_partition(facts, partition)
     methods = facts.methods
     touched = {m: accesses(e) for m, e in methods.items()}
@@ -372,7 +399,22 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
               for m, e in methods.items()}
     callees = callees_of(facts)
 
-    # What makes a method touch everything, and every method that reaches it too.
+    why = reaching(callees, _opaque_roots(methods, callees))
+    shared = _shared_partitions(facts, part, touched)
+    releasing = _synchronize(facts, shared, reads, writes)
+    close_over_callees(callees, reads, writes)
+    releases = reaching(callees, releasing)
+
+    everything = {p for m in methods for p in reads[m] | writes[m]} | {part(REST)}
+    signatures = {m: Signature(frozenset(reads[m]), frozenset(writes[m]), opaque=m in why, why=why.get(m, ""),
+                               releases=m in releases and m not in why)
+                  for m in methods}
+    return Effects(part, signatures, tuple(sorted(everything)), frozenset(shared), facts)
+
+
+def _opaque_roots(methods: dict[str, dict], callees: dict[str, set[str]]) -> dict[str, str]:
+    """The methods that may touch anything by themselves, each with why: a callee without facts, a call the
+    analysis couldn't resolve, an unknown effect, or a read of anything (which needs every token)."""
     why: dict[str, str] = {}
     for m, e in methods.items():
         missing = sorted(c for c in callees[m] if c not in methods)
@@ -382,34 +424,35 @@ def analyse(facts: PointsToFacts, partition: Partitioner) -> Effects:
             why[m] = f"{m}: unresolved call to {e['unresolved'][0]}"
         elif e.get("unknown"):
             why[m] = f"{m}: {e['unknown'][0]}"
-        elif e.get("unknownReads"):  # may read anything, so it takes every token
+        elif e.get("unknownReads"):
             why[m] = f"{m}: {e['unknownReads'][0]}"
-    why = reaching(callees, why)
+    return why
 
-    # The partitions another thread may touch: the rest of memory, and every partition some
-    # access reaches through an object another thread may reach.
+
+def _shared_partitions(facts: PointsToFacts, part: Partitioner,
+                       touched: dict[str, list[tuple[str, str, Receivers]]]) -> set[str]:
+    """The partitions another thread may touch: REST, and every partition an access reaches through an object
+    another thread may reach, or through objects the analysis can't name."""
     shared = {part(REST)}
-    for m in methods:
-        for _, f, r in touched[m]:
+    for method_accesses in touched.values():
+        for _, f, r in method_accesses:
             if r is None or any(shared_object(facts, o) for o in r):
                 shared.add(part(f, r))
+    return shared
 
-    # Synchronization on an object another thread may reach. An acquire may show this thread
-    # their writes, so it writes every shared partition; a release may show them this thread's
-    # writes and lets none of theirs in, so it reads every shared partition. Synchronization on
-    # an object only this thread reaches orders it with no other thread, and does nothing.
+
+def _synchronize(facts: PointsToFacts, shared: set[str], reads: dict[str, set[str]],
+                 writes: dict[str, set[str]]) -> dict[str, str]:
+    """Add each method's synchronization on objects another thread may reach to what it reads and writes, and
+    give the methods that release. An acquire may show this thread other threads' writes, so it reads and
+    writes every shared partition. A release may show them this thread's writes, so it reads every shared
+    partition. Synchronization on an object only this thread reaches orders nothing and adds nothing."""
     releasing = {}
-    for m, e in methods.items():
+    for m, e in facts.methods.items():
         if synchronizing(facts, e, "acquires"):
             reads[m] |= shared
             writes[m] |= shared
         if synchronizing(facts, e, "releases"):
             reads[m] |= shared
             releasing[m] = m
-    close_over_callees(callees, reads, writes)
-    releases = reaching(callees, releasing)
-
-    everything = {p for m in methods for p in reads[m] | writes[m]} | {part(REST)}
-    signatures = {m: Signature(frozenset(reads[m]), frozenset(writes[m]), m in why, why.get(m, ""), m in releases and m not in why)
-                  for m in methods}
-    return Effects(part, signatures, tuple(sorted(everything)), frozenset(shared), facts)
+    return releasing

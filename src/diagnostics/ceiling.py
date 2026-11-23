@@ -33,6 +33,7 @@ def ceiling(facts: PointsToFacts, program: list[str], partition: str = "field") 
     rows = []
 
     def row(label: str, ignored: tuple[str, ...]) -> None:
+        """Add the row for the kill sets with the effects in `ignored` left out."""
         written = kills(facts, partition, ignored)
         rows.append((label, sum(written[m] == ANY for m in mine), sum(w == ANY for w in written.values()), len(mine)))
 
@@ -49,6 +50,7 @@ def ceiling(facts: PointsToFacts, program: list[str], partition: str = "field") 
 
 
 def main() -> int:
+    """Print the table: a row for each effect or set of effects left out."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path, help="facts or graphs exported by graal-export or by the image builder")
     parser.add_argument("--program", default="", help="comma-separated method prefixes that are the program (default: outside the platform's packages)")

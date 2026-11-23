@@ -25,6 +25,8 @@ from .translate import Translation
 
 
 def main() -> int:
+    """Translate the export's methods (those whose name contains --method), print or write the text, then report
+    the methods refused and the single-use and type errors."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("dump", type=Path)
     parser.add_argument("--method", default="", help="only methods whose name contains this")

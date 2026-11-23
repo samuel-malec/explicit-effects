@@ -8,7 +8,7 @@ from .ir import LINEAR, Instr, Lambda, Program
 
 
 class LinearityError(Exception):
-    pass
+    """A λ that can't be made single use: a linear value in it is used twice, or never."""
 
 
 def linearize(lam: Lambda) -> None:
@@ -18,11 +18,11 @@ def linearize(lam: Lambda) -> None:
     for instr in lam.body:
         types.update(zip(instr.outs, instr.out_types))
 
-    remaining = Counter(name for instr in lam.body for name in instr.ins)
+    remaining = Counter(name for instr in lam.body for name in instr.ins)  # each value's uses still to come
     remaining.update(name for name, _ in lam.outs)
 
-    fresh = count(1)
-    current: dict[str, str] = {}
+    fresh = count(1)  # numbers for the copies' names
+    current: dict[str, str] = {}  # the name each value goes by now: its last copy
     body: list[Instr] = []
 
     def unused(name: str) -> None:
