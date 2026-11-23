@@ -1,5 +1,9 @@
-"""The token form in memory, and its text in the graal.ct dialect. A program is structures, one per translated
-method; a structure is λs; a λ's body is instructions `type op ins → outs`."""
+"""Programs in graal.ct, the form graal2ct translates Graal IR into: in memory, and as text.
+
+Memory is explicit in graal.ct. Each partition of memory is a `heap` value, a token, that every operation on it
+takes and gives back, so the order of memory operations is the data flow between them. A program is structures,
+one per translated method; a structure is λs (functions, about one per basic block); a λ's body is instructions
+`type op ins → outs`."""
 
 from dataclasses import dataclass, field
 from functools import cache
