@@ -1,6 +1,6 @@
-"""Graal IR into the token form, graal.ct: a structure per method, a λ per block it reaches, and a token per
-partition of memory its signature names. The graph decides the code; the signatures (effects.signatures) decide
-which tokens each method and each call takes."""
+"""Translate Graal IR into graal.ct: a structure per method, a λ per block it reaches, and a heap token per
+partition of memory the method may touch. The graph gives the code; the effects (effects.signatures) give the
+tokens each method and each call takes."""
 
 import re
 from collections.abc import Callable
@@ -37,8 +37,8 @@ NUMBERS = {"int", "long", "float", "double"}
 # What escape analysis made virtual: described, and made by a CommitAllocation.
 VIRTUAL = {"VirtualInstance", "VirtualArray", "VirtualBoxing"}
 
-# Nodes that touch memory in a way the dialect has no operation for. Each becomes a call to
-# an external that takes every token of the method. The method's signature covers the node.
+# Nodes that touch memory in a way the dialect has no operation for. Each becomes a call to an external
+# function that takes every token of the method; the method's effects already include the node's.
 OPAQUE = {"EnsureClassInitialized", "MarkStaticFinalFieldInitialized", "PureBox", "AllocatingBox",
           "CopyOf", "CopyOfRange", "ArrayCopy", "ArrayCopyWithConversions",
           "ArrayEquals", "ArrayRegionEquals", "ArrayRegionEqualsWithMask", "ArrayCompareTo", "ArrayRegionCompareTo",
@@ -381,7 +381,7 @@ class MethodTranslation:
         self.calls: dict[str, str] = {}  # the structures this method calls, and the methods they stand for
         self.frames: dict[str, Lambda] = {}
 
-        # The graph's control flow, a _ControlFlow, is the first thing structure() works out: self.flow.
+        # self.flow, the graph's control flow (_ControlFlow), is the first thing structure() sets.
 
         # The block being translated: _block gives each block a new state, which _node, _end and what they call
         # work on. _trap leaves it as it is.
@@ -499,7 +499,7 @@ class MethodTranslation:
         """The partition of the node's access to `location`, a field or an array kind, through its receivers."""
         try:
             return self.effects.partition(location, _receivers(n))
-        except ValueError as e:  # objects the facts don't list together
+        except ValueError as e:  # objects that no one partition covers
             raise Unsupported(str(e)) from e
 
     # --- nodes --------------------------------------------------------------------------------------------------
@@ -615,7 +615,7 @@ class MethodTranslation:
 
         elif op == "BytecodeException":
             # A check failed, of a receiver, an index, a divisor or a cast: a new exception, which
-            # nothing else has seen. The facts give it no effect, as Native Image's analysis does.
+            # nothing else has seen. Like Native Image's analysis, the export gives it no effect.
             self._emit("ref", "exception", [], [v], ["ref"], note="a check failed")
 
         elif op == "FinalFieldBarrier" and self.constructor:
@@ -718,8 +718,8 @@ class MethodTranslation:
             for i, value in enumerate(n.entries[start:start + size]):
                 field = o.fields[i] if o.op != "VirtualArray" else o.kind
                 partition = self._initialized(field, receivers)
-                # A part nothing in the method or its callees touches is no ordering's business:
-                # the object is new, and the facts leave initializing it out.
+                # Skip a field or element nothing in the method or its callees touches: the object
+                # is new, and the export lists no writes that initialize it.
                 if value is None or partition not in self.token:
                     continue
 
@@ -736,7 +736,7 @@ class MethodTranslation:
 
     def _initialized(self, field: str, receivers: frozenset | None) -> str | None:
         """The partition of a new object's field: by where the object was allocated, else by
-        the field alone; None if the facts have neither, since nothing they list touches it."""
+        the field alone; None if neither has one, since no access in the export touches it."""
         for objects in (receivers, None):
             try:
                 return self.effects.partition(field, objects)
@@ -919,7 +919,7 @@ def _type(n: Node) -> str:
 
 
 def _receivers(n: Node) -> frozenset[str] | None:
-    """The objects the node's access may touch, None when the facts can't say."""
+    """The objects the node's access may touch, None when the analysis can't say."""
     return None if n.receivers is None else frozenset(n.receivers)
 
 

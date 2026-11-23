@@ -5,11 +5,11 @@ Usage:
     uv run python -m diagnostics.ceiling graal-native/out/awfy-eval/fields/export.json
     uv run python -m diagnostics.ceiling export.json --program deltablue,havlak --partition object-field
 
-The effects are those of `effects.kills.IGNORABLE`: each on its own, then added one after the other (the three
-the notes found in front of most opaque methods, then what lies behind them). A method is counted when its
-kill set is everything (`any`); the program's methods are those outside the platform's packages, or the ones
-`--program` names. The last row is the most the kill sets could do if the facts were exact about everything: an
-upper bound to compare a build with, not a build to keep.
+The effects are those of `effects.kills.IGNORABLE`: each on its own, then added one after the other (first the
+three that most opaque methods reach first, then the rest). A method is counted when its kill set is everything
+(`any`); the program's methods are those outside the platform's packages, or the ones `--program` names. The
+last row is the most the kill sets could do if the analysis were exact about everything: an upper bound to
+compare a build with, not a build to keep.
 """
 
 import argparse
@@ -20,7 +20,7 @@ from graal.graal_import import PointsToFacts, load_facts
 
 from .blockers import in_program
 
-#: The layers the notes found in front of most opaque methods, then what lies behind them, in the order they were found.
+#: The three effects most opaque methods reach first, then the rest, in the order they are added.
 LAYERS = ("identity-hash", "class-initialization", "synchronization")
 BEHIND = ("unresolved-calls", "other-effects", "calls-without-facts")
 

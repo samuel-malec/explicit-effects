@@ -1,8 +1,9 @@
 """Read an export of graal-export or of the image builder.
 
-`load_facts` reads only the facts, which every export has: all the kill sets and the lock decisions need.
-`load` also reads the graphs, which only an export made with them has (`DUMP_IR`, or
-`-H:+SideEffectAnalysisExportGraphs` in the image builder): for the translation and the printers."""
+Every export has the facts: what Native Image's points-to analysis found about each method (what it reads, writes
+and calls, its synchronization, and the objects each access may touch). `load_facts` reads only those, which is all
+the kill sets and the lock decisions need. `load` also reads the graphs, which only an export made with them has
+(`DUMP_IR`, or `-H:+SideEffectAnalysisExportGraphs` in the image builder): for the translation and the printers."""
 
 import json
 from collections import Counter

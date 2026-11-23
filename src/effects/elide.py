@@ -8,12 +8,12 @@ A monitor enter or exit takes a lock to order this thread with the others that t
 thread can reach any object the site may lock (thread escape, under the assumptions the export was made
 with), nothing is ordered and the site can be removed from the code. Two things keep a site:
 
-* the object is waited or notified on, or asked about with `Thread.holdsLock` (the facts' `waits`): those
+* the object is waited or notified on, or asked about with `Thread.holdsLock` (the export's `waits`): those
   need the monitor held, and throw without it, so a site stays if any object it may lock is such an object,
   or if some wait or notify has an object the analysis can't name;
-* the virtual machine's own code (`com.oracle.svm`): the assumption that its state is read only by it makes
-  its objects look thread-local, which is for the program's sake, not a fact about its queues. Its waits are
-  not counted either (JNI's `MonitorExit` asks about any object it is given).
+* the VM's own code (`com.oracle.svm`): thread escape assumes that only the VM reads its state, so its
+  objects look thread-local. That holds for the program, not for the VM's own queues. Its waits are not
+  counted either (JNI's `MonitorExit` asks about any object it is given).
 
 A volatile read or write of a field is the same: it orders this thread with the others that access the
 field, and when no other thread reaches any object it may be on, there is none. Waits don't matter to it.
