@@ -4,7 +4,7 @@ Usage:
     uv run python -m effects.kills graal-native/out/loadstoreelimination.json -o graal-native/out/loadstoreelimination.kills
     uv run python -m effects.kills graal-native/out/aliasing.json -o kills.txt \\
         --partition object-field --accesses accesses.txt
-    uv run python -m effects.kills export.json -o ceiling.kills --ignore all
+    uv run python -m effects.kills export.json -o upper-bound.kills --ignore all
 """
 
 import argparse
@@ -23,9 +23,8 @@ INIT = "init"  # in a kill set: the call may allocate
 
 #: Effects whose kill can be left out, to measure what more precise kill sets could give Graal. Never sound, so
 #: never for an image whose output matters. Each maps to the kinds of node that are that effect among a method's
-#: unknown effects, or to None when it isn't one kind of node (`blocks` handles those). The first three are what
-#: most opaque methods reach first; every method still opaque without them reaches each of the others, so only
-#: leaving all of them out shows the most the kill sets could do.
+#: unknown effects, or to None when it isn't one kind of node (`blocks` handles those). Most methods that kill
+#: everything reach several of these, so only leaving all of them out shows the most the kill sets could do.
 IGNORABLE: dict[str, tuple[str, ...] | None] = {
     "identity-hash": ("SubstrateIdentityHashCodeNode",),
     "class-initialization": ("EnsureClassInitializedNode",),
@@ -63,7 +62,7 @@ def blocks(facts: PointsToFacts, method: dict, ignore: Collection[str] = ()) -> 
 def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str] = ()) -> dict[str, str | tuple[str, ...]]:
     """Each method's kill set: the partitions it, or anything it may call, may write. A partition that is all of
     a field goes by the field's name; the set also has `init` if the method allocates, and the VM's own
-    locations it writes. It is `any` if the method reaches something the facts can't describe, or
+    locations it writes. It is `any` if the method reaches something the analysis can't bound, or
     synchronization that may order this thread with another. A lock or volatile field that only this thread
     reaches orders nothing, and kills nothing.
 
@@ -87,9 +86,8 @@ def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str
 
     callees = callees_of(facts)
     kill_everything = reaching(callees, {m: m for m, e in methods.items() if blocks(facts, e, ignore)})
-    # A method that reaches something unknown kills everything, whatever it writes. Every other method only
-    # calls methods like itself, so only those need their callees' writes: on javac's export a third of the
-    # methods, and a tenth of the time.
+    # A method that reaches something unknown kills everything, whatever it writes. The others only call
+    # methods like themselves, so only they need their callees' writes (on javac, a third of the methods).
     close_over_callees({m: cs for m, cs in callees.items() if m not in kill_everything}, written)
     return {m: ANY if m in kill_everything else tuple(sorted(written[m])) for m in sorted(methods)}
 
@@ -105,6 +103,7 @@ def partitioned(facts: PointsToFacts, partition: str) -> dict[tuple[str, str], s
 
 
 def main() -> int:
+    """Write each method's kill set, one line per method, and say how many are narrowed."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("export", type=Path, help="facts or graphs exported by graal-export")
     parser.add_argument("-o", "--out", type=Path, required=True)

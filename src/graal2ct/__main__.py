@@ -1,4 +1,4 @@
-"""Compiler Driver of Graal -> Cthu pipeline
+"""Translate an export's methods from Graal IR into graal.ct
 
 Usage:
     cd graal-export && ./build.sh corpus/LoadStoreElimination.java && \\

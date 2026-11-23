@@ -20,7 +20,7 @@ from pathlib import Path
 from effects.signatures import STATICS
 from graal.graal_import import load
 
-# Effects the facts can't name one by one, as the export lists them.
+# A method's other effects, as the export lists them: each as the text of the node that has it.
 EFFECTS = ("unknown", "acquires", "releases", "unresolved", "unknownReads", "vmWrites", "dead")
 
 

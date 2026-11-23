@@ -1,14 +1,14 @@
-"""Why the methods of a program kill everything: the first thing each reaches that the facts can't
-bound, and how many methods the program has behind each.
+"""Why the methods of a program kill everything: the first thing each reaches that the analysis can't
+bound, and how many of the program's methods are behind each.
 
 Usage:
     uv run python -m diagnostics.blockers graal-native/out/awfy-eval-o3/fields/export.json
     uv run python -m diagnostics.blockers export.json --program deltablue,havlak --synchronization none
 
 A method kills everything (`effects.kills`) when it, or a method it calls, has an effect or a call
-the facts can't name, or synchronization that may order this thread with another. The answer says
-which, for the program's methods: synchronization on objects only this thread reaches counts as
-nothing (`--synchronization all` counts it, as the kill sets did before they knew thread escape).
+the analysis can't name, or synchronization that may order this thread with another. The answer says
+which, for the program's methods. Synchronization on objects only this thread reaches doesn't count
+(`--synchronization all` counts it, ignoring thread escape).
 """
 
 import argparse
@@ -105,7 +105,7 @@ def main() -> int:
     parser.add_argument("--program", default="", help="comma-separated class-name prefixes, * for every method; default: outside the platform's packages")
     parser.add_argument("--synchronization", choices=["shared", "all", "none"], default="shared",
                         help="which synchronization blocks: that on objects another thread may reach (what the kill sets do), "
-                             "all of it (before they knew thread escape), or none (what a kill set that named exactly the "
+                             "all of it (ignoring thread escape), or none (what a kill set that named exactly the "
                              "partitions another thread may touch could free at most)")
     args = parser.parse_args()
     facts = load_facts(args.export, args.assumptions)

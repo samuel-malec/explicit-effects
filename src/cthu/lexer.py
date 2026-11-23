@@ -1,5 +1,5 @@
-"""The tokens of graal.ct text: names, keywords, strings, punctuation, arrows and line ends. `;` starts a
-comment that runs to the end of the line."""
+"""Split graal.ct text into lexical tokens (not the heap tokens of the programs): names, keywords, strings,
+punctuation, arrows and line ends. `;` starts a comment that runs to the end of the line."""
 
 from dataclasses import dataclass
 from enum import Enum

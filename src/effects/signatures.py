@@ -253,7 +253,7 @@ class Signature:
 
     reads: frozenset[str]
     writes: frozenset[str]
-    opaque: bool = False  # may touch anything
+    opaque: bool = False  # may touch anything: a call to it kills all memory
     why: str = ""  # the effect that makes it opaque
     releases: bool = False  # whether it, or a method it may call, releases
 
