@@ -1,12 +1,11 @@
 """Straighten translated code (`graal2ct --shape`)
 
 The translation makes a λ of every block Graal has, and Graal splits a block at every call. This pass simplifies the
-control flow where that is safe and changes nothing else: no load is forwarded and no store removed.
+control flow where that is safe and changes nothing else: no load is forwarded and no store removed. A branch to an
+arm that leaves the method becomes guards, and a λ that one jump reaches joins the λ that jumps, so the code is
+straight-line and a token can be followed from one operation to the next.
 
-    a branch to an arm that leaves the method becomes guards, and a λ that one jump reaches joins the λ that jumps,
-    so that the code is straight-line and a token can be followed from one operation to the next.
-
-`straighten` is the pass; the rest are its steps, and the helpers that read how a translated method is built."""
+`straighten` is the pass; the rest are its steps, and helpers that read how a translated method is built."""
 
 import re
 from dataclasses import dataclass
