@@ -59,6 +59,17 @@ def blocks(facts: PointsToFacts, method: dict, ignore: Collection[str] = ()) -> 
     return "calls-without-facts" not in ignore and any(c not in facts.methods for c in method.get("callees", ()))
 
 
+def opaque(facts: PointsToFacts, ignore: Collection[str] = (), callees: dict[str, set[str]] | None = None) -> dict[str, str]:
+    """The methods whose kill set is everything (`any`), each with a method that has the cause: the method itself, or a
+    method it calls, directly or not. Only which methods these are, no kill set is worked out, so it costs a walk over
+    the call graph: with effects left out (`ignore`) the sets are long lists and this is the way to count what that
+    frees on a large program. `kills` has the same methods."""
+    if unknown := set(ignore) - IGNORABLE.keys():
+        raise ValueError(f"cannot ignore {sorted(unknown)}: only {sorted(IGNORABLE)}")
+    callees = callees_of(facts) if callees is None else callees
+    return reaching(callees, {m: m for m, e in facts.methods.items() if blocks(facts, e, ignore)})
+
+
 def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str] = ()) -> dict[str, str | tuple[str, ...]]:
     """Each method's kill set: the partitions it, or anything it may call, may write. A partition that is all of
     a field goes by the field's name; the set also has `init` if the method allocates, and the VM's own
@@ -85,7 +96,7 @@ def kills(facts: PointsToFacts, partition: str = "field", ignore: Collection[str
         written[m] = own | set(e.get("vmWrites", ())) | ({INIT} if e.get("allocates") else set())
 
     callees = callees_of(facts)
-    kill_everything = reaching(callees, {m: m for m, e in methods.items() if blocks(facts, e, ignore)})
+    kill_everything = opaque(facts, ignore, callees)
     # A method that reaches something unknown kills everything, whatever it writes. The others only call
     # methods like themselves, so only they need their callees' writes (on javac, a third of the methods).
     close_over_callees({m: cs for m, cs in callees.items() if m not in kill_everything}, written)

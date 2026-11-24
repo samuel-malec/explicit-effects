@@ -15,7 +15,8 @@ compare a build with, not a build to keep.
 import argparse
 from pathlib import Path
 
-from effects.kills import ANY, IGNORABLE, kills
+from effects.kills import IGNORABLE, opaque
+from effects.signatures import callees_of
 from graal.graal_import import PointsToFacts, load_facts
 
 from .blockers import in_program
@@ -32,10 +33,12 @@ def ceiling(facts: PointsToFacts, program: list[str], partition: str = "field") 
     mine = [m for m in facts.methods if in_program(m, program)]
     rows = []
 
+    callees = callees_of(facts)
+
     def row(label: str, ignored: tuple[str, ...]) -> None:
         """Add the row for the kill sets with the effects in `ignored` left out."""
-        written = kills(facts, partition, ignored)
-        rows.append((label, sum(written[m] == ANY for m in mine), sum(w == ANY for w in written.values()), len(mine)))
+        killing = opaque(facts, ignored, callees)  # which methods kill everything, never the sets: they are huge when effects are left out
+        rows.append((label, sum(m in killing for m in mine), len(killing), len(mine)))
 
     row("nothing (as built)", ())
     for name in IGNORABLE:
@@ -46,6 +49,19 @@ def ceiling(facts: PointsToFacts, program: list[str], partition: str = "field") 
         if len(chain) >= len(LAYERS):
             row("the three layers" if chain == LAYERS else f"+ {name}", chain)
     rows[-1] = (rows[-1][0] + " = everything", *rows[-1][1:])
+    return rows
+
+
+def only_one(facts: PointsToFacts, program: list[str]) -> list[tuple[str, int, int, int]]:
+    """Rows of (the one effect still counted, program methods killing everything, all methods killing everything, program
+    methods) with every other effect left out: which single effect keeps methods opaque by itself. Where the rows of
+    `ceiling` ask what freeing an effect gains, these ask what an effect alone still holds."""
+    mine = [m for m in facts.methods if in_program(m, program)]
+    callees = callees_of(facts)
+    rows = []
+    for name in IGNORABLE:
+        killing = opaque(facts, tuple(other for other in IGNORABLE if other != name), callees)
+        rows.append((name, sum(m in killing for m in mine), len(killing), len(mine)))
     return rows
 
 
@@ -65,6 +81,9 @@ def main() -> int:
     print(f"{'left out':58} {'program':>8} {'freed':>6} {'all':>7} {'freed':>6}")
     for label, in_prog, everywhere, _ in rows:
         print(f"{label:58} {in_prog:>8} {base_program - in_prog:>6} {everywhere:>7} {base_all - everywhere:>6}")
+    print(f"\nevery effect left out but one: the methods that one still holds opaque\n{'still counted':58} {'program':>8} {'':>6} {'all':>7}")
+    for label, in_prog, everywhere, _ in only_one(facts, [p for p in args.program.split(",") if p]):
+        print(f"{label:58} {in_prog:>8} {'':>6} {everywhere:>7}")
     return 0
 
 
